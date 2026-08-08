@@ -2,39 +2,57 @@ import SwiftUI
 import Personas
 
 /// Full design token system for Mercury: Quicksilver.
-/// Cosmic black · deep violet · mercury silver · emerald · subtle gold · glass · liquid metal.
+/// Controlled chaos radioactivity: void black · glow purple · toxic green · hazard green · mercury silver.
 /// Tokens are persona-reactive where it serves identity; the overall identity is Mercury.
 enum PersonaTheme {
 
-    // MARK: - Core Palette (Mercury Identity)
+    // MARK: - Core Palette (Radioactive Mercury Identity)
 
-    static let cosmicBlack = Color(red: 0.04, green: 0.04, blue: 0.07)
-    static let deepViolet = Color(red: 0.28, green: 0.15, blue: 0.42)
-    static let mercurySilver = Color(red: 0.78, green: 0.80, blue: 0.84)
-    static let emeraldAccent = Color(red: 0.20, green: 0.72, blue: 0.55)
-    static let subtleGold = Color(red: 0.82, green: 0.68, blue: 0.38)
-    static let liquidMetal = Color(red: 0.55, green: 0.58, blue: 0.65)
+    /// Near-absolute void — primary background.
+    static let voidBlack = Color(red: 0.020, green: 0.020, blue: 0.039)   // #05050A
+
+    /// High-energy purple glow — primary accent / chamber pulse.
+    static let glowPurple = Color(red: 0.545, green: 0.239, blue: 1.000)  // #8B3DFF
+
+    /// Toxic / radioactive green — success, health, live signals.
+    static let toxicGreen = Color(red: 0.220, green: 0.949, blue: 0.353)  // #38F25A
+
+    /// Hazard / secondary green — warnings, secondary emphasis.
+    static let hazardGreen = Color(red: 0.086, green: 0.639, blue: 0.290) // #16A34A
+
+    /// Cool metallic silver — text, structure, mercury sheen.
+    static let mercurySilver = Color(red: 0.784, green: 0.800, blue: 0.831) // #C8CCD4
+
+    // Legacy aliases so existing call-sites compile while migrating.
+    static let cosmicBlack = voidBlack
+    static let deepViolet = glowPurple
+    static let emeraldAccent = toxicGreen
+    static let subtleGold = hazardGreen
+    static let liquidMetal = mercurySilver.opacity(0.72)
 
     // MARK: - Persona Accents (still used for identity shifts)
 
     static func accent(for personaID: String) -> Color {
         switch personaID.lowercased() {
         case "forge":
-            return Color(red: 0.95, green: 0.55, blue: 0.20) // forgeOrange
+            // Forge leans hard into toxic green + purple edge
+            return toxicGreen
         case "eternal":
-            return Color(red: 0.62, green: 0.45, blue: 0.90) // eternalViolet
+            // Eternal keeps the glow purple as primary
+            return glowPurple
         case "quicksilver":
-            return Color(red: 0.20, green: 0.85, blue: 0.90) // quicksilverCyan
+            // Quicksilver is silver with purple undertone
+            return mercurySilver
         default:
-            return emeraldAccent
+            return toxicGreen
         }
     }
 
     static func secondaryAccent(for personaID: String) -> Color {
         switch personaID.lowercased() {
-        case "forge": return subtleGold
-        case "eternal": return deepViolet
-        default: return mercurySilver
+        case "forge": return glowPurple
+        case "eternal": return toxicGreen.opacity(0.85)
+        default: return glowPurple
         }
     }
 
@@ -59,9 +77,9 @@ enum PersonaTheme {
 
     static func glassOpacity(for personaID: String) -> Double {
         switch personaID.lowercased() {
-        case "forge": return 0.12
-        case "eternal": return 0.08
-        default: return 0.14
+        case "forge": return 0.14
+        case "eternal": return 0.09
+        default: return 0.12
         }
     }
 
@@ -70,11 +88,11 @@ enum PersonaTheme {
     static func assistantBubbleStyle(for personaID: String) -> (opacity: Double, weight: Font.Weight) {
         switch personaID.lowercased() {
         case "forge":
-            return (0.10, .medium)
+            return (0.12, .medium)
         case "eternal":
-            return (0.08, .regular)
+            return (0.09, .regular)
         default:
-            return (0.14, .regular)
+            return (0.13, .regular)
         }
     }
 
@@ -83,25 +101,31 @@ enum PersonaTheme {
     static func spring(for personaID: String) -> Animation {
         switch personaID.lowercased() {
         case "forge":
-            return .spring(response: 0.32, dampingFraction: 0.82)
+            return .spring(response: 0.30, dampingFraction: 0.84)
         case "eternal":
             return .spring(response: 0.55, dampingFraction: 0.78)
         default:
-            return .spring(response: 0.42, dampingFraction: 0.75)
+            return .spring(response: 0.40, dampingFraction: 0.76)
         }
     }
 
-    static let thinkingPulse = Animation.easeInOut(duration: 1.4).repeatForever(autoreverses: true)
-    static let insightAppear = Animation.spring(response: 0.5, dampingFraction: 0.7)
+    static let thinkingPulse = Animation.easeInOut(duration: 1.35).repeatForever(autoreverses: true)
+    static let insightAppear = Animation.spring(response: 0.48, dampingFraction: 0.72)
 
-    // MARK: - Materials
+    // MARK: - Materials & Borders
 
     static func cardBackground(for personaID: String) -> some ShapeStyle {
         .ultraThinMaterial
     }
 
     static func borderColor(for personaID: String) -> Color {
-        accent(for: personaID).opacity(0.35)
+        accent(for: personaID).opacity(0.40)
+    }
+
+    /// Radioactive edge stroke used on high-energy surfaces (Forge cards, live signals).
+    static func radioactiveStroke(for personaID: String, intensity: Double = 1.0) -> Color {
+        let base = personaID.lowercased() == "forge" ? toxicGreen : glowPurple
+        return base.opacity(0.35 * intensity)
     }
 
     // MARK: - Policy Summary (legacy helper)
@@ -118,9 +142,9 @@ enum PersonaTheme {
 
     static func healthColor(_ score: Int) -> Color {
         switch score {
-        case 80...: return emeraldAccent
-        case 50..<80: return subtleGold
-        default: return Color(red: 0.9, green: 0.3, blue: 0.3)
+        case 80...: return toxicGreen
+        case 50..<80: return hazardGreen
+        default: return Color(red: 0.95, green: 0.25, blue: 0.28)
         }
     }
 }
