@@ -43,26 +43,14 @@ struct SanctumView: View {
                 .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showForge) {
-            NavigationStack {
+            RealmGateway(title: "Forge", chamber: .forge, isPresented: $showForge) {
                 ForgeView()
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") { showForge = false }
-                        }
-                    }
             }
-            .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showEternal) {
-            NavigationStack {
+            RealmGateway(title: "Eternal", chamber: .eternal, isPresented: $showEternal) {
                 EternalView()
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button("Done") { showEternal = false }
-                        }
-                    }
             }
-            .preferredColorScheme(.dark)
         }
     }
 
@@ -92,7 +80,6 @@ struct SanctumView: View {
                             visualState: vm.visualState
                         )
 
-                        // Functional glyph instruments
                         GlyphStrip(
                             glyphs: glyphStates(for: vm),
                             personaID: personaID
@@ -101,10 +88,8 @@ struct SanctumView: View {
                         }
                         .padding(.vertical, 4)
 
-                        // Realm gateways
                         chamberIndicators(vm, accent: accent, radius: radius)
 
-                        // Progressive disclosure — environmental layer
                         environmentalSignals(vm, radius: radius)
 
                         if let insight = vm.latestInsight {
