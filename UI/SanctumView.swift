@@ -13,6 +13,7 @@ struct SanctumView: View {
     @State private var showCodex = false
     @State private var showMemory = false
     @State private var showForge = false
+    @State private var showEternal = false
 
     var body: some View {
         Group {
@@ -25,13 +26,22 @@ struct SanctumView: View {
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showAsk) {
-            AskView(container: container)
+            NavigationStack {
+                AskView()
+            }
+            .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showCodex) {
-            CodexView(container: container)
+            NavigationStack {
+                CodexView()
+            }
+            .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showMemory) {
-            MemoryView(container: container)
+            NavigationStack {
+                MemoryView()
+            }
+            .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showForge) {
             NavigationStack {
@@ -39,6 +49,17 @@ struct SanctumView: View {
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button("Done") { showForge = false }
+                        }
+                    }
+            }
+            .preferredColorScheme(.dark)
+        }
+        .sheet(isPresented: $showEternal) {
+            NavigationStack {
+                EternalView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showEternal = false }
                         }
                     }
             }
@@ -136,12 +157,17 @@ struct SanctumView: View {
             }
             .buttonStyle(.plain)
 
-            chamberChip(
-                name: "Eternal",
-                isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum,
-                accent: PersonaTheme.accent(for: "eternal"),
-                radius: radius
-            )
+            Button {
+                showEternal = true
+            } label: {
+                chamberChip(
+                    name: "Eternal",
+                    isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum,
+                    accent: PersonaTheme.accent(for: "eternal"),
+                    radius: radius
+                )
+            }
+            .buttonStyle(.plain)
         }
     }
 
