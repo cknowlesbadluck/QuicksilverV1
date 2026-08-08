@@ -15,6 +15,7 @@ final class SanctumViewModel {
     private(set) var networkStatus: String = "—"
     private(set) var thermalState: String = "—"
     private(set) var overallHealthScore: Int = 100
+    private(set) var visualState: VisualState = .idle
 
     private let container: DependencyContainer
     private var refreshTask: Task<Void, Never>?
@@ -40,6 +41,9 @@ final class SanctumViewModel {
 
         // Invisible Architecture: chamber comes from Brain, not local heuristics.
         activeChamber = container.brain.suggestedChamber
+
+        // Visual state derived from system truth — never arbitrary.
+        visualState = deriveVisualState(health: overallHealthScore, thermal: state.thermalState)
     }
 
     func startLiveRefresh(interval: Duration = .seconds(3)) {
@@ -56,5 +60,20 @@ final class SanctumViewModel {
     func stopLiveRefresh() {
         refreshTask?.cancel()
         refreshTask = nil
+    }
+
+    private func deriveVisualState(health: Int, thermal: String) -> VisualState {
+        let thermalLower = thermal.lowercased()
+        if thermalLower.contains("serious") || thermalLower.contains("critical") {
+            return .critical
+        }
+        if health < 35 {
+            return .warning
+        }
+        if health < 55 {
+            return .processing
+        }
+        // Default presence
+        return .idle
     }
 }
