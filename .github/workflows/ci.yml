@@ -188,14 +188,36 @@ jobs:
         id: dest
         run: |
           set -euo pipefail
-          DEST=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
+          echo "== Available simulators =="
+          xcrun simctl list devices available || true
+
+          # Prefer a concrete modern iPhone by name (most reliable on macos-15 runners).
+          DEST=""
+          for name in "iPhone 16" "iPhone 16 Pro" "iPhone 15" "iPhone 15 Pro" "iPhone 14"; do
+            if xcrun simctl list devices available | grep -q "$name"; then
+              DEST="platform=iOS Simulator,name=$name"
+              echo "Matched preferred device: $name"
+              break
+            fi
+          done
+
+          # Fallback: first available iPhone by UDID
           if [[ -z "$DEST" ]]; then
-            # Fallback: let xcodebuild pick any iPhone simulator
-            echo "destination=platform=iOS Simulator,name=iPhone 16" >> "$GITHUB_OUTPUT"
-          else
-            echo "destination=platform=iOS Simulator,id=$DEST" >> "$GITHUB_OUTPUT"
+            UDID=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
+            if [[ -n "$UDID" ]]; then
+              DEST="platform=iOS Simulator,id=$UDID"
+              echo "Fell back to UDID: $UDID"
+            fi
           fi
-          echo "Using: $(cat "$GITHUB_OUTPUT")"
+
+          # Last resort: let xcodebuild choose any iPhone simulator
+          if [[ -z "$DEST" ]]; then
+            DEST="platform=iOS Simulator,name=iPhone 16"
+            echo "No available device listed; using default name fallback"
+          fi
+
+          echo "destination=$DEST" >> "$GITHUB_OUTPUT"
+          echo "Using destination: $DEST"
 
       - name: Build for iOS Simulator
         run: |
