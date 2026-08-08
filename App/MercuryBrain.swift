@@ -19,6 +19,7 @@ import Nexus
 /// - Influence personality behavioral state
 /// - Surface insights rather than raw data
 /// - Determine which chamber (Forge / Eternal / Sanctum) should awaken
+/// - Own VisualState so the environment reflects cognition
 @MainActor
 @Observable
 final class MercuryBrain {
@@ -34,6 +35,8 @@ final class MercuryBrain {
     private(set) var primaryInsight: String?
     private(set) var livingStatus: String = "Quicksilver is present. Observing."
     private(set) var suggestedChamber: SanctumChamber = .sanctum
+    /// Explicit visual communication state — UI only observes.
+    private(set) var visualState: VisualState = .idle
 
     init(
         personaManager: PersonaManager,
@@ -61,6 +64,7 @@ final class MercuryBrain {
     func ask(_ query: String) async throws -> String {
         personaManager.recordInteraction()
         personality.noteInteraction()
+        visualState = .thinking
 
         let lower = query.lowercased()
         let (intent, kind) = classify(query: lower)
@@ -77,25 +81,38 @@ final class MercuryBrain {
         let config = personaManager.activeConfiguration
         let system = buildSystemPrompt(for: config)
 
-        let response = try await aiService.complete(
-            prompt: query,
-            systemPrompt: system,
-            temperature: config.preferredTemperature,
-            maxTokens: config.maxTokensHint
-        )
+        do {
+            let response = try await aiService.complete(
+                prompt: query,
+                systemPrompt: system,
+                temperature: config.preferredTemperature,
+                maxTokens: config.maxTokensHint
+            )
 
-        let colored = personality.colorResponse(response.content, personaID: config.id)
-        refreshLivingStatus()
-        return colored
+            visualState = .speaking
+            let colored = personality.colorResponse(response.content, personaID: config.id)
+
+            // Brief success stabilization, then return to environmental baseline
+            visualState = .success
+            refreshLivingStatus()
+            stabilizeVisualStateAfterSuccess()
+            return colored
+        } catch {
+            visualState = .warning
+            refreshLivingStatus()
+            throw error
+        }
     }
 
     func switchPersona(to id: String) async throws {
+        visualState = .transitioning
         try await personaManager.switchTo(id: id)
         personality.applyPersonaBias(personaID: id)
         nexus.updatePersonaContext(id)
         suggestedChamber = chamberForPersona(id)
         refreshLivingStatus()
         logger.info("Mercury Brain: persona → \(id)", category: logger.persona)
+        visualState = environmentalBaseline()
     }
 
     func remember(_ content: String) async {
@@ -120,7 +137,9 @@ final class MercuryBrain {
         )
 
         personality.noteInsight()
+        visualState = .processing
         refreshLivingStatus()
+        stabilizeVisualStateAfterSuccess()
     }
 
     func refreshLivingStatus() {
@@ -138,6 +157,49 @@ final class MercuryBrain {
             personality.increase(.patience, by: 0.03)
         } else {
             livingStatus = "\(persona) is present. The Sanctum holds."
+        }
+
+        // Do not clobber in-flight cognitive states
+        if visualState != .thinking && visualState != .speaking && visualState != .transitioning {
+            visualState = environmentalBaseline()
+        }
+    }
+
+    /// Call when UI begins listening (e.g. voice invocation).
+    func beginListening() {
+        visualState = .listening
+    }
+
+    func endListening() {
+        visualState = environmentalBaseline()
+    }
+
+    // MARK: - Visual baseline from Nexus
+
+    private func environmentalBaseline() -> VisualState {
+        let state = nexus.state
+        let thermal = state.thermalState.lowercased()
+        if thermal.contains("serious") || thermal.contains("critical") {
+            return .critical
+        }
+        if state.overallHealthScore < 35 {
+            return .warning
+        }
+        if state.lowPowerMode {
+            return .sleeping
+        }
+        if state.overallHealthScore < 55 {
+            return .processing
+        }
+        return .idle
+    }
+
+    private func stabilizeVisualStateAfterSuccess() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            if visualState == .success || visualState == .processing {
+                visualState = environmentalBaseline()
+            }
         }
     }
 
@@ -185,7 +247,6 @@ final class MercuryBrain {
             prompt += "\n\nBehavioral posture (internal): \(bias)"
         }
 
-        // Sharpened Phase II intellectual stance
         prompt += """
 
 
