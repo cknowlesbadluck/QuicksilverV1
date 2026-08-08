@@ -14,6 +14,7 @@ struct SanctumView: View {
     @State private var showMemory = false
     @State private var showForge = false
     @State private var showEternal = false
+    @State private var showDiagnostics = false
 
     var body: some View {
         Group {
@@ -26,22 +27,20 @@ struct SanctumView: View {
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showAsk) {
-            NavigationStack {
-                AskView()
-            }
-            .preferredColorScheme(.dark)
+            NavigationStack { AskView() }
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showCodex) {
-            NavigationStack {
-                CodexView()
-            }
-            .preferredColorScheme(.dark)
+            NavigationStack { CodexView() }
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showMemory) {
-            NavigationStack {
-                MemoryView()
-            }
-            .preferredColorScheme(.dark)
+            NavigationStack { MemoryView() }
+                .preferredColorScheme(.dark)
+        }
+        .sheet(isPresented: $showDiagnostics) {
+            NavigationStack { DiagnosticsView() }
+                .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showForge) {
             NavigationStack {
@@ -73,18 +72,19 @@ struct SanctumView: View {
         let radius = PersonaTheme.cardCornerRadius(for: personaID)
 
         return ZStack {
-            // Radioactive void — the chamber is larger than the screen
             PersonaTheme.voidBlack.ignoresSafeArea()
 
-            AmbientLayer(personaID: personaID, chamber: vm.activeChamber)
+            AmbientLayer(
+                personaID: personaID,
+                chamber: vm.activeChamber,
+                visualState: vm.visualState
+            )
 
-            // Main Sanctum content
             VStack(spacing: 0) {
                 presenceBar(vm, accent: accent, radius: radius)
 
                 ScrollView {
-                    VStack(spacing: 24 * PersonaTheme.density(for: personaID)) {
-                        // Living core — no card chrome
+                    VStack(spacing: 28 * PersonaTheme.density(for: personaID)) {
                         QuicksilverPresenceView(
                             personaID: personaID,
                             chamber: vm.activeChamber,
@@ -92,23 +92,31 @@ struct SanctumView: View {
                             visualState: vm.visualState
                         )
 
+                        // Functional glyph instruments
+                        GlyphStrip(
+                            glyphs: glyphStates(for: vm),
+                            personaID: personaID
+                        ) { kind in
+                            handleGlyph(kind)
+                        }
+                        .padding(.vertical, 4)
+
                         // Realm gateways
                         chamberIndicators(vm, accent: accent, radius: radius)
 
-                        // Environmental signals (Nexus) — progressive disclosure
+                        // Progressive disclosure — environmental layer
                         environmentalSignals(vm, radius: radius)
 
                         if let insight = vm.latestInsight {
                             insightCard(insight, accent: accent, radius: radius)
                         }
 
-                        Spacer(minLength: 80)
+                        Spacer(minLength: 64)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
                 }
 
-                // Ritual bar — invocation instruments
                 ritualBar(accent: accent)
             }
         }
@@ -117,6 +125,35 @@ struct SanctumView: View {
         .animation(MotionTokens.spring(for: personaID), value: vm.activeChamber)
         .animation(MotionTokens.spring(for: personaID), value: vm.livingStatus)
         .animation(MotionTokens.stabilization, value: vm.visualState)
+    }
+
+    // MARK: - Glyph mapping
+
+    private func glyphStates(for vm: SanctumViewModel) -> [(GlyphKind, GlyphVisualState)] {
+        let healthState: GlyphVisualState = vm.overallHealthScore < 40 ? .warning : .idle
+        return [
+            (.communication, .attention),
+            (.memory, .idle),
+            (.diagnostics, healthState),
+            (.development, vm.activeChamber == .forge ? .active : .idle),
+            (.observation, vm.activeChamber == .eternal ? .active : .idle),
+            (.configuration, .idle),
+            (.health, healthState),
+            (.network, .idle)
+        ]
+    }
+
+    private func handleGlyph(_ kind: GlyphKind) {
+        switch kind {
+        case .communication: showAsk = true
+        case .memory: showMemory = true
+        case .diagnostics, .health: showDiagnostics = true
+        case .development, .creation: showForge = true
+        case .observation: showEternal = true
+        case .configuration: showCodex = true
+        case .network, .security, .intelligence:
+            showDiagnostics = true
+        }
     }
 
     // MARK: - Presence Bar
@@ -149,13 +186,11 @@ struct SanctumView: View {
         .background(.ultraThinMaterial.opacity(0.35))
     }
 
-    // MARK: - Chamber Indicators (Realm Gateways)
+    // MARK: - Chamber Indicators
 
     private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
-            Button {
-                showForge = true
-            } label: {
+            Button { showForge = true } label: {
                 chamberChip(
                     name: "Forge",
                     isAwake: vm.activeChamber == .forge || vm.activeChamber == .sanctum,
@@ -165,9 +200,7 @@ struct SanctumView: View {
             }
             .buttonStyle(.plain)
 
-            Button {
-                showEternal = true
-            } label: {
+            Button { showEternal = true } label: {
                 chamberChip(
                     name: "Eternal",
                     isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum,
