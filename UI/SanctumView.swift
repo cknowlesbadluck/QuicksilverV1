@@ -12,13 +12,14 @@ struct SanctumView: View {
     @State private var showAsk = false
     @State private var showCodex = false
     @State private var showMemory = false
+    @State private var showForge = false
 
     var body: some View {
         Group {
             if let viewModel {
                 sanctumContent(viewModel)
             } else {
-                Color.black.ignoresSafeArea()
+                PersonaTheme.voidBlack.ignoresSafeArea()
                     .onAppear { viewModel = SanctumViewModel(container: container) }
             }
         }
@@ -32,6 +33,17 @@ struct SanctumView: View {
         .sheet(isPresented: $showMemory) {
             MemoryView(container: container)
         }
+        .sheet(isPresented: $showForge) {
+            NavigationStack {
+                ForgeView()
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button("Done") { showForge = false }
+                        }
+                    }
+            }
+            .preferredColorScheme(.dark)
+        }
     }
 
     private func sanctumContent(_ vm: SanctumViewModel) -> some View {
@@ -40,8 +52,8 @@ struct SanctumView: View {
         let radius = PersonaTheme.cardCornerRadius(for: personaID)
 
         return ZStack {
-            // Cosmic void
-            PersonaTheme.cosmicBlack.ignoresSafeArea()
+            // Radioactive void
+            PersonaTheme.voidBlack.ignoresSafeArea()
 
             AmbientLayer(personaID: personaID, chamber: vm.activeChamber)
 
@@ -57,7 +69,7 @@ struct SanctumView: View {
                             livingStatus: vm.livingStatus
                         )
 
-                        // Chamber indicators (awakened state)
+                        // Chamber indicators (awakened state) — tappable into realms
                         chamberIndicators(vm, accent: accent, radius: radius)
 
                         // Environmental signals (Nexus)
@@ -112,12 +124,18 @@ struct SanctumView: View {
 
     private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
-            chamberChip(
-                name: "Forge",
-                isAwake: vm.activeChamber == .forge || vm.activeChamber == .sanctum,
-                accent: PersonaTheme.accent(for: "forge"),
-                radius: radius
-            )
+            Button {
+                showForge = true
+            } label: {
+                chamberChip(
+                    name: "Forge",
+                    isAwake: vm.activeChamber == .forge || vm.activeChamber == .sanctum,
+                    accent: PersonaTheme.accent(for: "forge"),
+                    radius: radius
+                )
+            }
+            .buttonStyle(.plain)
+
             chamberChip(
                 name: "Eternal",
                 isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum,
