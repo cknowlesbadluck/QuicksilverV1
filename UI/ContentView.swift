@@ -36,7 +36,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .background(PersonaTheme.cosmicBlack.ignoresSafeArea())
+            .background(PersonaTheme.voidBlack.ignoresSafeArea())
         }
         .preferredColorScheme(.dark)
     }
@@ -148,7 +148,7 @@ struct ContentView: View {
                 Label("Nexus", systemImage: "antenna.radiowaves.left.and.right").font(.headline)
                 Spacer()
                 HStack(spacing: 6) {
-                    Circle().fill(vm.isNexusActive ? PersonaTheme.emeraldAccent : .secondary).frame(width: 8, height: 8)
+                    Circle().fill(vm.isNexusActive ? PersonaTheme.toxicGreen : .secondary).frame(width: 8, height: 8)
                     Text(vm.isNexusActive ? "Active" : "Inactive").font(.subheadline).foregroundStyle(.secondary)
                 }
             }
@@ -160,7 +160,7 @@ struct ContentView: View {
                     .foregroundStyle(PersonaTheme.healthColor(vm.overallHealthScore))
             }
             if vm.lowPowerMode {
-                Label("Low Power Mode", systemImage: "battery.25").font(.caption).foregroundStyle(PersonaTheme.subtleGold)
+                Label("Low Power Mode", systemImage: "battery.25").font(.caption).foregroundStyle(PersonaTheme.hazardGreen)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
