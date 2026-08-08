@@ -73,7 +73,7 @@ struct SanctumView: View {
         let radius = PersonaTheme.cardCornerRadius(for: personaID)
 
         return ZStack {
-            // Radioactive void
+            // Radioactive void — the chamber is larger than the screen
             PersonaTheme.voidBlack.ignoresSafeArea()
 
             AmbientLayer(personaID: personaID, chamber: vm.activeChamber)
@@ -83,17 +83,19 @@ struct SanctumView: View {
                 presenceBar(vm, accent: accent, radius: radius)
 
                 ScrollView {
-                    VStack(spacing: 20 * PersonaTheme.density(for: personaID)) {
+                    VStack(spacing: 24 * PersonaTheme.density(for: personaID)) {
+                        // Living core — no card chrome
                         QuicksilverPresenceView(
                             personaID: personaID,
                             chamber: vm.activeChamber,
-                            livingStatus: vm.livingStatus
+                            livingStatus: vm.livingStatus,
+                            visualState: vm.visualState
                         )
 
-                        // Chamber indicators (awakened state) — tappable into realms
+                        // Realm gateways
                         chamberIndicators(vm, accent: accent, radius: radius)
 
-                        // Environmental signals (Nexus)
+                        // Environmental signals (Nexus) — progressive disclosure
                         environmentalSignals(vm, radius: radius)
 
                         if let insight = vm.latestInsight {
@@ -103,17 +105,18 @@ struct SanctumView: View {
                         Spacer(minLength: 80)
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 12)
+                    .padding(.top, 8)
                 }
 
-                // Ritual bar
+                // Ritual bar — invocation instruments
                 ritualBar(accent: accent)
             }
         }
         .onAppear { vm.startLiveRefresh() }
         .onDisappear { vm.stopLiveRefresh() }
-        .animation(PersonaTheme.spring(for: personaID), value: vm.activeChamber)
-        .animation(PersonaTheme.spring(for: personaID), value: vm.livingStatus)
+        .animation(MotionTokens.spring(for: personaID), value: vm.activeChamber)
+        .animation(MotionTokens.spring(for: personaID), value: vm.livingStatus)
+        .animation(MotionTokens.stabilization, value: vm.visualState)
     }
 
     // MARK: - Presence Bar
@@ -131,6 +134,11 @@ struct SanctumView: View {
 
             Spacer()
 
+            Text(vm.visualState.rawValue.uppercased())
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.5))
+                .padding(.trailing, 6)
+
             Text(vm.livingStatus)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -138,10 +146,10 @@ struct SanctumView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.4))
+        .background(.ultraThinMaterial.opacity(0.35))
     }
 
-    // MARK: - Chamber Indicators
+    // MARK: - Chamber Indicators (Realm Gateways)
 
     private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
@@ -252,7 +260,7 @@ struct SanctumView: View {
                 .frame(height: 1)
 
             HStack {
-                ritualButton(systemImage: "bubble.left.and.bubble.right", label: "Ask") {
+                ritualButton(systemImage: "bubble.left.and.bubble.right", label: "Invoke") {
                     showAsk = true
                 }
                 Spacer()
@@ -283,5 +291,3 @@ struct SanctumView: View {
         .buttonStyle(.plain)
     }
 }
-
-// SanctumChamber lives in Core — shared cleanly with MercuryBrain.
