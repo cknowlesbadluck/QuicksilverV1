@@ -4,7 +4,7 @@ Native iOS intelligence framework: modular architecture, adaptive personas, Nexu
 
 **Primary device target:** iPhone 14 / **iOS 27**  
 **Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.  
-**Current ship:** 0.1.0 (**build 6**)
+**Current ship:** 0.2.0 (**build 7**)
 
 ```
 SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
@@ -17,20 +17,23 @@ Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
 | Job | What it does |
 |-----|----------------|
 | **Structure & Contracts** | Verifies modular layout, Core protocols, and Privacy Manifest |
+| **SwiftLint** | Strict lint (fails the PR on violations) |
 | **SPM Unit Tests** | `swift test` for Core / Memory / Personas / Nexus / AI |
 | **iOS Simulator Build** | XcodeGen → `xcodebuild` for iPhone Simulator (no signing) |
 
 **Manual runs from your phone:** GitHub → Actions → *Quicksilver CI* → *Run workflow*.
 
 **IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
-Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure.
+Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure.  
+When `SENTRY_AUTH_TOKEN` is configured, debug symbols are automatically uploaded to Sentry (`inbetween` / `quicksilver`).
 
-Artifacts (logs + IPA) are downloadable from the workflow run page on your iPhone.
+Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on your iPhone.
 
 ## Status
 
 - **Slice A (persona experience)** — merged to `main` (PR #52). PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.
 - **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
+- **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
 - SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
 
 ## Surfaces
