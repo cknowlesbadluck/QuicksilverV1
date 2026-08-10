@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   archive:
-    name: Archive & Export IPA (Unsigned + Optional Signed)
+    name: Archive & Export IPA (Unsigned + Optional Signed + Sentry dSYMs)
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -65,6 +65,17 @@ jobs:
             echo "No signing secrets. Will produce unsigned IPA for SideStore re-signing."
           fi
 
+      - name: Check Sentry secrets
+        id: sentry
+        run: |
+          if [[ -n "${{ secrets.SENTRY_AUTH_TOKEN }}" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "Sentry auth token present — will upload debug symbols."
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "No SENTRY_AUTH_TOKEN. Skipping dSYM upload."
+          fi
+
       - name: Install signing certificate & profile
         if: steps.signing.outputs.available == 'true'
         env:
@@ -103,6 +114,7 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             ONLY_ACTIVE_ARCH=NO \
+            DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
             build \
             2>&1 | tee build-unsigned.log
 
@@ -151,6 +163,45 @@ jobs:
           }
           echo "Unsigned IPA created and structure verified."
 
+      - name: Collect dSYMs
+        id: dsyms
+        run: |
+          set -euo pipefail
+          mkdir -p build/dSYMs
+          # Find any dSYMs produced by the build
+          find DerivedData -name "*.dSYM" -type d | while read -r dsym; do
+            echo "Found dSYM: $dsym"
+            cp -R "$dsym" build/dSYMs/
+          done
+          ls -la build/dSYMs || true
+          if [[ -n "$(ls -A build/dSYMs 2>/dev/null)" ]]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "dSYMs collected."
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No dSYMs found — symbolication will be limited."
+          fi
+
+      - name: Upload debug symbols to Sentry
+        if: steps.sentry.outputs.available == 'true' && steps.dsyms.outputs.found == 'true'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG || 'inbetween' }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT || 'quicksilver' }}
+        run: |
+          set -euo pipefail
+          echo "Installing sentry-cli…"
+          curl -sL https://sentry.io/get-cli/ | bash
+          export PATH="$HOME/.local/bin:$PATH"
+
+          echo "Uploading dSYMs to Sentry (org=$SENTRY_ORG project=$SENTRY_PROJECT)…"
+          sentry-cli debug-files upload \
+            --org "$SENTRY_ORG" \
+            --project "$SENTRY_PROJECT" \
+            build/dSYMs
+
+          echo "Sentry dSYM upload complete."
+
       - name: Archive + Export signed IPA (optional)
         if: steps.signing.outputs.available == 'true'
         run: |
@@ -163,6 +214,7 @@ jobs:
             -destination "generic/platform=iOS" \
             -archivePath build/Quicksilver.xcarchive \
             -derivedDataPath DerivedData-Signed \
+            DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
             archive \
             2>&1 | tee archive-signed.log
 
@@ -206,6 +258,15 @@ jobs:
           path: build/ipa/*.ipa
           retention-days: 14
           if-no-files-found: warn
+
+      - name: Upload dSYMs artifact
+        if: steps.dsyms.outputs.found == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quicksilver-dSYMs
+          path: build/dSYMs
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Upload logs
         if: always()

@@ -137,6 +137,10 @@ targets:
         CODE_SIGN_STYLE: Automatic
         # SideStore-friendly: no private entitlements, public APIs only.
         # Build floor = iOS 18.0 (current CI SDK). Primary validation device = iOS 27.
+      configs:
+        Release:
+          DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
+          GCC_GENERATE_DEBUGGING_SYMBOLS: YES
 
   QuicksilverTests:
     type: bundle.unit-test
