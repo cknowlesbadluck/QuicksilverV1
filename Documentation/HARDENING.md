@@ -1,6 +1,6 @@
 # Quicksilver Hardening Report & Roadmap
 
-Date: 2026-08-02 (Slice A — persona experience + CI/SideStore polish)
+**Last updated:** 2026-08-10 (Coordinate cycle — CI + Sentry + version regime)
 
 ## Device / OS policy
 
@@ -13,47 +13,42 @@ Date: 2026-08-02 (Slice A — persona experience + CI/SideStore polish)
 
 Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archive job and stop SideStore IPA production. Keep the floor at 18 until the runner SDK catches up; binaries built that way install and run correctly on iOS 27.
 
-## Last SideStore drop
+## Current ship
 
 | Field | Value |
 |-------|-------|
-| Version | **0.1.0 (build 6)** |
-| Branch | `feature/persona-experience-slice-a` (merge to main after CI green) |
-| Focus | Persona-driven UI tone, accent, density, memory policy visibility |
+| Version | **0.2.0 (build 7)** |
+| Branch | `main` |
+| Sentry | Fully integrated (DSN + refined options + automatic dSYM upload on Archive when `SENTRY_AUTH_TOKEN` is set) |
 | Path | Actions → Archive IPA → Quicksilver-unsigned-IPA |
 
-## Completed Hardening + Sprint
+## Completed Hardening + Recent Work
 
 ### P0 — Correctness & Safety
 - BatteryMonitor / NetworkMonitor / StorageMonitor / DeviceMetricsMonitor: main-queue delivery, token-based observers, explicit lifecycle
 - GrokAIProvider: Task cancellation, 45 s timeout, no secret leakage in errors
 - LoggerService: redaction helper for API keys / long tokens
-- **PrivacyInfo.xcprivacy** added and embedded in the app target
+- **PrivacyInfo.xcprivacy** present and embedded
 - DependencyContainer: structured persona switch with error logging
 
 ### P1 — Architecture & Maintainability
 - Persona prompts externalized to `Resources/Personas/*.txt`
 - PromptManager loads external prompts with embedded fallback
 - MemoryManager: `clearAll()` + `exportJSON()`
-- **Redirect stubs removed** (`Services/AI/AIRequest`, `AIResponse`, `PromptManager`; `Memory/MemoryItem`)
-- **Deprecated placeholders removed** (`SystemMonitor`, `AutomationManager`)
 - InsightEngine: personaID is an optional traceability tag only; generation is persona-agnostic
 - AppConfiguration documents both build floor (18) and primary device (27)
 
-### P2 — Experience (Slice A)
+### P2 — Experience
 - **PersonaTheme**: accent colors, density, card radius, bubble style per persona
-- **InsightPresenter**: distinct tone + action labels (Forge / Eternal / Quicksilver)
-- Home: persona accent stroke + live density
-- Ask: persona-colored bubbles + send button
-- Memory: explicit policy summary in section header
-- PersonaEntity for typed Shortcuts / Siri selection
-- Memory lifecycle tests + expanded MemoryScorer + NexusIntelligence coverage
+- **InsightPresenter**: distinct tone + action labels
+- **ForgeView** + **EternalView** present on main as functional realms
+- Sanctum as primary place with RealmGateway transitions
 
-### CI / SideStore path
-- Archive IPA workflow prints version/build banner + GitHub notice
-- Verifies `.app` existence, persona prompt presence, and IPA structure
-- Structure job requires PrivacyInfo.xcprivacy
-- Build number at **6**
+### CI / SideStore / Observability (2026-08-10)
+- CI upgraded: `maxim-lobanov/setup-xcode`, strict SwiftLint job, improved SPM + DerivedData caching
+- Archive IPA: unsigned SideStore path + optional signed path + **automatic Sentry dSYM upload**
+- Structure job enforces modular layout + Core contracts + PrivacyInfo
+- Version / build banner + persona prompt verification in Archive
 
 ### Architecture invariants preserved
 - Sense → Think → Express
@@ -61,6 +56,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - Nexus remains persona-agnostic
 - UI stays presentation-only
 - DependencyContainer is the composition root
+- MercuryBrain remains the central intelligence coordinator
 
 ---
 
@@ -68,21 +64,33 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 
 ### Milestone 1 — Foundation Stability → Done
 ### Milestone 2 — Device Intelligence → Done
-### Milestone 3 — Memory System → Done (UI + decay + export)
-### Milestone 4 — AI Integration → Largely done (cancellation, prompts, Mock path)
-### Milestone 5 — Polished UI / Personality → **Slice A landed** (PersonaTheme + InsightPresenter + surface polish)
-### Milestone 6 — SideStore production hardening → Largely done
-### Cleanup / refine / polish → Ongoing
+### Milestone 3 — Memory System → Done
+### Milestone 4 — AI Integration → Largely done
+### Milestone 5 — Polished UI / Personality → Slice A landed + Forge/Eternal realms on main
+### Milestone 6 — SideStore production hardening → Done (plus Sentry)
+### Living Realms v1 → In progress (GitHub #57 + Linear CHR-10 / CHR-11 / CHR-12)
 
-Remaining optional polish:
-- Stronger pure Observation (further reduce any remaining timers)
-- Optional MetricKit (public APIs only)
-- Full removal of `@unchecked Sendable` once Apple frameworks become Sendable or we wrap them in actors
-- CodeQL / secret-scanning workflow
-- Make SwiftLint blocking once the codebase is fully clean under the current ruleset
-- Raise deployment target to 27.0 the day CI gains an iOS 27 SDK
-- On-device AI provider (Slice B)
-- Richer automation surface (Slice C)
+Remaining focus:
+- Finish functional depth of Forge + Eternal (actions, visualization, quality)
+- Accessibility / Dynamic Type / Reduce Motion pass (CHR-12)
+- Branch hygiene (many historical forge/sprint branches still present)
+- First formal GitHub Release once quality gate is satisfied
+
+---
+
+## Branch Hygiene Recommendation
+
+Keep:
+- `main`
+- `sprint/living-realms-v1` (active product work)
+
+Safe to close / delete after confirming no unique unmerged value:
+- Older `forge/p1-*` branches
+- `day-one-foundation`, `core-intelligence-layer*`, `stabilization-pass`, `audit-fixes-and-sidestore-deployment`
+- Stale Dependabot branches once their PRs are merged or closed
+- `feature/release-workflow` (reconcile any useful bits then retire)
+
+The existing `prune-branches.yml` will automatically delete *merged* remote branches.
 
 ---
 
@@ -91,15 +99,14 @@ Remaining optional polish:
 1. Trigger **Actions → Archive IPA → Run workflow** (Release)
 2. Download **Quicksilver-unsigned-IPA** artifact
 3. Install via SideStore (LocalDevVPN connected)
-4. Launch → Home shows persona + Nexus health + accent stroke
-5. Switch personas — confirm accent, density, insight tone change
-6. Settings → paste xAI key → enable AI Service
-7. Diagnostics → live signals + persona-toned insights
-8. Memory → policy label visible; add note, swipe delete, Clear All, Export
-9. Ask → persona-colored bubbles + response
-10. Shortcuts: status, remember, ask, report
-11. Background 5–10 min → no excessive drain
-12. Force-quit + relaunch → state intact
-13. Confirm PrivacyInfo.xcprivacy is present inside the installed app (optional advanced check)
+4. Launch → Sanctum / Home shows persona + Nexus health
+5. Enter Forge → awaken, capture notes, ask
+6. Enter Eternal → observe signals / memory constellation
+7. Switch personas — confirm accent, density, insight tone change
+8. Settings → paste xAI key → enable AI Service
+9. Memory → policy label, add/delete/clear/export
+10. Background 5–10 min → no excessive drain
+11. Force-quit + relaunch → state intact
+12. Confirm PrivacyInfo.xcprivacy present inside the installed app
 
-No private APIs. Keychain for secrets only.
+No private APIs. Keychain for secrets only. Sentry active when configured.
