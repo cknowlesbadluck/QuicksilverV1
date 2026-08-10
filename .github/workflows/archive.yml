@@ -27,37 +27,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: |
-          set -euo pipefail
-          echo "Available Xcode apps:"
-          ls /Applications | grep -i xcode || true
-
-          SELECTED=""
-          for candidate in \
-            /Applications/Xcode_16.4.app \
-            /Applications/Xcode_16.3.app \
-            /Applications/Xcode_16.2.app \
-            /Applications/Xcode_16.1.app \
-            /Applications/Xcode_16.0.app \
-            /Applications/Xcode_15.4.app \
-            /Applications/Xcode.app
-          do
-            if [[ -d "$candidate" ]]; then
-              SELECTED="$candidate"
-              break
-            fi
-          done
-
-          if [[ -z "$SELECTED" ]]; then
-            echo "::error::No usable Xcode installation found on runner"
-            exit 1
-          fi
-
-          sudo xcode-select -s "$SELECTED"
-          echo "Selected: $(xcode-select -p)"
-          xcodebuild -version
-          swift --version
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Install XcodeGen
         run: brew install xcodegen || brew upgrade xcodegen || true
@@ -147,7 +120,6 @@ jobs:
             if [[ -f "$APP_PATH/Personas/${persona}.txt" ]] || [[ -f "$APP_PATH/${persona}.txt" ]]; then
               echo "  OK  ${persona}.txt present"
             else
-              # Also check Resources subfolder layouts that Xcode sometimes uses
               FOUND=$(find "$APP_PATH" -name "${persona}.txt" | head -n 1 || true)
               if [[ -n "$FOUND" ]]; then
                 echo "  OK  ${persona}.txt found at $FOUND"

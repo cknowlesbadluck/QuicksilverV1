@@ -13,6 +13,8 @@ concurrency:
 
 permissions:
   contents: read
+  checks: write
+  pull-requests: write
 
 jobs:
   structure:
@@ -62,6 +64,29 @@ jobs:
           done
           echo "Structure and contracts verified."
 
+  lint:
+    name: SwiftLint
+    runs-on: macos-15
+    needs: structure
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install SwiftLint
+        run: brew install swiftlint || brew upgrade swiftlint || true
+
+      - name: Run SwiftLint
+        run: |
+          set -euo pipefail
+          # Strict mode: fail the job on any violation so PRs stay clean.
+          # Adjust .swiftlint.yml if you need to relax specific rules.
+          swiftlint lint --reporter github-actions-logging --strict
+
   spm-test:
     name: SPM Unit Tests
     runs-on: macos-15
@@ -70,34 +95,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: |
-          set -euo pipefail
-          echo "Available Xcode apps:"
-          ls /Applications | grep -i xcode || true
-          SELECTED=""
-          for candidate in \
-            /Applications/Xcode_16.4.app \
-            /Applications/Xcode_16.3.app \
-            /Applications/Xcode_16.2.app \
-            /Applications/Xcode_16.1.app \
-            /Applications/Xcode_16.0.app \
-            /Applications/Xcode_15.4.app \
-            /Applications/Xcode.app
-          do
-            if [[ -d "$candidate" ]]; then
-              SELECTED="$candidate"
-              break
-            fi
-          done
-          if [[ -z "$SELECTED" ]]; then
-            echo "::error::No usable Xcode installation found"
-            exit 1
-          fi
-          sudo xcode-select -s "$SELECTED"
-          echo "Active developer dir: $(xcode-select -p)"
-          xcodebuild -version
-          swift --version
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Cache SPM
         uses: actions/cache@v4
@@ -105,11 +106,10 @@ jobs:
           path: |
             .build
             ~/Library/Caches/org.swift.swiftpm
-          # Include repository name so path-renamed workspaces (Quicksilver → QuicksilverV1)
-          # never restore a PCH built against a different absolute ModuleCache path.
-          key: spm-v2-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('Package.swift') }}
+            ~/Library/org.swift.swiftpm
+          key: spm-v3-${{ runner.os }}-${{ github.repository }}-${{ hashFiles('Package.swift', '**/Package.resolved') }}
           restore-keys: |
-            spm-v2-${{ runner.os }}-${{ github.repository }}-
+            spm-v3-${{ runner.os }}-${{ github.repository }}-
 
       - name: Resolve packages
         run: swift package resolve
@@ -117,7 +117,7 @@ jobs:
       - name: Run tests
         run: |
           set -euo pipefail
-          # Drop any restored ModuleCache that still points at a previous workspace path.
+          # Clean any stale ModuleCache that can break after path changes
           rm -rf .build/arm64-apple-macosx/debug/ModuleCache 2>/dev/null || true
           swift test --enable-code-coverage 2>&1 | tee spm-test.log
 
@@ -138,36 +138,15 @@ jobs:
   ios-simulator-build:
     name: iOS Simulator Build
     runs-on: macos-15
-    needs: structure
+    needs: [structure, lint]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode
-        run: |
-          set -euo pipefail
-          SELECTED=""
-          for candidate in \
-            /Applications/Xcode_16.4.app \
-            /Applications/Xcode_16.3.app \
-            /Applications/Xcode_16.2.app \
-            /Applications/Xcode_16.1.app \
-            /Applications/Xcode_16.0.app \
-            /Applications/Xcode_15.4.app \
-            /Applications/Xcode.app
-          do
-            if [[ -d "$candidate" ]]; then
-              SELECTED="$candidate"
-              break
-            fi
-          done
-          if [[ -z "$SELECTED" ]]; then
-            echo "::error::No usable Xcode installation found"
-            exit 1
-          fi
-          sudo xcode-select -s "$SELECTED"
-          echo "Active developer dir: $(xcode-select -p)"
-          xcodebuild -version
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Install XcodeGen + SwiftLint
         run: |
@@ -178,11 +157,15 @@ jobs:
         run: |
           set -euo pipefail
           xcodegen generate
+          test -d Quicksilver.xcodeproj
 
-      - name: SwiftLint (report)
-        run: |
-          set -euo pipefail
-          swiftlint lint --reporter github-actions-logging || true
+      - name: Cache DerivedData
+        uses: actions/cache@v4
+        with:
+          path: DerivedData
+          key: deriveddata-v1-${{ runner.os }}-${{ hashFiles('project.yml', 'Package.swift', '**/*.swift') }}
+          restore-keys: |
+            deriveddata-v1-${{ runner.os }}-
 
       - name: Resolve destination (iPhone simulator)
         id: dest
@@ -191,7 +174,6 @@ jobs:
           echo "== Available simulators =="
           xcrun simctl list devices available || true
 
-          # Prefer a concrete modern iPhone by name (most reliable on macos-15 runners).
           DEST=""
           for name in "iPhone 16" "iPhone 16 Pro" "iPhone 15" "iPhone 15 Pro" "iPhone 14"; do
             if xcrun simctl list devices available | grep -q "$name"; then
@@ -201,7 +183,6 @@ jobs:
             fi
           done
 
-          # Fallback: first available iPhone by UDID
           if [[ -z "$DEST" ]]; then
             UDID=$(xcrun simctl list devices available | grep -E "iPhone" | head -1 | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/' || true)
             if [[ -n "$UDID" ]]; then
@@ -210,7 +191,6 @@ jobs:
             fi
           fi
 
-          # Last resort: let xcodebuild choose any iPhone simulator
           if [[ -z "$DEST" ]]; then
             DEST="platform=iOS Simulator,name=iPhone 16"
             echo "No available device listed; using default name fallback"
