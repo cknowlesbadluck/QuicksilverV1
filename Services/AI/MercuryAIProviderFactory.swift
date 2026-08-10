@@ -7,19 +7,19 @@ public enum MercuryAIProviderFactory {
         geminiAPIKey: String?,
         groqAPIKey: String?,
         openRouterAPIKey: String?
-    ) -> MercuryProviderRouter {
+    ) async -> MercuryProviderRouter {
         let router = MercuryProviderRouter()
 
         if let key = geminiAPIKey, let provider = try? GeminiAIProvider(apiKey: key) {
-            Task { await router.register(provider) }
+            await router.register(provider)
         }
 
         if let key = groqAPIKey, let provider = try? OpenAICompatibleAIProvider.groq(apiKey: key) {
-            Task { await router.register(provider) }
+            await router.register(provider)
         }
 
         if let key = openRouterAPIKey, let provider = try? OpenAICompatibleAIProvider.openRouterFree(apiKey: key) {
-            Task { await router.register(provider) }
+            await router.register(provider)
         }
 
         return router
