@@ -1,6 +1,6 @@
 # Quicksilver Hardening Report & Roadmap
 
-**Last updated:** 2026-08-10 (Coordinate cycle — CI + Sentry + version regime)
+**Last updated:** 2026-08-10 (Forge — Sentry Cocoa corrected to official sentry-cocoa 9.25.0 + SentrySPM)
 
 ## Device / OS policy
 
@@ -19,7 +19,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 |-------|-------|
 | Version | **0.2.0 (build 7)** |
 | Branch | `main` |
-| Sentry | Fully integrated (DSN + refined options + automatic dSYM upload on Archive when `SENTRY_AUTH_TOKEN` is set) |
+| Sentry | Fully integrated — official `getsentry/sentry-cocoa` 9.25.0 via **SentrySPM** (compile-from-source), DSN + refined privacy-conscious options, automatic dSYM upload on Archive when `SENTRY_AUTH_TOKEN` is set |
 | Path | Actions → Archive IPA → Quicksilver-unsigned-IPA |
 
 ## Completed Hardening + Recent Work
@@ -49,6 +49,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - Archive IPA: unsigned SideStore path + optional signed path + **automatic Sentry dSYM upload**
 - Structure job enforces modular layout + Core contracts + PrivacyInfo
 - Version / build banner + persona prompt verification in Archive
+- **Sentry dependency corrected**: removed broken `sentry-swift` reference; now uses official `sentry-cocoa` + explicit `SentrySPM` product in both Package.swift and project.yml
 
 ### Architecture invariants preserved
 - Sense → Think → Express
