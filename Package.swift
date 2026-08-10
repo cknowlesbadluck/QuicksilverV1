@@ -11,6 +11,9 @@ let package = Package(
         .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]),
         .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/getsentry/sentry-swift.git", from: "8.0.0")
+    ],
     targets: [
         .target(name: "Core", path: "Core"),
         .target(
@@ -26,7 +29,11 @@ let package = Package(
             path: "Nexus",
             exclude: ["PIPELINE.md"]
         ),
-        .target(name: "QuicksilverIntents", dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"], path: "Intents"),
+        .target(
+            name: "QuicksilverIntents",
+            dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
+            path: "Intents"
+        ),
         .testTarget(
             name: "QuicksilverCoreTests",
             dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],

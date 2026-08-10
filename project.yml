@@ -121,6 +121,7 @@ targets:
       - target: ServicesAI
       - target: Nexus
       - target: QuicksilverIntents
+      - package: Sentry
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.app
