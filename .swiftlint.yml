@@ -45,6 +45,15 @@ type_name:
   min_length:
     warning: 3
 
+# Practical for SwiftUI feature screens during recovery; still bounds god-views.
+type_body_length:
+  warning: 300
+  error: 400
+
+function_body_length:
+  warning: 60
+  error: 80
+
 force_cast: error
 force_try: error
 force_unwrapping: warning
