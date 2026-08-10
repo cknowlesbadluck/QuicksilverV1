@@ -39,7 +39,10 @@ struct CodexView: View {
             } header: {
                 Text("Mind")
             } footer: {
-                Text("Credentials remain sealed in the device Keychain. They never leave the device in logs or defaults.")
+                Text(
+                    "Credentials remain sealed in the device Keychain. " +
+                    "They never leave the device in logs or defaults."
+                )
             }
 
             Section {
@@ -53,7 +56,10 @@ struct CodexView: View {
             } header: {
                 Text("Identity")
             } footer: {
-                Text("When enabled, Mercury may shift between Quicksilver, Forge, and Eternal according to task, pressure, and time. Manual shifts always take precedence.")
+                Text(
+                    "When enabled, Mercury may shift between Quicksilver, Forge, and Eternal " +
+                    "according to task, pressure, and time. Manual shifts always take precedence."
+                )
             }
 
             Section {
@@ -67,7 +73,11 @@ struct CodexView: View {
                 Button("Bind Key") {
                     vm.saveAPIKey()
                 }
-                .disabled(vm.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(
+                    vm.apiKeyDraft
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .isEmpty
+                )
 
                 if vm.hasStoredKey {
                     Button("Unbind Key", role: .destructive) {

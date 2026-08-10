@@ -92,6 +92,11 @@ public struct PersonalityState: Sendable, Equatable {
     }
 
     public mutating func adjustFor(intent: QueryIntent, kind: TaskKind) {
+        adjustForIntent(intent)
+        adjustForKind(kind)
+    }
+
+    private mutating func adjustForIntent(_ intent: QueryIntent) {
         switch intent {
         case .preciseTechnical:
             increase(.focus, by: 0.10)
@@ -116,7 +121,9 @@ public struct PersonalityState: Sendable, Equatable {
         case .unknown:
             break
         }
+    }
 
+    private mutating func adjustForKind(_ kind: TaskKind) {
         switch kind {
         case .building:
             increase(.focus, by: 0.06)

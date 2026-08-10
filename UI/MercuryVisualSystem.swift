@@ -56,7 +56,10 @@ struct MercurySanctumBackdrop: View {
                 for point in seed {
                     let center = CGPoint(x: point.x * size.width, y: point.y * size.height)
                     let rect = CGRect(x: center.x, y: center.y, width: 1.5, height: 1.5)
-                    context.fill(Path(ellipseIn: rect), with: .color(MercuryVisualTokens.silver.opacity(0.22)))
+                    context.fill(
+                        Path(ellipseIn: rect),
+                        with: .color(MercuryVisualTokens.silver.opacity(0.22))
+                    )
                 }
             }
             .blendMode(.screen)
@@ -75,7 +78,8 @@ struct MercuryPresenceOrb: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
-            let phase = timeline.date.timeIntervalSinceReferenceDate / MercuryVisualTokens.corePulseDuration
+            let phase = timeline.date.timeIntervalSinceReferenceDate
+                / MercuryVisualTokens.corePulseDuration
             let pulse = 0.5 + 0.5 * sin(phase * .pi * 2.0)
             let scale = 0.96 + (0.045 * pulse)
             let opacity = 0.58 + (0.20 * pulse)
@@ -133,10 +137,19 @@ struct MercuryGlassSurface<Content: View>: View {
     var body: some View {
         content
             .padding(14)
-            .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous))
+            .background(
+                .ultraThinMaterial.opacity(0.42),
+                in: RoundedRectangle(
+                    cornerRadius: MercuryVisualTokens.cornerRadius,
+                    style: .continuous
+                )
+            )
             .overlay {
-                RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.22), lineWidth: 1)
+                RoundedRectangle(
+                    cornerRadius: MercuryVisualTokens.cornerRadius,
+                    style: .continuous
+                )
+                .stroke(accent.opacity(0.22), lineWidth: 1)
             }
     }
 }
@@ -168,7 +181,10 @@ struct MercuryRealmPill: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(active ? 0.52 : 0.25), in: Capsule())
+        .background(
+            .ultraThinMaterial.opacity(active ? 0.52 : 0.25),
+            in: Capsule()
+        )
         .overlay {
             Capsule()
                 .stroke(accent.opacity(active ? 0.34 : 0.12), lineWidth: 1)
