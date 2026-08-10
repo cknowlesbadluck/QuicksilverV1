@@ -51,8 +51,12 @@ type_body_length:
   error: 400
 
 function_body_length:
-  warning: 60
-  error: 80
+  warning: 70
+  error: 100
+
+cyclomatic_complexity:
+  warning: 12
+  error: 20
 
 force_cast: error
 force_try: error

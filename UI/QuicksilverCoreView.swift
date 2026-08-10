@@ -114,11 +114,11 @@ struct QuicksilverCoreView: View {
 
             // Micro-particles near core when elevated
             if visualState.isElevated && !reduceMotion {
-                ForEach(0..<5, id: \.self) { i in
+                ForEach(0..<5, id: \.self) { index in
                     Circle()
                         .fill(accent.opacity(0.5))
                         .frame(width: 2.5, height: 2.5)
-                        .offset(particleOffset(index: i))
+                        .offset(particleOffset(index: index))
                 }
             }
         }
