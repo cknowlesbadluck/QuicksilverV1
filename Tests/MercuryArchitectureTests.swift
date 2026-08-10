@@ -33,6 +33,26 @@ final class MercuryArchitectureTests: XCTestCase {
         XCTAssertEqual(expression.eternal, 0.5)
     }
 
+    func testForgeEmergesFromCreativeTechnicalContext() {
+        let expression = MercuryAspectResolver().resolve(
+            .init(creativeIntensity: 1, technicalIntensity: 0.9)
+        )
+
+        XCTAssertGreaterThan(expression.forge, 0.9)
+        XCTAssertGreaterThan(expression.curiosity, 0.8)
+        XCTAssertGreaterThan(expression.creativity, 0.9)
+    }
+
+    func testEternalEmergesFromCodexAutomationContext() {
+        let expression = MercuryAspectResolver().resolve(
+            .init(codexRelevance: 1, automationRelevance: 0.9)
+        )
+
+        XCTAssertGreaterThan(expression.eternal, 0.9)
+        XCTAssertGreaterThan(expression.authority, 0.7)
+        XCTAssertGreaterThan(expression.precision, 0.9)
+    }
+
     func testDefaultProviderPolicyHasPrimarySecondaryAndFallback() {
         let policy = MercuryProviderPolicy()
 
