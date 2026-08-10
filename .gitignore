@@ -60,6 +60,7 @@ Icon
 .env.*
 Secrets.xcconfig
 **/AuthKey_*.p8
+.sentryclirc
 
 # CI local artifacts
 xcodebuild.log
