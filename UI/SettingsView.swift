@@ -30,7 +30,11 @@ struct SettingsView: View {
             } header: {
                 Text("Intelligence")
             } footer: {
-                Text("Keys are stored in the device Keychain (AfterFirstUnlockThisDeviceOnly). They are never written to UserDefaults or logs.")
+                Text(
+                    "Keys are stored in the device Keychain " +
+                    "(AfterFirstUnlockThisDeviceOnly). " +
+                    "They are never written to UserDefaults or logs."
+                )
             }
 
             Section {
@@ -44,7 +48,11 @@ struct SettingsView: View {
             } header: {
                 Text("Personas")
             } footer: {
-                Text("When enabled, Quicksilver may switch personas based on task, battery, thermal, and time context. Manual switches always work.")
+                Text(
+                    "When enabled, Quicksilver may switch personas based on " +
+                    "task, battery, thermal, and time context. " +
+                    "Manual switches always work."
+                )
             }
 
             Section("xAI API Key") {
@@ -58,7 +66,11 @@ struct SettingsView: View {
                 Button("Save Key") {
                     vm.saveAPIKey()
                 }
-                .disabled(vm.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(
+                    vm.apiKeyDraft
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .isEmpty
+                )
 
                 if vm.hasStoredKey {
                     Button("Remove Key", role: .destructive) {
