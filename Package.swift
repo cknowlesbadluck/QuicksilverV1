@@ -12,7 +12,8 @@ let package = Package(
         .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/getsentry/sentry-swift.git", from: "8.0.0")
+        // Official Sentry Cocoa SDK (compile-from-source product recommended)
+        .package(url: "https://github.com/getsentry/sentry-cocoa", from: "9.25.0")
     ],
     targets: [
         .target(name: "Core", path: "Core"),
