@@ -9,18 +9,18 @@ struct QuicksilverPresenceView: View {
     let livingStatus: String
     var visualState: VisualState = .idle
 
-    var body: some View {
-        VStack(spacing: 20) {
-            QuicksilverCoreView(
-                personaID: personaID,
-                chamber: chamber,
-                visualState: visualState,
-                size: 80
-            )
+    private var accent: Color {
+        PersonaTheme.accent(for: personaID)
+    }
 
-            VStack(spacing: 6) {
+    var body: some View {
+        VStack(spacing: 18) {
+            MercuryPresenceOrb(accent: accent, size: 132)
+
+            VStack(spacing: 7) {
                 Text(presenceTitle)
                     .font(.title3.weight(.semibold))
+                    .tracking(0.4)
                     .foregroundStyle(PersonaTheme.mercurySilver)
 
                 Text(livingStatus)
@@ -31,7 +31,8 @@ struct QuicksilverPresenceView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
+        .animation(PersonaTheme.spring(for: personaID), value: chamber)
     }
 
     private var presenceTitle: String {
