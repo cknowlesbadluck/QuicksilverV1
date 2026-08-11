@@ -86,6 +86,20 @@ bash scripts/install-opencode.sh       # direct pipe installer (requested)
 bash scripts/install-opencode-npx.sh   # npx installer (safer if you have Node)
 ```
 
+### AICTRL local tooling
+
+The repo now includes helper scripts for AICTRL telemetry tooling and the Cursor plugin.
+Use environment variables locally rather than inline secrets.
+
+```bash
+export AICTRL_API_KEY='your-key-here'
+bash scripts/install-aictrl-telemetry.sh
+bash scripts/install-aictrl-cursor-plugin.sh
+# or: bash scripts/install-aictrl-all.sh
+```
+
+Full setup notes: [Documentation/LOCAL_TOOLING.md](Documentation/LOCAL_TOOLING.md)
+
 Security note: piping remote scripts into a shell executes code from the network; review before running in sensitive environments.
 
 This repository also includes editor and Codespaces recommendations to make working with Swift easier (.vscode/extensions.json and .devcontainer/devcontainer.json).
