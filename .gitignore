@@ -1,4 +1,4 @@
-# Xcode / XcodeGen (project is generated — never commit it)
+# Xcode / XcodeGen generated artifacts
 *.xcodeproj/
 *.xcworkspace/
 DerivedData/
@@ -25,14 +25,15 @@ xcuserdata/
 .build/
 .swiftpm/config/registries.json
 .swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
-# Keep Package.resolved when external deps appear (currently none)
-# Package.resolved
 
-# CocoaPods / Carthage (unused, defensive)
+# Package dependency resolution is source-controlled when present
+# Package.resolved is intentionally NOT ignored.
+
+# Dependency managers not used by the project, kept defensive
 Pods/
 Carthage/Build/
 
-# Fastlane
+# Fastlane / local automation output
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
@@ -47,23 +48,30 @@ Icon
 
 # IDEs / editors
 .idea/
+.vscode/
 *.swp
 *~
-.vscode/
 
-# Secrets & signing material — never commit
+# Secrets, signing material, and local configuration
 *.p12
 *.mobileprovision
 *.cer
 *.certSigningRequest
 .env
 .env.*
+!.env.example
 Secrets.xcconfig
 **/AuthKey_*.p8
 .sentryclirc
 
-# CI local artifacts
+# CI / local build artifacts
 xcodebuild.log
 spm-test.log
 archive.log
 export.log
+coverage.profdata
+coverage.json
+
+# Local integration-plane state must never enter source control
+Quicksilver/Integration/tasks.json
+Quicksilver/Integration/events.json
