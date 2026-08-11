@@ -90,7 +90,8 @@ final class IntegrationPlaneTests: XCTestCase {
         let task = try await store.create(objective: "Build feature", steps: [])
 
         try await store.markPaused(id: task.id)
-        XCTAssertEqual(await store.task(id: task.id)?.status, .paused)
+        let paused = await store.task(id: task.id)?.status
+        XCTAssertEqual(paused, .paused)
 
         let resumed = try await store.resume(id: task.id)
         XCTAssertEqual(resumed?.status, .queued)
