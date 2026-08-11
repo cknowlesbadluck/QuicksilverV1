@@ -11,7 +11,7 @@ public actor IntegrationRouter {
             objective: String,
             capabilities: [IntegrationCapability],
             preferredProviders: [IntegrationProvider] = [],
-            policy: IntegrationExecutionPolicy = .init()
+            policy: IntegrationExecutionPolicy = IntegrationExecutionPolicy()
         ) {
             self.objective = objective
             self.capabilities = capabilities
@@ -40,8 +40,8 @@ public actor IntegrationRouter {
 
     public init(
         gateway: any IntegrationGateway,
-        tasks: IntegrationTaskStore = .init(),
-        events: IntegrationEventStore = .init()
+        tasks: IntegrationTaskStore = IntegrationTaskStore(),
+        events: IntegrationEventStore = IntegrationEventStore()
     ) {
         self.gateway = gateway
         self.tasks = tasks
@@ -91,7 +91,7 @@ public actor IntegrationRouter {
             steps: steps
         )
         _ = try await events.append(
-            .init(
+            IntegrationEventStore.Event(
                 taskID: task.id,
                 type: "task.created",
                 message: request.objective
@@ -103,7 +103,7 @@ public actor IntegrationRouter {
     public func pauseTask(_ id: UUID) async throws {
         try await tasks.markPaused(id: id)
         _ = try await events.append(
-            .init(
+            IntegrationEventStore.Event(
                 taskID: id,
                 type: "task.paused",
                 message: "Task paused and persisted."
@@ -115,7 +115,7 @@ public actor IntegrationRouter {
         let task = try await tasks.resume(id: id)
         if task != nil {
             _ = try await events.append(
-                .init(
+                IntegrationEventStore.Event(
                     taskID: id,
                     type: "task.resumed",
                     message: "Task resumed from persistent state."
