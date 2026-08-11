@@ -114,7 +114,7 @@ public actor IntegrationPlaneClient {
         }
 
         let text = String(data: data, encoding: .utf8) ?? ""
-        let lines = text.split(whereSeparator: \ .isNewline)
+        let lines = text.split(whereSeparator: \.isNewline)
         if let eventData = lines.first(where: { $0.hasPrefix("data:") }) {
             let payload = eventData.dropFirst(5).trimmingCharacters(in: .whitespaces)
             guard let payloadData = payload.data(using: .utf8),
