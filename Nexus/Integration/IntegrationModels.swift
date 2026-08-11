@@ -47,14 +47,7 @@ public struct IntegrationConnector: Codable, Sendable, Identifiable, Hashable {
     public let credential: String
     public let enabled: Bool
 
-    public init(
-        id: String,
-        provider: IntegrationProvider,
-        capabilities: [IntegrationCapability],
-        transport: String,
-        credential: String,
-        enabled: Bool
-    ) {
+    public init(id: String, provider: IntegrationProvider, capabilities: [IntegrationCapability], transport: String, credential: String, enabled: Bool) {
         self.id = id
         self.provider = provider
         self.capabilities = capabilities
@@ -68,6 +61,12 @@ public struct IntegrationRoute: Codable, Sendable, Hashable {
     public let connectorID: String
     public let provider: IntegrationProvider
     public let reason: String
+
+    public init(connectorID: String, provider: IntegrationProvider, reason: String) {
+        self.connectorID = connectorID
+        self.provider = provider
+        self.reason = reason
+    }
 
     enum CodingKeys: String, CodingKey {
         case connectorID = "connectorId"
@@ -85,6 +84,14 @@ public struct IntegrationPlanStep: Codable, Sendable, Identifiable, Hashable {
 
     public var id: Int { order }
 
+    public init(order: Int, capability: IntegrationCapability, connectorID: String, provider: IntegrationProvider, approvalRequired: Bool) {
+        self.order = order
+        self.capability = capability
+        self.connectorID = connectorID
+        self.provider = provider
+        self.approvalRequired = approvalRequired
+    }
+
     enum CodingKeys: String, CodingKey {
         case order
         case capability
@@ -97,6 +104,11 @@ public struct IntegrationPlanStep: Codable, Sendable, Identifiable, Hashable {
 public struct IntegrationPlan: Codable, Sendable, Hashable {
     public let objective: String
     public let steps: [IntegrationPlanStep]
+
+    public init(objective: String, steps: [IntegrationPlanStep]) {
+        self.objective = objective
+        self.steps = steps
+    }
 }
 
 public struct IntegrationHealth: Codable, Sendable, Hashable {
@@ -105,4 +117,12 @@ public struct IntegrationHealth: Codable, Sendable, Hashable {
     public let enabledCount: Int
     public let secretPolicy: String
     public let architecture: String
+
+    public init(status: String, connectorCount: Int, enabledCount: Int, secretPolicy: String, architecture: String) {
+        self.status = status
+        self.connectorCount = connectorCount
+        self.enabledCount = enabledCount
+        self.secretPolicy = secretPolicy
+        self.architecture = architecture
+    }
 }
