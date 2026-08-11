@@ -77,17 +77,9 @@ public actor IntegrationPlaneClient {
         return result
     }
 
-    private func call(
-        method: String,
-        params: [String: AnyCodable]
-    ) async throws -> [String: AnyCodable] {
+    private func call(method: String, params: [String: AnyCodable]) async throws -> [String: AnyCodable] {
         requestID += 1
-        let request = MCPRequest(
-            jsonrpc: "2.0",
-            id: requestID,
-            method: method,
-            params: .object(params)
-        )
+        let request = MCPRequest(jsonrpc: "2.0", id: requestID, method: method, params: .object(params))
 
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
@@ -108,7 +100,6 @@ public actor IntegrationPlaneClient {
         }
 
         if data.isEmpty { return [:] }
-
         if let json = try? decoder.decode([String: AnyCodable].self, from: data) {
             return json
         }
@@ -152,22 +143,48 @@ public enum AnyCodable: Codable, Sendable, Hashable {
 
     public init(_ value: Any) {
         switch value {
-        case let value as AnyCodable:
-            self = value
-        case let value as Bool:
+        case let value as AnyCodable: self = value
+        case let value as Bool: self = .bool(value)
+        case let value as Int: self = .int(value)
+        case let value as Double: self = .double(value)
+        case let value as String: self = .string(value)
+        case let value as [String: AnyCodable]: self = .object(value)
+        case let value as [AnyCodable]: self = .array(value)
+        default: self = .string(String(describing: value))
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
             self = .bool(value)
-        case let value as Int:
+        } else if let value = try? container.decode(Int.self) {
             self = .int(value)
-        case let value as Double:
+        } else if let value = try? container.decode(Double.self) {
             self = .double(value)
-        case let value as String:
+        } else if let value = try? container.decode(String.self) {
             self = .string(value)
-        case let value as [String: AnyCodable]:
+        } else if let value = try? container.decode([String: AnyCodable].self) {
             self = .object(value)
-        case let value as [AnyCodable]:
+        } else if let value = try? container.decode([AnyCodable].self) {
             self = .array(value)
-        default:
-            self = .string(String(describing: value))
+        } else {
+            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON value")
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .null: try container.encodeNil()
+        case .bool(let value): try container.encode(value)
+        case .int(let value): try container.encode(value)
+        case .double(let value): try container.encode(value)
+        case .string(let value): try container.encode(value)
+        case .object(let value): try container.encode(value)
+        case .array(let value): try container.encode(value)
         }
     }
 }
