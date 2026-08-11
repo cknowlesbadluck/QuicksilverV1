@@ -22,7 +22,7 @@ public actor IntegrationPlaneClient {
     private let session: URLSession
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
-    private var requestID: Int = 0
+    private var requestID = 0
     private var sessionID: String?
 
     public init(endpoint: URL, session: URLSession = .shared) {
@@ -31,34 +31,41 @@ public actor IntegrationPlaneClient {
     }
 
     public func initialize() async throws {
-        let result = try await call(method: "initialize", params: [
-            "protocolVersion": "2025-06-18",
-            "capabilities": [:],
-            "clientInfo": [
-                "name": "Quicksilver",
-                "version": "0.1.0"
+        let response = try await call(
+            method: "initialize",
+            params: [
+                "protocolVersion": .string("2025-06-18"),
+                "capabilities": .object([:]),
+                "clientInfo": .object([
+                    "name": .string("Quicksilver"),
+                    "version": .string("0.1.0")
+                ])
             ]
-        ])
-        guard result["result"] != nil else {
-            throw ClientError.remoteError(Self.errorMessage(from: result) ?? "MCP initialization failed.")
+        )
+        guard response["result"] != nil else {
+            throw ClientError.remoteError(Self.errorMessage(from: response) ?? "MCP initialization failed.")
         }
     }
 
     public func listTools() async throws -> [[String: AnyCodable]] {
         let response = try await call(method: "tools/list", params: [:])
         guard let result = response["result"],
-              let tools = result.objectValue?["tools"]?.arrayValue else {
+              case let .object(object) = result,
+              case let .array(tools) = object["tools"] else {
             throw ClientError.malformedToolResult
         }
-        return tools
+        return tools.compactMap { value in
+            guard case let .object(tool) = value else { return nil }
+            return tool
+        }
     }
 
     public func callTool(name: String, arguments: [String: AnyCodable] = [:]) async throws -> AnyCodable {
         let response = try await call(
             method: "tools/call",
             params: [
-                "name": name,
-                "arguments": AnyCodable(arguments)
+                "name": .string(name),
+                "arguments": .object(arguments)
             ]
         )
         if let error = Self.errorMessage(from: response) {
@@ -70,13 +77,16 @@ public actor IntegrationPlaneClient {
         return result
     }
 
-    private func call(method: String, params: [String: Any]) async throws -> [String: AnyCodable] {
+    private func call(
+        method: String,
+        params: [String: AnyCodable]
+    ) async throws -> [String: AnyCodable] {
         requestID += 1
         let request = MCPRequest(
             jsonrpc: "2.0",
             id: requestID,
             method: method,
-            params: AnyCodable(params)
+            params: .object(params)
         )
 
         var urlRequest = URLRequest(url: endpoint)
@@ -97,16 +107,15 @@ public actor IntegrationPlaneClient {
             sessionID = returnedSessionID
         }
 
-        if data.isEmpty {
-            return [:]
-        }
+        if data.isEmpty { return [:] }
 
         if let json = try? decoder.decode([String: AnyCodable].self, from: data) {
             return json
         }
 
         let text = String(data: data, encoding: .utf8) ?? ""
-        if let eventData = text.split(separator: "\n").first(where: { $0.hasPrefix("data:") }) {
+        let lines = text.split(whereSeparator: \ .isNewline)
+        if let eventData = lines.first(where: { $0.hasPrefix("data:") }) {
             let payload = eventData.dropFirst(5).trimmingCharacters(in: .whitespaces)
             guard let payloadData = payload.data(using: .utf8),
                   let json = try? decoder.decode([String: AnyCodable].self, from: payloadData) else {
@@ -119,7 +128,9 @@ public actor IntegrationPlaneClient {
     }
 
     private static func errorMessage(from response: [String: AnyCodable]) -> String? {
-        response["error"]?.objectValue?["message"]?.stringValue
+        guard let error = response["error"], case let .object(object) = error,
+              case let .string(message) = object["message"] else { return nil }
+        return message
     }
 }
 
@@ -130,61 +141,33 @@ private struct MCPRequest: Codable, Sendable {
     let params: AnyCodable
 }
 
-public struct AnyCodable: Codable, Sendable, Hashable {
-    public let value: AnyHashable
+public enum AnyCodable: Codable, Sendable, Hashable {
+    case null
+    case bool(Bool)
+    case int(Int)
+    case double(Double)
+    case string(String)
+    case object([String: AnyCodable])
+    case array([AnyCodable])
 
     public init(_ value: Any) {
-        if let value = value as? AnyHashable {
-            self.value = value
-        } else {
-            self.value = String(describing: value)
-        }
-    }
-
-    public init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if container.decodeNil() {
-            value = NSNull()
-        } else if let value = try? container.decode(Bool.self) {
-            self.value = value
-        } else if let value = try? container.decode(Int.self) {
-            self.value = value
-        } else if let value = try? container.decode(Double.self) {
-            self.value = value
-        } else if let value = try? container.decode(String.self) {
-            self.value = value
-        } else if let value = try? container.decode([String: AnyCodable].self) {
-            self.value = value as NSDictionary
-        } else if let value = try? container.decode([AnyCodable].self) {
-            self.value = value as NSArray
-        } else {
-            throw DecodingError.dataCorruptedError(in: container, debugDescription: "Unsupported JSON value")
-        }
-    }
-
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
         switch value {
+        case let value as AnyCodable:
+            self = value
         case let value as Bool:
-            try container.encode(value)
+            self = .bool(value)
         case let value as Int:
-            try container.encode(value)
+            self = .int(value)
         case let value as Double:
-            try container.encode(value)
+            self = .double(value)
         case let value as String:
-            try container.encode(value)
+            self = .string(value)
         case let value as [String: AnyCodable]:
-            try container.encode(value)
+            self = .object(value)
         case let value as [AnyCodable]:
-            try container.encode(value)
-        case _ as NSNull:
-            try container.encodeNil()
+            self = .array(value)
         default:
-            try container.encode(String(describing: value))
+            self = .string(String(describing: value))
         }
     }
-
-    public var objectValue: [String: AnyCodable]? { value as? [String: AnyCodable] }
-    public var arrayValue: [[String: AnyCodable]]? { value as? [[String: AnyCodable]] }
-    public var stringValue: String? { value as? String }
 }
