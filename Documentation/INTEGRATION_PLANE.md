@@ -1,101 +1,69 @@
 # Quicksilver Integration Fabric
 
-The Integration Plane is a permanent, provider-neutral boundary between Quicksilver and external AI, API, development, design, project-management, build, deployment, and automation systems.
+The Integration Fabric is Quicksilver's permanent, provider-neutral boundary to AI/LLM services, APIs, development platforms, project management, design, build/deployment, databases, and automation.
 
-## Core principle
+## Principle
 
-Agents are workers. The Integration Fabric is infrastructure.
+**Agents are workers. The Integration Fabric is infrastructure.**
 
-An AI agent may run out of credits, disconnect, be replaced, or terminate. Quicksilver's work must not terminate with it. Durable task state and the event ledger live independently of the agent session.
+Claude, Grok, Codex, Cursor, ChatGPT, or any future agent may run out of credits, disconnect, or be replaced. The work state must survive the agent.
 
 ```text
-                    QUICKSILVER NEXUS
-                           |
-                    IntegrationRouter
-                           |
-                 +---------------------+
-                 | Integration Fabric  |
-                 +----------+----------+
-                            |
-          +-----------------+------------------+
-          |                 |                  |
-     Capability Graph   Task Store        Event Ledger
-          |                 |                  |
-          +-----------------+------------------+
-                            |
-                     Provider Gateway
-                            |
-       +----------+---------+---------+----------+
-       |          |         |         |          |
-      AI       GitHub    Linear    Google     Build/Deploy
-       |          |         |         |          |
- OpenAI/etc     Repo      Issues    Drive     Figma/Replit/etc
+Quicksilver Nexus
+      |
+IntegrationTaskCoordinator
+      |
+IntegrationRouter
+      |
+IntegrationGateway <---- stable application contract
+      |
+Noodle Seed / MCP gateway <---- replaceable transport
+      |
+Provider connectors
+      |
+AI | GitHub | Linear | Google | Figma | Replit | Vercel | Netlify | Supabase | ...
 ```
 
-## Durable work
+## Durable state
 
-Every multi-step operation should be converted into a task before consequential execution begins. A task contains only:
+`IntegrationTaskStore` persists task objectives, planned steps, provider identifiers, status, retry count, timestamps, and safe errors. `IntegrationEventStore` keeps an append-only metadata ledger for task creation, pause/resume, recovery, and future audit correlation.
 
-- objective
-- capability plan
-- provider/connector identifiers
-- step status
-- retry count
-- timestamps
-- safe error messages
-- event correlation ID
-
-It must never contain API keys, OAuth tokens, cookies, authorization headers, or other secrets.
-
-Tasks are persisted locally by the Swift `IntegrationTaskStore`. The task can therefore be resumed by another agent or session.
-
-## Event ledger
-
-`IntegrationEventStore` provides an append-only local record of orchestration events. Events are metadata only and are intended for Nexus visibility, debugging, recovery, and audit correlation.
+No task or event payload may contain credentials, bearer tokens, cookies, authorization headers, or raw secrets.
 
 ## Provider neutrality
 
-Quicksilver requests capabilities, not vendors. A capability can have a primary, secondary, and fallback connector. Provider health, quota state, latency, and policy should eventually influence ranking without changing Swift application code.
+The Nexus layer requests capabilities rather than vendors:
 
-## Security boundary
+- chat, reason, code, search
+- files, repo, issues, pull requests
+- project management, design
+- deploy, database, automation
+- OAuth and custom API access
 
-The iOS application does not own third-party secrets. Credentials belong in the managed integration gateway or OAuth flow. The Swift client carries only endpoint/session information and user-approved operation arguments.
+Routing can select primary, secondary, and fallback connectors without changing the Swift domain layer.
 
-Consequential capabilities require approval by default:
+## Security
 
-- repository/file writes
-- pull requests and merges
-- deployments
-- external automation
-- account/project mutations
+Third-party credentials remain outside the iOS binary. Consequential operations require approval by default, including repository/file writes, pull requests/merges, deployments, automation with external side effects, and account/project mutations.
 
-Read-only operations can use automatic execution when policy permits.
+## MCP / Noodle Seed
 
-## MCP and Noodle Seed
+MCP is the current gateway protocol and Noodle Seed is the first gateway implementation. `IntegrationGateway` deliberately isolates that choice. Replacing Noodle Seed must not require rewriting Nexus, personas, memory, or UI code.
 
-MCP is the transport abstraction for the current gateway. Noodle Seed is the first gateway implementation. It is deliberately replaceable. Quicksilver's domain layer depends on `IntegrationPlaneClient` and capability models, not on Noodle Seed internals.
-
-This means the permanent asset is the Integration Fabric contract and durable state, not an agent's credits or a particular AI platform.
-
-## Recovery flow
+## Recovery
 
 ```text
-Agent starts work
-    -> create durable task
-    -> execute step
-    -> persist state/event
-    -> provider fails or agent ends
-    -> task remains queued/paused
-    -> another agent/session discovers task
-    -> resume from current step
+Agent begins task
+ -> durable task created
+ -> step executes
+ -> state/event persisted
+ -> agent terminates or provider fails
+ -> task remains recoverable
+ -> another agent/session resumes it
 ```
 
-## Current connector families
+## Current scope
 
-AI/LLM: OpenAI, Anthropic, Google AI, xAI.
+The repository contains the provider registry, capability routing/planning tools, MCP transport, credential-safe health surface, durable Swift task/event stores, provider-neutral gateway contract, orchestration coordinator, and contract tests.
 
-Development: GitHub, Linear, Google, Cursor, Replit.
-
-Design/build/deployment: Figma, Vercel, Netlify, Supabase, Convex, Lovable, AppDeploy, n8n.
-
-The registry is intentionally extensible. Adding a provider should not require changing the Nexus UI or persona architecture.
+Concrete provider credentials and production connector accounts are intentionally configured outside source control. The gateway implementation must be validated with Noodle Seed tooling and real OAuth/API credentials before production execution is enabled.
