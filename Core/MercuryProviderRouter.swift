@@ -24,9 +24,9 @@ public struct MercuryProviderPolicy: Sendable, Equatable {
     public let fallback: AIProviderRoute
 
     public init(
-        primary: AIProviderRoute = .init(providerID: "gemini", role: .primary),
-        secondary: AIProviderRoute = .init(providerID: "groq", role: .secondary),
-        fallback: AIProviderRoute = .init(providerID: "openrouter-free", role: .fallback)
+        primary: AIProviderRoute = .init(providerID: "primary", role: .primary),
+        secondary: AIProviderRoute = .init(providerID: "secondary", role: .secondary),
+        fallback: AIProviderRoute = .init(providerID: "fallback", role: .fallback)
     ) {
         self.primary = primary
         self.secondary = secondary
