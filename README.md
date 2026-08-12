@@ -1,124 +1,103 @@
 # Quicksilver
 
-Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
+**Mercury: Quicksilver** is a native iOS intelligence environment built around one persistent Mercury entity, contextual expressions, modular capabilities, memory, and spatial realms.
 
-**Primary device target:** iPhone 14 / **iOS 27**  
-**Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.  
-**Current ship:** 0.2.0 (**build 7**)
-
-```
-SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
-```
-
-## Cloud development (no local Mac required)
-
-Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
-
-| Job | What it does |
-|-----|----------------|
-| **Structure & Contracts** | Verifies modular layout, Core protocols, and Privacy Manifest |
-| **SwiftLint** | Strict lint (fails the PR on violations) |
-| **SPM Unit Tests** | `swift test` for Core / Memory / Personas / Nexus / AI |
-| **iOS Simulator Build** | XcodeGen → `xcodebuild` for iPhone Simulator (no signing) |
-
-**Manual runs from your phone:** GitHub → Actions → *Quicksilver CI* → *Run workflow*.
-
-**IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
-Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure.  
-When `SENTRY_AUTH_TOKEN` is configured, debug symbols are automatically uploaded to Sentry (`inbetween` / `quicksilver`).
-
-Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on your iPhone.
-
-## Status
-
-- **Slice A (persona experience)** — merged to `main` (PR #52). PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.
-- **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
-- **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
-- SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
-
-## Surfaces
-
-| Screen | Role |
-|--------|------|
-| **Home** | Persona switcher + accent, Nexus health, latest insight |
-| **Ask** | Persona-aware chat with Memory history |
-| **Memory** | Policy-filtered notes, delete / clear / export |
-| **Diagnostics** | Live insights + signals |
-| **Settings** | xAI key (Keychain) + AI feature flag |
+**Primary device:** iPhone 14 / iOS 27  
+**Deployment floor:** iOS 18.0  
+**Current app version:** 0.2.0 (build 7)
 
 ## Architecture
 
-[Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md)
-
-Core owns contracts. Modules implement. UI only presents. Nexus stays persona-agnostic.
-
-## Local Mac workflow (optional)
-
-```bash
-brew install xcodegen
-xcodegen generate
-open Quicksilver.xcodeproj
-# or: swift test
+```text
+Sense → Context → Think → Express → Act
 ```
 
-Requires Xcode with an iOS SDK. CI currently uses the iOS 18 SDK; the resulting binary runs on iOS 27.
+- **Nexus** observes available device/environment signals.
+- **MercuryBrain** coordinates intent, context, memory, expression, provider routing, and action planning.
+- **Relics** are instruments Mercury can invoke.
+- **Glyphs** connect Mercury to Apple surfaces and external systems.
+- **CapabilityBroker** is the authorization and invocation boundary.
+- **Sanctum, Nexus, Forge, and Observatory** are realms, not separate personalities.
 
-## Installation
+Mercury is one entity. Quicksilver, Forge, and Eternal are expressions of that entity and share identity, memory, relationship, and intelligence.
 
-Recommended ways to install opencode tooling for local development and mobile workflows:
+See [Documentation/MERCURY_ARCHITECTURE_2.md](Documentation/MERCURY_ARCHITECTURE_2.md) for the architecture contract and [Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md) for the implementation overview.
 
-- Direct installer (fast, but security risk — runs a remote script):
+## AI provider strategy
 
-```bash
-curl -fsSL https://opencode.ai/install | bash
+The application is designed around one default and two secondary free-tier-oriented providers:
+
+1. Gemini — default general-purpose provider.
+2. Groq — secondary / latency-oriented fallback.
+3. OpenRouter free routing — tertiary fallback across currently available free models.
+
+Provider-specific code stays behind the AI provider abstraction and routing layer. Core functionality must remain operable without a paid provider.
+
+## Visual system
+
+Mercury is a **place**, not a generic AI dashboard. The primary experience is the Sanctum, with Forge and Observatory as functional realms and Codex as Mercury's governance/knowledge surface.
+
+Figma is the visual authority for design intent, components, tokens, motion, and interaction specifications. SwiftUI implements those specifications within the project's architecture and iOS constraints.
+
+## Diagnostics
+
+Battery and thermal diagnostics are not part of the core architecture. Supported diagnostic work must use legitimate public iOS APIs and available system interfaces.
+
+## Cloud development
+
+The repository is designed to be developed and validated without a local Mac. GitHub Actions provides the CI and SideStore-oriented archive path.
+
+Typical CI gates include:
+
+| Gate | Purpose |
+|---|---|
+| Structure & Contracts | Verify modular boundaries and required project contracts |
+| SwiftLint | Strict linting |
+| SPM Unit Tests | Validate Core and modular behavior |
+| iOS Simulator Build | Generate the Xcode project and build the app/test targets |
+| Archive IPA | Produce the unsigned SideStore artifact |
+
+## Sentry
+
+Sentry is used as optional runtime observability and crash evidence. It must remain behind the project's observability boundary and must not receive unnecessary private conversation, memory, credential, or sensitive data.
+
+Archive builds can upload dSYMs when the appropriate Sentry authentication secret is configured.
+
+## Development workflow
+
+```text
+Linear
+  ↓
+Architecture / Design specification
+  ↓
+Figma + Codex / Grok / Cursor
+  ↓
+GitHub branch + PR
+  ↓
+Code review + CI
+  ↓
+iPhone 14 validation
+  ↓
+Sentry runtime evidence
+  ↓
+Linear completion
 ```
 
-- npx installer (requires Node.js / npm):
+Keep commits small and reviewable. Do not merge speculative rewrites. Architecture changes require corresponding updates to the architecture contract and tests.
 
-```bash
-npx opencode-mobile install
-```
+## On-device / SideStore
 
-You can run the included helper scripts in this repository:
+See [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md) for the current SideStore workflow.
 
-```bash
-bash scripts/install-opencode.sh       # direct pipe installer (requested)
-bash scripts/install-opencode-npx.sh   # npx installer (safer if you have Node)
-```
-
-Security note: piping remote scripts into a shell executes code from the network; review before running in sensitive environments.
-
-This repository also includes editor and Codespaces recommendations to make working with Swift easier (.vscode/extensions.json and .devcontainer/devcontainer.json).
-
-## On-device (iPhone 14 / iOS 27) — SideStore path
-
-Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
-
-1. Trigger **Actions → Archive IPA → Run workflow** (Release).
-2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
-3. Install the IPA in SideStore (LocalDevVPN connected).
-4. Settings → paste xAI key → enable AI Service.
-5. Validate Home → Diagnostics → Memory → Ask → persona switch (accent + tone).
-
-No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
-
-## Personas
-
-| Persona | Role |
-|---------|------|
-| Quicksilver | Adaptive daily intelligence |
-| Forge | Disciplined builder |
-| Eternal | Continuity & long-term coherence |
-
-Prompts: `Resources/Personas/*.txt` (embedded fallback if missing).
+The project uses public Apple APIs only and targets an unsigned IPA workflow suitable for SideStore re-signing.
 
 ## Principles
 
-- Privacy first, on-device by default
-- Modular boundaries non-negotiable
-- Focused commits, working vertical slices
-- No autonomous agent loops
-
-## License
-
-Private / All rights reserved until otherwise stated.
+- Privacy first.
+- One Mercury entity, shared memory and identity.
+- Modular boundaries are non-negotiable.
+- UI observes intelligence state rather than implementing intelligence decisions.
+- Relics are instruments; Glyphs are connectors.
+- Figma defines visual intent; SwiftUI owns implementation.
+- Small, testable, reviewable changes.
+- No autonomous agent loops.
