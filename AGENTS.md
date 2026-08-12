@@ -3,65 +3,84 @@
 ## Project
 Native iOS intelligence platform. Primary target: iPhone 14 / iOS 27. CI floor: iOS 18.0.
 
-## Non-negotiable Architecture
-- Sense (Nexus) → Think (MercuryBrain + Memory + AI) → Express (Personas + UI)
-- Core owns all protocols and shared models (SanctumChamber, MemoryItem, etc.)
-- MercuryBrain is the only intelligence surface. UI and Intents must prefer the Brain.
-- Nexus is persona-agnostic. PersonaID is a tag only.
-- DependencyContainer is the composition root.
+## Identity: non-negotiable
+- Mercury is **one entity** with one identity, one memory, one relationship model, and one intelligence pipeline.
+- Quicksilver is Mercury's default expression: witty, mocking, intelligent, loyal, crude when appropriate, challenging, sharp, scathing, and humorous.
+- Forge is Mercury's creative/experimental expression.
+- Eternal is Mercury's Codex/automation/system expression.
+- Never implement Quicksilver, Forge, or Eternal as independent AI identities, memories, agents, or providers.
+- Use **aspect/expression** terminology instead of persona switching for new architecture.
+
+## Core architecture
+- Sense → Context → Think → Express → Act.
+- Nexus senses the device/environment and exposes connection points.
+- Mercury intelligence owns intent, context, memory retrieval, expression resolution, provider routing, and action planning.
+- UI observes Mercury state. UI does not select providers, memory stores, Relics, or Glyph implementations.
+- DependencyContainer remains the composition root.
+- Core owns shared contracts and models.
 - Public Apple APIs only. SideStore-first. No private APIs.
-- **VisualState is owned by MercuryBrain.** UI only observes.
-- **PersonaTheme + MotionTokens** are the only visual/motion sources. No magic numbers in views.
+- Keep strict Swift concurrency.
 
-## Master Visual Directive (summary)
-Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Glyphs are instruments. Realms are spatial. See conversation / design directive for full rules. Do not introduce generic AI chat UI patterns.
+## Capability architecture
+- **Relics are tools/instruments.** They perform operations for Mercury.
+- **Glyphs are connectors.** They connect Mercury to Apple surfaces, external systems, or future connector protocols.
+- All Relic/Glyph discovery and invocation routes through `CapabilityBroker`.
+- Every capability declares permissions, data access, transmission policy, risk, and availability.
+- Never invoke a Relic or Glyph directly from a SwiftUI view or provider implementation.
 
-## Coding Rules
-- Prefer Observation, @Observable, actors, structured concurrency, async/await.
-- SWIFT_STRICT_CONCURRENCY: complete
-- Keep modules small and directional. No upward dependencies into UI or App.
-- PersonaTheme drives visual language. Do not hard-code colors per view.
-- Every new realm (Forge, Eternal) must route actions through MercuryBrain / NexusCoordinator.
+## AI provider architecture
+Mercury uses one default and two secondary free-tier dependencies:
+1. **Gemini 2.5 Flash** — default general-purpose provider.
+2. **Groq** — secondary, especially for low-latency requests and first fallback.
+3. **OpenRouter `openrouter/free`** — tertiary fallback across currently available free models.
 
-## Agent domain partition (Cursor vs Codex)
+Provider choice is contextual and health-aware. Do not assume a specific free model remains available forever. Keep provider-specific code behind `AIProvider` and `MercuryProviderRouter`.
 
-### Cursor — strongest at
-Multi-file wiring, refactors that touch existing call sites, CI/debug loops, keeping the graph consistent.
+Core functionality must remain operable without a paid provider.
 
-**Assign to Cursor:**
-1. Wire `RealmGateway` through SanctumView (replace remaining plain sheets for Forge/Eternal).
-2. Propagate `brain.visualState` into ForgeViewModel / EternalViewModel / AskViewModel.
-3. CHR-6: triage latest Actions logs if Simulator Build still fails; fix destination / concurrency / ModuleCache only.
-4. Grep-and-replace remaining `PersonaTheme.spring` → `MotionTokens.spring` / named tokens.
-5. Ensure DiagnosticsView / AskView sheets use NavigationStack consistently.
+## Personality / expression
+- `MercuryIdentity` owns persistent identity and permanent traits.
+- `MercuryExpression` is continuous and blendable. Do not use mutually exclusive persona switching for new work.
+- `AspectResolver` determines expression from context, intent, realm, memory relevance, task type, and current Mercury state.
+- Personality may change how Mercury communicates, never what privacy, authorization, or safety rules permit.
 
-### Codex — strongest at
-Greenfield generation of cohesive new files, pure components, docs, and algorithmically clear ViewModels.
+## Realms
+- **Sanctum:** Mercury's primary presence and conversation environment.
+- **Nexus:** connection and capability convergence point.
+- **Forge:** creation, engineering, experimentation, diagnostics, and tools.
+- **Observatory:** memory, history, observations, trends, analytics, and Codex.
+- Realms are environments, not personas.
 
-**Assign to Codex:**
-1. Deepen Forge instruments: `ForgeInstrumentPanel` (build status, experiment log list UI) — Brain-routed only.
-2. Deepen Eternal: `MemoryConstellationView` (relationship-oriented memory surface, not a plain List).
-3. `InvocationControl` — expandable invoke glyph per directive §14 (idle → expand → listen/think → retract).
-4. Unit tests for VisualState transitions on MercuryBrain (thinking → success → idle).
-5. ARCHITECTURE.md section: Visual System map (VisualState × Realm × MotionTokens).
+## Diagnostics
+- Battery diagnostics are out of scope.
+- Thermal diagnostics are out of scope.
+- Supported domains should use public APIs and legitimate system interfaces: device, network, DNS, connectivity, Bluetooth, media/playback, storage, logs, and security observations.
+- Diagnostics produce structured observations/evidence. Do not imply private iOS access.
 
-### Shared constraints for both
-- Do not break SPM tests or Simulator Build.
-- Small reviewable commits / PRs.
-- No new Core protocols unless required.
-- Reduce Motion must keep state communication.
+## Visual system
+- Mercury is a place/presence, not a generic AI dashboard.
+- `VisualEngine` derives visual state from Mercury expression, realm, conversation, capability state, and system observations.
+- SwiftUI consumes state; it does not decide intelligence transitions.
+- PersonaTheme is legacy terminology. New visual work should use semantic Mercury design tokens and expression/realm state.
+- No magic visual constants in feature views.
 
-## Vertical Slice Preference
-Work one realm at a time. Prefer small, reviewable PRs.
-Current priority order: CI green (CHR-6) → visual system integration → Forge (CHR-10) → Eternal (CHR-11) → Quality gate (CHR-12).
+## Architecture rules
+- Do not turn `MercuryBrain` into a god object. It is a coordinator/facade; domain work belongs in focused services.
+- Do not add duplicate AI/context pathways.
+- Do not expose provider response bodies directly as user-facing errors.
+- Cancellation must be structured. No untracked long-lived Tasks for UI stabilization.
+- External AI requests pass through privacy/transmission policy.
+- Prefer deterministic, testable intent and expression resolution.
 
-## Testing & CI
-- SPM unit tests must stay green.
-- Simulator Build must pass before merge.
-- Archive IPA workflow is the SideStore path.
-
-## Output Discipline
-- Complete, paste-ready files preferred.
-- Respect existing naming and file layout.
-- Do not introduce new Core protocols unless strictly required.
+## Agent workflow
+- Small, reviewable commits.
+- Inspect existing contracts before adding new ones.
+- Preserve module directionality.
+- Add tests for new Core behavior.
+- CI must remain green before merge.
 - Humans own the merge decision.
+
+## Canonical architecture documents
+- `Documentation/MERCURY_ARCHITECTURE_2.md` — current architecture contract.
+- `Documentation/ARCHITECTURE.md` — historical/current overview; update it when architecture changes.
+- `Documentation/HARDENING.md` — security and release constraints.

@@ -2,98 +2,159 @@
 
 ## Vision
 
-Mercury is a personal AI operating companion for iPhone.
+Mercury is a personal AI operating companion for iPhone. The user enters the Sanctum rather than opening a generic dashboard.
 
-The user does not open an application.
-The user enters **The Sanctum** — an immense, corrupted, still-functioning throne room outside conventional space.
+There is one entity: **Mercury**.
 
-Quicksilver is already there.
+Quicksilver is Mercury's default expression. Forge and Eternal are contextual aspects of the same entity, not separate personas or agents.
 
-Sense → Think → Express → Act
+## Core Model
 
-- **Nexus** senses the device and environment
-- **Mercury Brain** reasons, plans, and decides (Invisible Architecture)
-- **Personality Engine** shapes expression and behavior
-- **Memory** provides continuity
-- **The Sanctum + Chambers** express presence
-
-## Experiential Layers
-
-| Layer | Role |
-|-------|------|
-| **The Sanctum** | Primary place. Cosmic + Norse + liquid mercury + broken monuments. |
-| **Quicksilver Presence** | Permanent ambient entity. Not summoned. |
-| **The Forge** | Creation, engineering, Swift, architecture, experiments. Awakens on domain. |
-| **The Eternal** | Observation, diagnostics, memory, long-term patterns. Awakens on domain. |
-| **The Codex** | Governance of Mercury (voice, memory, keys, autonomy). Not Settings. |
-
-## Strict Dependency Direction
-
-```
-                 Sanctum (UI)
-                       |
-              DependencyContainer
-                       |
-                   MercuryBrain
-                       |
- ------------------------------------------------
- |              |              |                |
-Core        Personas        Nexus          Services
- |              |              |                |
- ---------------- Memory ---------------- AI Provider
+```text
+                         MERCURY
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+       Identity        Intelligence       Capabilities
+          │                 │                 │
+          │           Context + Intent       │
+          │                 │                 │
+          └─────────────────┼─────────────────┘
+                            │
+                    Aspect / Expression
+                            │
+              ┌─────────────┼─────────────┐
+              ▼             ▼             ▼
+         Quicksilver       Forge        Eternal
+           default        creative      codex/system
 ```
 
-UI never selects engines, providers, or memory strategies.
-The Brain decides.
+## Intelligence Pipeline
 
-## Mercury Brain
+```text
+Input
+ → Intent
+ → Context Assembly
+ → Memory Retrieval
+ → Aspect Resolution
+ → Privacy Policy
+ → Provider Routing
+ → Response Processing
+ → Mercury Expression
+ → Visual / Voice / UI State
+```
 
-Central intelligence coordinator (`App/MercuryBrain.swift`).
+`MercuryBrain` is a coordinator/facade, not a god object. Domain responsibilities belong to focused services.
 
-- Intent classification
-- Context assembly
-- Personality influence
-- Chamber suggestion (Forge / Eternal / Sanctum)
-- Living status generation
-- Unified `ask` / `remember` / `switchPersona` surface
+## AI Provider Stack
 
-## Personality Engine
+Mercury uses one default and two secondary free-tier dependencies:
 
-`PersonalityState` — live behavioral dimensions:
+1. **Gemini 2.5 Flash** — default general-purpose provider.
+2. **Groq** — secondary/fast path and first fallback.
+3. **OpenRouter `openrouter/free`** — tertiary fallback across available free models.
 
-Confidence · Curiosity · Humor · Mischief · Focus · Initiative · Skepticism · Patience · Loyalty
+The router evaluates context, capability requirements, provider health, rate limits, latency, and privacy policy. Provider-specific implementations remain behind `AIProvider`.
 
-Phase II posture: intellectually formidable, truth over agreement, precise critique of ideas, dry elegant wit, unwavering loyalty.
+## Relics and Glyphs
 
-## Core Contracts
+**Relics are instruments/tools.** They perform operations for Mercury.
 
-| Protocol | Purpose |
-|----------|---------|
-| `AIProvider` | Language-model backends |
-| `MemoryStore` | Persistent memory |
-| `DiagnosticProvider` | Device / environment sensors |
-| `PersonaEngine` | Persona selection & influence |
-| `AutomationProvider` | App Intents / Shortcuts surface |
+**Glyphs are connectors.** They connect Mercury to Apple surfaces, external systems, or future connector protocols.
 
-## Visual Identity
+All discovery and invocation goes through `CapabilityBroker` and registered `RelicRegistry` / `GlyphRegistry` instances.
 
-Cosmic black · deep violet · mercury silver · emerald · subtle gold · glass · liquid metal.
+Each capability declares:
 
-Ambient particles, glyph rotation, reflective presence, chamber-aware intensity.
+- permissions
+- data accessed
+- transmission policy
+- risk level
+- availability
+- supported realms/aspects
+
+## Realms
+
+| Realm | Purpose |
+|---|---|
+| **Sanctum** | Mercury's primary presence and conversation environment |
+| **Nexus** | Connection and capability convergence point |
+| **Forge** | Creation, engineering, experimentation, diagnostics, and tools |
+| **Observatory** | Memory, history, observations, trends, analytics, and Codex |
+
+Realms are environments, not personalities.
+
+## Personality / Expression
+
+`MercuryIdentity` owns persistent identity and baseline traits.
+
+`MercuryExpression` is continuous and blendable. It may combine Quicksilver, Forge, and Eternal rather than switching between mutually exclusive personas.
+
+- **Quicksilver:** witty, mocking, intelligent, loyal, crude when appropriate, challenging, sharp, scathing, humorous.
+- **Forge:** creative, experimental, technically obsessed, energetic, inventive, mad-scientist intensity layered over Quicksilver.
+- **Eternal:** direct, precise, semi-aloof, systems-oriented, keeper of the Codex and automation, layered over Quicksilver.
+
+Personality affects expression, never privacy, authorization, or safety constraints.
+
+## Memory
+
+All memory belongs to Mercury. There are no separate Forge/Eternal memories.
+
+Memory domains:
+
+- working
+- episodic
+- semantic
+- preference
+- relationship
+- system observations
+- Codex
+
+## Diagnostics
+
+Battery and thermal diagnostics are intentionally excluded.
+
+Supported diagnostic domains are limited to legitimate public iOS capabilities:
+
+- device
+- network
+- DNS
+- connectivity
+- Bluetooth
+- media/playback
+- storage
+- logs
+- security observations
+
+Diagnostics produce structured observations and evidence. They do not imply privileged access to private iOS internals.
+
+## Event System
+
+`MercuryEventBus` is the internal event fabric for conversation, aspect, realm, memory, capability, Relic, Glyph, diagnostic, automation, system, and visual events.
+
+Events are domain events, not UI callbacks.
+
+## Privacy Boundary
+
+Every context item and capability has a transmission classification such as `localOnly`, `sensitive`, `restricted`, `neverTransmit`, or `providerSafe`.
+
+External provider requests pass through a privacy policy before transmission.
+
+## Visual System
+
+`VisualEngine` derives visual state from Mercury expression, realm, conversation state, capability state, and system observations.
+
+The living quicksilver presence is a state visualization. Visual effects should communicate Mercury's current state without requiring explicit persona selection.
 
 ## Engineering Rules
 
-- Public APIs only. SideStore-first.
-- Modular boundaries non-negotiable.
-- Depth over quantity.
-- Personality over generic functionality.
-- Every interaction must strengthen the illusion that the user has entered a place, not opened an app.
-
-## Explicitly Deferred
-
-- Full autonomous agent loops
-- Complex multi-hop RAG
-- Cloud dependency for core function
-- Plugin marketplace
-
-The goal is a present intelligence that feels ancient, sharp, and loyal.
+- Swift 6 strict concurrency.
+- SwiftUI for presentation.
+- Dependency injection at the composition root.
+- Public Apple APIs only.
+- SideStore-first distribution.
+- Modular boundaries are non-negotiable.
+- UI does not select AI providers or invoke Relics/Glyphs directly.
+- Core functionality must not require a paid AI provider.
+- Prefer deterministic, testable routing and expression resolution.
+- Do not create duplicate intelligence/context pathways.
