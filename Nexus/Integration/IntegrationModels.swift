@@ -75,7 +75,14 @@ public struct IntegrationConnector: Codable, Sendable, Identifiable, Hashable {
     public let credential: IntegrationCredentialPolicy
     public let enabled: Bool
 
-    public init(id: String, provider: IntegrationProvider, capabilities: [IntegrationCapability], transport: IntegrationTransport, credential: IntegrationCredentialPolicy, enabled: Bool) {
+    public init(
+        id: String,
+        provider: IntegrationProvider,
+        capabilities: [IntegrationCapability],
+        transport: IntegrationTransport,
+        credential: IntegrationCredentialPolicy,
+        enabled: Bool
+    ) {
         self.id = id
         self.provider = provider
         self.capabilities = capabilities
@@ -90,7 +97,21 @@ public struct IntegrationRoute: Codable, Sendable, Hashable {
     public let provider: IntegrationProvider
     public let reason: String
 
-    enum CodingKeys: String, CodingKey { case connectorID = "connectorId", provider, reason }
+    public init(
+        connectorID: String,
+        provider: IntegrationProvider,
+        reason: String
+    ) {
+        self.connectorID = connectorID
+        self.provider = provider
+        self.reason = reason
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case connectorID = "connectorId"
+        case provider
+        case reason
+    }
 }
 
 public struct IntegrationPlanStep: Codable, Sendable, Identifiable, Hashable {
@@ -101,16 +122,37 @@ public struct IntegrationPlanStep: Codable, Sendable, Identifiable, Hashable {
     public let approvalRequired: Bool
     public var id: Int { order }
 
+    public init(
+        order: Int,
+        capability: IntegrationCapability,
+        connectorID: String,
+        provider: IntegrationProvider,
+        approvalRequired: Bool
+    ) {
+        self.order = order
+        self.capability = capability
+        self.connectorID = connectorID
+        self.provider = provider
+        self.approvalRequired = approvalRequired
+    }
+
     enum CodingKeys: String, CodingKey {
-        case order, capability
+        case order
+        case capability
         case connectorID = "connectorId"
-        case provider, approvalRequired
+        case provider
+        case approvalRequired
     }
 }
 
 public struct IntegrationPlan: Codable, Sendable, Hashable {
     public let objective: String
     public let steps: [IntegrationPlanStep]
+
+    public init(objective: String, steps: [IntegrationPlanStep]) {
+        self.objective = objective
+        self.steps = steps
+    }
 }
 
 public struct IntegrationHealth: Codable, Sendable, Hashable {
@@ -119,6 +161,20 @@ public struct IntegrationHealth: Codable, Sendable, Hashable {
     public let enabledCount: Int
     public let secretPolicy: String
     public let architecture: String
+
+    public init(
+        status: String,
+        connectorCount: Int,
+        enabledCount: Int,
+        secretPolicy: String,
+        architecture: String
+    ) {
+        self.status = status
+        self.connectorCount = connectorCount
+        self.enabledCount = enabledCount
+        self.secretPolicy = secretPolicy
+        self.architecture = architecture
+    }
 }
 
 public struct IntegrationExecutionPolicy: Codable, Sendable, Hashable {
@@ -127,7 +183,12 @@ public struct IntegrationExecutionPolicy: Codable, Sendable, Hashable {
     public let timeoutSeconds: Int
     public let allowFallback: Bool
 
-    public init(approval: IntegrationApprovalPolicy = .approvalRequired, maxAttempts: Int = 3, timeoutSeconds: Int = 60, allowFallback: Bool = true) {
+    public init(
+        approval: IntegrationApprovalPolicy = .approvalRequired,
+        maxAttempts: Int = 3,
+        timeoutSeconds: Int = 60,
+        allowFallback: Bool = true
+    ) {
         self.approval = approval
         self.maxAttempts = max(1, maxAttempts)
         self.timeoutSeconds = max(1, timeoutSeconds)
