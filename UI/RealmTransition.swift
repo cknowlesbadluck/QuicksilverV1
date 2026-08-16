@@ -2,13 +2,9 @@ import SwiftUI
 import Core
 
 /// Spatial realm transition foundation.
-/// Full choreography (glyph → energy → gateway → emerge) is iterative;
-/// this provides consistent enter/exit motion and Reduce Motion safety.
+/// Full choreography is iterative; this provides consistent enter/exit motion and Reduce Motion safety.
 enum RealmTransition {
-    /// Primary spring for realm change when motion is allowed.
     static var spatial: Animation { MotionTokens.realmTransition }
-
-    /// Calm cross-fade when Reduce Motion is enabled.
     static var reduced: Animation { MotionTokens.reduced(MotionTokens.realmTransition) }
 
     static func animation(reduceMotion: Bool) -> Animation {
@@ -16,50 +12,48 @@ enum RealmTransition {
     }
 }
 
-/// Applies a realm-aware transition to a view hierarchy.
+/// Applies a persona-aware transition to a view hierarchy.
 struct RealmTransitionModifier: ViewModifier {
-    let chamber: SanctumChamber
+    let personaID: String
     let reduceMotion: Bool
 
     func body(content: Content) -> some View {
         content
             .transition(transition)
-            .animation(RealmTransition.animation(reduceMotion: reduceMotion), value: chamber)
+            .animation(RealmTransition.animation(reduceMotion: reduceMotion), value: personaID)
     }
 
     private var transition: AnyTransition {
         if reduceMotion {
             return .opacity
         }
-        switch chamber {
-        case .forge:
-            // Forge rises from below — workshop ascending
+        switch personaID.lowercased() {
+        case "forge":
             return .asymmetric(
                 insertion: .move(edge: .bottom).combined(with: .opacity),
                 removal: .move(edge: .top).combined(with: .opacity)
             )
-        case .eternal:
-            // Eternal expands from depth — observatory opening
+        case "eternal":
             return .asymmetric(
                 insertion: .scale(scale: 0.92).combined(with: .opacity),
                 removal: .scale(scale: 1.04).combined(with: .opacity)
             )
-        case .sanctum:
+        default:
             return .opacity
         }
     }
 }
 
 extension View {
-    func realmTransition(chamber: SanctumChamber, reduceMotion: Bool) -> some View {
-        modifier(RealmTransitionModifier(chamber: chamber, reduceMotion: reduceMotion))
+    func realmTransition(personaID: String, reduceMotion: Bool) -> some View {
+        modifier(RealmTransitionModifier(personaID: personaID, reduceMotion: reduceMotion))
     }
 }
 
 /// Full-screen cover style gateway for a realm — preferred over plain sheet long-term.
 struct RealmGateway<Content: View>: View {
     let title: String
-    let chamber: SanctumChamber
+    let personaID: String
     @Binding var isPresented: Bool
     @ViewBuilder var content: () -> Content
 
@@ -68,7 +62,7 @@ struct RealmGateway<Content: View>: View {
     var body: some View {
         NavigationStack {
             content()
-                .realmTransition(chamber: chamber, reduceMotion: reduceMotion)
+                .realmTransition(personaID: personaID, reduceMotion: reduceMotion)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Done") {
