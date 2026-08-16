@@ -15,7 +15,7 @@ Sense → Think → Express → Act
 - **Mercury Brain** reasons, plans, and decides (Invisible Architecture)
 - **Personality Engine** shapes expression and behavior
 - **Memory** provides continuity
-- **The Sanctum + Chambers** express presence
+- **Personas + UI** express presence
 
 ## Experiential Layers
 
@@ -23,8 +23,8 @@ Sense → Think → Express → Act
 |-------|------|
 | **The Sanctum** | Primary place. Cosmic + Norse + liquid mercury + broken monuments. |
 | **Quicksilver Presence** | Permanent ambient entity. Not summoned. |
-| **The Forge** | Creation, engineering, Swift, architecture, experiments. Awakens on domain. |
-| **The Eternal** | Observation, diagnostics, memory, long-term patterns. Awakens on domain. |
+| **The Forge** | Creation, engineering, Swift, architecture, experiments. Persona-driven. |
+| **The Eternal** | Observation, diagnostics, memory, long-term patterns. Persona-driven. |
 | **The Codex** | Governance of Mercury (voice, memory, keys, autonomy). Not Settings. |
 
 ## Strict Dependency Direction
@@ -51,11 +51,11 @@ The Brain decides.
 Central intelligence coordinator (`App/MercuryBrain.swift`).
 
 - Intent classification
-- Context assembly
+- Context assembly (Memory + Nexus + persona)
 - Personality influence
-- Chamber suggestion (Forge / Eternal / Sanctum)
 - Living status generation
 - Unified `ask` / `remember` / `switchPersona` surface
+- Owns `VisualState` (UI only observes)
 
 ## Personality Engine
 
@@ -79,7 +79,7 @@ Phase II posture: intellectually formidable, truth over agreement, precise criti
 
 Cosmic black · deep violet · mercury silver · emerald · subtle gold · glass · liquid metal.
 
-Ambient particles, glyph rotation, reflective presence, chamber-aware intensity.
+Ambient particles, glyph rotation, reflective presence. Intensity derived from active persona + VisualState.
 
 ## Engineering Rules
 
@@ -88,6 +88,7 @@ Ambient particles, glyph rotation, reflective presence, chamber-aware intensity.
 - Depth over quantity.
 - Personality over generic functionality.
 - Every interaction must strengthen the illusion that the user has entered a place, not opened an app.
+- No “chamber” terminology — personas are the sole experiential lever.
 
 ## Explicitly Deferred
 
