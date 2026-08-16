@@ -26,8 +26,8 @@ public enum AppError: Error, LocalizedError, Sendable {
             return "Feature not yet supported: \(name)"
         case .apiKeyMissing:
             return "AI API key is not configured"
-        case .aiRequestFailed(let detail):
-            return "AI request failed: \(detail)"
+        case .aiRequestFailed:
+            return "AI request failed. Please try again."
         case .unknown(let message):
             return message
         }
