@@ -3,17 +3,19 @@ import Core
 
 /// Subtle living environment of the Sanctum.
 /// Particles, mercury flow, slow celestial motion.
-/// Intensity and palette respond to chamber + VisualState.
+/// Intensity and palette respond to persona + VisualState.
 struct AmbientLayer: View {
     let personaID: String
-    let chamber: SanctumChamber
     var visualState: VisualState = .idle
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var intensity: Double {
+        PersonaTheme.ambientIntensity(for: personaID) * visualState.ambientEnergy
+    }
+
     var body: some View {
         let accent = PersonaTheme.accent(for: personaID)
-        let intensity = chamber.ambientIntensity * visualState.ambientEnergy
         let baseCount = Int(10 + intensity * 20)
         let particleCount = reduceMotion
             ? max(4, baseCount / 3)
@@ -23,7 +25,6 @@ struct AmbientLayer: View {
             Canvas { context, size in
                 let t = timeline.date.timeIntervalSinceReferenceDate
 
-                // Chamber-reactive drifting particles
                 for i in 0..<particleCount {
                     let seed = Double(i) * 1.37
                     let speed = 0.04 + intensity * 0.07
@@ -40,8 +41,8 @@ struct AmbientLayer: View {
                     )
                 }
 
-                // Mercury sheen lines — denser in Forge / elevated states
-                let lineCount = (chamber == .forge || visualState.isElevated) ? 6 : 3
+                let isForge = personaID.lowercased() == "forge"
+                let lineCount = (isForge || visualState.isElevated) ? 6 : 3
                 let lineOpacity = 0.02 + intensity * 0.045
                 for i in 0..<lineCount {
                     let y = size.height * (0.15 + Double(i) * (0.7 / Double(max(lineCount, 1))))
@@ -51,12 +52,11 @@ struct AmbientLayer: View {
                     context.stroke(
                         path,
                         with: .color(PersonaTheme.mercurySilver.opacity(lineOpacity)),
-                        lineWidth: chamber == .forge ? 1.2 : 0.9
+                        lineWidth: isForge ? 1.2 : 0.9
                     )
                 }
 
-                // Soft central glow when a chamber is awake or state is elevated
-                if chamber != .sanctum || visualState.isElevated {
+                if isForge || personaID.lowercased() == "eternal" || visualState.isElevated {
                     let glowRadius = min(size.width, size.height) * (0.20 + intensity * 0.14)
                     let glowRect = CGRect(
                         x: size.width * 0.5 - glowRadius,
@@ -81,7 +81,7 @@ struct AmbientLayer: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-        .animation(MotionTokens.environmentalWake, value: chamber)
+        .animation(MotionTokens.environmentalWake, value: personaID)
         .animation(MotionTokens.stabilization, value: visualState)
     }
 }
