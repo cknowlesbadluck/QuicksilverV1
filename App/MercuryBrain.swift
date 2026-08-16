@@ -18,7 +18,6 @@ import Nexus
 /// - Plan and validate responses
 /// - Influence personality behavioral state
 /// - Surface insights rather than raw data
-/// - Determine which chamber (Forge / Eternal / Sanctum) should awaken
 /// - Own VisualState so the environment reflects cognition
 @MainActor
 @Observable
@@ -34,7 +33,6 @@ final class MercuryBrain {
     private(set) var personality = PersonalityState()
     private(set) var primaryInsight: String?
     private(set) var livingStatus: String = "Quicksilver is present. Observing."
-    private(set) var suggestedChamber: SanctumChamber = .sanctum
     /// Explicit visual communication state — UI only observes.
     private(set) var visualState: VisualState = .idle
 
@@ -76,10 +74,10 @@ final class MercuryBrain {
         )
 
         personality.adjustFor(intent: intent, kind: kind)
-        suggestedChamber = chamberFor(intent: intent, kind: kind, personaID: activePersonaID)
 
         let config = personaManager.activeConfiguration
-        let system = buildSystemPrompt(for: config)
+        let relevantMemory = retrieveRelevantMemory(for: query, personaID: config.id)
+        let system = buildSystemPrompt(for: config, memory: relevantMemory)
 
         do {
             let response = try await aiService.complete(
@@ -92,7 +90,6 @@ final class MercuryBrain {
             visualState = .speaking
             let colored = personality.colorResponse(response.content, personaID: config.id)
 
-            // Brief success stabilization, then return to environmental baseline
             visualState = .success
             refreshLivingStatus()
             stabilizeVisualStateAfterSuccess()
@@ -109,7 +106,6 @@ final class MercuryBrain {
         try await personaManager.switchTo(id: id)
         personality.applyPersonaBias(personaID: id)
         nexus.updatePersonaContext(id)
-        suggestedChamber = chamberForPersona(id)
         refreshLivingStatus()
         logger.info("Mercury Brain: persona → \(id)", category: logger.persona)
         visualState = environmentalBaseline()
@@ -203,10 +199,24 @@ final class MercuryBrain {
         }
     }
 
+    // MARK: - Memory context assembly
+
+    /// Retrieve a small, ranked, persona-aware set of memory items for prompt injection.
+    /// Hard limit + importance floor keeps the prompt lean and private.
+    private func retrieveRelevantMemory(for query: String, personaID: String) -> [MemoryItem] {
+        let policy = personaManager.activeMemoryPolicy
+        let q = MemoryQuery(
+            personaScope: personaID,
+            minimumImportance: policy.retentionThreshold,
+            limit: 5
+        )
+        return memoryManager.items(matching: q)
+    }
+
     // MARK: - Internals
 
     private func classify(query: String) -> (QueryIntent, TaskKind) {
-        if containsAny(query, ["architect", "implement", "refactor", "debug", "error", "crash", "fix", "structure", "precision", "swift", "xcode", "spm", "git", "commit", "pr ", "pull request"]) {
+        if containsAny(query, ["architect", "implement", "refactor", "debug", "error", "crash", "test", "structure", "precision", "swift", "xcode", "spm", "git", "commit", "pr ", "pull request"]) {
             return (.preciseTechnical, .building)
         }
         if containsAny(query, ["reflect", "remember", "history", "pattern", "long-term", "why did", "continuity", "archive", "memory"]) {
@@ -221,25 +231,7 @@ final class MercuryBrain {
         return (.strategic, .exploring)
     }
 
-    private func chamberFor(intent: QueryIntent, kind: TaskKind, personaID: String) -> SanctumChamber {
-        if personaID == "forge" || intent == .preciseTechnical || kind == .building || kind == .debugging {
-            return .forge
-        }
-        if personaID == "eternal" || intent == .reflective || intent == .diagnostic || kind == .reflecting {
-            return .eternal
-        }
-        return .sanctum
-    }
-
-    private func chamberForPersona(_ id: String) -> SanctumChamber {
-        switch id.lowercased() {
-        case "forge": return .forge
-        case "eternal": return .eternal
-        default: return .sanctum
-        }
-    }
-
-    private func buildSystemPrompt(for config: PersonaConfiguration) -> String {
+    private func buildSystemPrompt(for config: PersonaConfiguration, memory: [MemoryItem]) -> String {
         var prompt = config.systemPrompt
 
         let bias = personality.promptBias()
@@ -259,6 +251,14 @@ Core stance:
 - Dry, elegant wit is allowed; cruelty is not.
 - Everything ultimately serves the user's long-term success.
 """
+
+        if !memory.isEmpty {
+            prompt += "\n\nRelevant memory (private, ranked by importance):\n"
+            for item in memory {
+                let snippet = String(item.value.prefix(180))
+                prompt += "- [\(item.category.rawValue)] \(snippet)\n"
+            }
+        }
 
         let health = nexus.state.overallHealthScore
         let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
