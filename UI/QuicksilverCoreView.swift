@@ -106,11 +106,11 @@ struct QuicksilverCoreView: View {
                 .offset(x: turbulence * 0.6, y: turbulence * -0.4)
 
             if visualState.isElevated && !reduceMotion {
-                ForEach(0..<5, id: \.self) { i in
+                ForEach(0..<5, id: \.self) { particleIndex in
                     Circle()
                         .fill(accent.opacity(0.5))
                         .frame(width: 2.5, height: 2.5)
-                        .offset(particleOffset(index: i))
+                        .offset(particleOffset(index: particleIndex))
                 }
             }
         }

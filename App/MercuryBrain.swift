@@ -205,27 +205,44 @@ final class MercuryBrain {
     /// Hard limit + importance floor keeps the prompt lean and private.
     private func retrieveRelevantMemory(for query: String, personaID: String) -> [MemoryItem] {
         let policy = personaManager.activeMemoryPolicy
-        let q = MemoryQuery(
+        let memoryQuery = MemoryQuery(
             personaScope: personaID,
             minimumImportance: policy.retentionThreshold,
             limit: 5
         )
-        return memoryManager.items(matching: q)
+        return memoryManager.items(matching: memoryQuery)
     }
 
     // MARK: - Internals
 
     private func classify(query: String) -> (QueryIntent, TaskKind) {
-        if containsAny(query, ["architect", "implement", "refactor", "debug", "error", "crash", "test", "structure", "precision", "swift", "xcode", "spm", "git", "commit", "pr ", "pull request"]) {
+        let technicalKeywords = [
+            "architect", "implement", "refactor", "debug", "error", "crash",
+            "test", "structure", "precision", "swift", "xcode", "spm",
+            "git", "commit", "pr ", "pull request"
+        ]
+        if containsAny(query, technicalKeywords) {
             return (.preciseTechnical, .building)
         }
-        if containsAny(query, ["reflect", "remember", "history", "pattern", "long-term", "why did", "continuity", "archive", "memory"]) {
+        let reflectiveKeywords = [
+            "reflect", "remember", "history", "pattern", "long-term",
+            "why did", "continuity", "archive", "memory"
+        ]
+        if containsAny(query, reflectiveKeywords) {
             return (.reflective, .reflecting)
         }
-        if containsAny(query, ["idea", "brainstorm", "what if", "explore", "creative", "option", "strategy", "imagine"]) {
+        let creativeKeywords = [
+            "idea", "brainstorm", "what if", "explore", "creative",
+            "option", "strategy", "imagine"
+        ]
+        if containsAny(query, creativeKeywords) {
             return (.creative, .exploring)
         }
-        if containsAny(query, ["diagnose", "why is", "broken", "failing", "battery", "network", "health", "thermal"]) {
+        let diagnosticKeywords = [
+            "diagnose", "why is", "broken", "failing", "battery",
+            "network", "health", "thermal"
+        ]
+        if containsAny(query, diagnosticKeywords) {
             return (.diagnostic, .debugging)
         }
         return (.strategic, .exploring)

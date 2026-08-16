@@ -23,18 +23,18 @@ struct AmbientLayer: View {
 
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
             Canvas { context, size in
-                let t = timeline.date.timeIntervalSinceReferenceDate
+                let time = timeline.date.timeIntervalSinceReferenceDate
 
-                for i in 0..<particleCount {
-                    let seed = Double(i) * 1.37
+                for index in 0..<particleCount {
+                    let seed = Double(index) * 1.37
                     let speed = 0.04 + intensity * 0.07
-                    let x = (sin(t * speed + seed) * 0.42 + 0.5) * size.width
-                    let y = (cos(t * (speed * 0.75) + seed * 1.3) * 0.42 + 0.5) * size.height
+                    let xPos = (sin(time * speed + seed) * 0.42 + 0.5) * size.width
+                    let yPos = (cos(time * (speed * 0.75) + seed * 1.3) * 0.42 + 0.5) * size.height
                     let baseOpacity = 0.04 + 0.10 * intensity
-                    let opacity = baseOpacity + 0.04 * sin(t * 0.35 + seed)
+                    let opacity = baseOpacity + 0.04 * sin(time * 0.35 + seed)
                     let radius = 1.4 + intensity * 1.6
 
-                    let rect = CGRect(x: x, y: y, width: radius, height: radius)
+                    let rect = CGRect(x: xPos, y: yPos, width: radius, height: radius)
                     context.fill(
                         Path(ellipseIn: rect),
                         with: .color(accent.opacity(opacity))
@@ -44,11 +44,17 @@ struct AmbientLayer: View {
                 let isForge = personaID.lowercased() == "forge"
                 let lineCount = (isForge || visualState.isElevated) ? 6 : 3
                 let lineOpacity = 0.02 + intensity * 0.045
-                for i in 0..<lineCount {
-                    let y = size.height * (0.15 + Double(i) * (0.7 / Double(max(lineCount, 1))))
+                for lineIndex in 0..<lineCount {
+                    let yPos = size.height * (0.15 + Double(lineIndex) * (0.7 / Double(max(lineCount, 1))))
                     var path = Path()
-                    path.move(to: CGPoint(x: 0, y: y + sin(t * 0.4 + Double(i)) * 8 * intensity))
-                    path.addLine(to: CGPoint(x: size.width, y: y + cos(t * 0.35 + Double(i)) * 8 * intensity))
+                    path.move(to: CGPoint(
+                        x: 0,
+                        y: yPos + sin(time * 0.4 + Double(lineIndex)) * 8 * intensity
+                    ))
+                    path.addLine(to: CGPoint(
+                        x: size.width,
+                        y: yPos + cos(time * 0.35 + Double(lineIndex)) * 8 * intensity
+                    ))
                     context.stroke(
                         path,
                         with: .color(PersonaTheme.mercurySilver.opacity(lineOpacity)),
