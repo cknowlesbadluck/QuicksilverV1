@@ -26,18 +26,41 @@ public final class MemoryManager {
         }
     }
 
-    public func set(key: String, value: String, category: MemoryItem.Category, metadata: [String: String] = [:], importanceBoost: Double? = nil, personaScope: String? = nil) async {
+    public func set(
+        key: String,
+        value: String,
+        category: MemoryItem.Category,
+        metadata: [String: String] = [:],
+        importanceBoost: Double? = nil,
+        personaScope: String? = nil
+    ) async {
         if let existing = items.first(where: { $0.key == key && $0.category == category }) {
             var updated = existing
             updated.value = value
             updated.updatedAt = Date()
             updated.metadata = metadata
-            updated.importance = MemoryScorer.score(category: category, value: value, explicitBoost: importanceBoost, existing: existing.importance)
+            updated.importance = MemoryScorer.score(
+                category: category,
+                value: value,
+                explicitBoost: importanceBoost,
+                existing: existing.importance
+            )
             if let personaScope { updated.personaScope = personaScope }
             await persist(updated)
         } else {
-            let importance = MemoryScorer.score(category: category, value: value, explicitBoost: importanceBoost)
-            let item = MemoryItem(key: key, category: category, value: value, metadata: metadata, importance: importance, personaScope: personaScope)
+            let importance = MemoryScorer.score(
+                category: category,
+                value: value,
+                explicitBoost: importanceBoost
+            )
+            let item = MemoryItem(
+                key: key,
+                category: category,
+                value: value,
+                metadata: metadata,
+                importance: importance,
+                personaScope: personaScope
+            )
             await persist(item)
         }
     }
@@ -57,7 +80,13 @@ public final class MemoryManager {
     public func items(matching query: MemoryQuery, retentionThreshold: Double? = nil) -> [MemoryItem] {
         var effective = query
         if let retentionThreshold, effective.minimumImportance == nil {
-            effective = MemoryQuery(category: query.category, personaScope: query.personaScope, minimumImportance: retentionThreshold, keyPrefix: query.keyPrefix, limit: query.limit)
+            effective = MemoryQuery(
+                category: query.category,
+                personaScope: query.personaScope,
+                minimumImportance: retentionThreshold,
+                keyPrefix: query.keyPrefix,
+                limit: query.limit
+            )
         }
         return effective.apply(to: items)
     }
@@ -98,7 +127,9 @@ public final class MemoryManager {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(items)
-        guard let json = String(data: data, encoding: .utf8) else { throw AppError.configurationMissing("Unable to encode memory export") }
+        guard let json = String(data: data, encoding: .utf8) else {
+            throw AppError.configurationMissing("Unable to encode memory export")
+        }
         return json
     }
 
