@@ -1,4 +1,5 @@
 import SwiftUI
+import Core
 
 /// The Codex — governance of Mercury himself.
 /// Not a settings screen. The user is altering the fundamental laws.
