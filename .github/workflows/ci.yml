@@ -46,11 +46,11 @@ jobs:
             Core/Models/AIRequest.swift \
             Core/Models/AIResponse.swift \
             Core/Models/MemoryItem.swift \
-            Core/Models/SanctumChamber.swift \
             Package.swift \
             project.yml \
             App/QuicksilverApp.swift \
             App/DependencyContainer.swift \
+            App/MercuryBrain.swift \
             Nexus/NexusCoordinator.swift \
             UI/ContentView.swift \
             Documentation/ARCHITECTURE.md \
@@ -136,7 +136,6 @@ jobs:
       - name: Run tests
         run: |
           set -euo pipefail
-          # Clean any stale ModuleCache that can break after path changes
           rm -rf .build/arm64-apple-macosx/debug/ModuleCache 2>/dev/null || true
           swift test --enable-code-coverage 2>&1 | tee spm-test.log
 
