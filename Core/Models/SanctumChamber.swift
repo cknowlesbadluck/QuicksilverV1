@@ -1,9 +1,6 @@
 import Foundation
 
-// REMOVED: SanctumChamber enum has been purged.
-// Ambient intensity and presence titles are now derived from personaID.
-// This file is intentionally left as a tombstone so the Structure check
-// and any residual imports fail loudly until fully cleaned.
-// Delete this file in the follow-up PR once all references are gone.
-
-#error("SanctumChamber has been removed. Use personaID + VisualState instead.")
+// SanctumChamber has been removed from the architecture.
+// Ambient intensity and presence titles are derived from personaID via PersonaTheme.
+// This file remains only so XcodeGen / existing project references do not break mid-migration.
+// Safe to delete in a follow-up once project.yml no longer lists it.
