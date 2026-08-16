@@ -79,9 +79,7 @@ struct GrokAIProvider: AIProvider {
         }
 
         guard (200...299).contains(http.statusCode) else {
-            // Truncate and never echo potential secrets
-            let snippet = String(data: data, encoding: .utf8).map { String($0.prefix(120)) } ?? "HTTP \(http.statusCode)"
-            throw AppError.aiRequestFailed("Grok API \(http.statusCode): \(snippet)")
+            throw AppError.aiRequestFailed("Grok API request failed (HTTP \(http.statusCode))")
         }
 
         let decoded: GrokAPI.ChatResponse

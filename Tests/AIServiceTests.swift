@@ -85,6 +85,12 @@ final class AIServiceTests: XCTestCase {
         }
     }
 
+    func testAIRequestFailureDoesNotExposeDetails() {
+        let error = AppError.aiRequestFailed("secret provider payload")
+        XCTAssertEqual(error.localizedDescription, "AI request failed. Please try again.")
+        XCTAssertFalse(error.localizedDescription.contains("secret provider payload"))
+    }
+
     func testPersonaAwareCompleteBuildsResponse() async throws {
         let bus = EventBus()
         let logger = LoggerService()
