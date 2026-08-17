@@ -18,7 +18,10 @@ struct QuicksilverApp: App {
 
             // Prefer lower sample rates in production to control cost / volume
             options.tracesSampleRate = 0.2
-            options.profilesSampleRate = 0.1
+            options.configureProfiling = { profiling in
+                profiling.lifecycle = .trace
+                profiling.sessionSampleRate = 0.1
+            }
 
             // Useful diagnostics without being overly aggressive
             options.enableMetrics = true
