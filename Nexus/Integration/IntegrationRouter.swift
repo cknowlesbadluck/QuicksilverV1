@@ -94,7 +94,9 @@ public actor IntegrationRouter {
     public func resumeTask(_ id: UUID) async throws -> IntegrationTaskStore.Task? {
         let task = try await tasks.resume(id: id)
         if task != nil {
-            _ = try await events.append(IntegrationEventStore.Event(taskID: id, type: "task.resumed", message: "Task resumed from persistent state."))
+            _ = try await events.append(
+                IntegrationEventStore.Event(taskID: id, type: "task.resumed", message: "Task resumed from persistent state.")
+            )
         }
         return task
     }
