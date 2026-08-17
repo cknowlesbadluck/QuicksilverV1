@@ -271,8 +271,8 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             intent: SwitchToForgeIntent(),
             phrases: [
                 "Switch to Forge in \(.applicationName)",
-                "Activate Forge persona",
-                "Start building with Forge"
+                "Activate Forge persona in \(.applicationName)",
+                "Start building with Forge in \(.applicationName)"
             ],
             shortTitle: "Switch to Forge",
             systemImageName: "hammer.fill"
