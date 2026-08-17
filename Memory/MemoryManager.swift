@@ -70,12 +70,7 @@ public final class MemoryManager {
     }
 
     public func items(forPersona personaID: String?) -> [MemoryItem] {
-        let filtered: [MemoryItem]
-        if let personaID {
-            filtered = items.filter { $0.personaScope == nil || $0.personaScope == personaID }
-        } else {
-            filtered = items
-        }
+        let filtered = personaID.map { id in items.filter { $0.personaScope == nil || $0.personaScope == id } } ?? items
         return filtered.sorted {
             if $0.importance != $1.importance { return $0.importance > $1.importance }
             return $0.updatedAt > $1.updatedAt
@@ -106,25 +101,24 @@ public final class MemoryManager {
         }
     }
 
-    public func clearAll() async {
-        let ids = items.map(\.id)
-        for id in ids {
+    @discardableResult
+    public func clearAll() async -> Bool {
+        for id in items.map(\.id) {
             await delete(id: id)
         }
-        items.removeAll()
+        guard items.isEmpty else {
+            logger.error("Memory clear failed; \(items.count) item(s) remain", category: logger.memory)
+            return false
+        }
         logger.info("Memory cleared by user request", category: logger.memory)
+        return true
     }
 
-    /// Removes items whose importance is strictly below `threshold`.
     @discardableResult
     public func pruneBelow(importance threshold: Double) async -> Int {
         let victims = items.filter { $0.importance < threshold }
-        for item in victims {
-            await delete(id: item.id)
-        }
-        if !victims.isEmpty {
-            logger.info("Pruned \(victims.count) memory items below importance \(threshold)", category: logger.memory)
-        }
+        for item in victims { await delete(id: item.id) }
+        if !victims.isEmpty { logger.info("Pruned \(victims.count) memory items below importance \(threshold)", category: logger.memory) }
         return victims.count
     }
 
@@ -142,11 +136,7 @@ public final class MemoryManager {
     private func persist(_ item: MemoryItem) async {
         do {
             try await store.save(item)
-            if let index = items.firstIndex(where: { $0.id == item.id }) {
-                items[index] = item
-            } else {
-                items.append(item)
-            }
+            if let index = items.firstIndex(where: { $0.id == item.id }) { items[index] = item } else { items.append(item) }
             await eventBus.publish(.memoryDidUpdate(itemID: item.id.uuidString))
         } catch {
             logger.error("Failed to save memory item: \(error.localizedDescription)", category: logger.memory)

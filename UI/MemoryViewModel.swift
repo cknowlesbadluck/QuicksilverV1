@@ -68,9 +68,9 @@ final class MemoryViewModel {
     }
 
     func clearAll() async {
-        await container.memoryManager.clearAll()
+        let didClear = await container.memoryManager.clearAll()
         await load()
-        statusMessage = "All memories cleared"
+        statusMessage = didClear ? "All memories cleared" : "Unable to clear all memories"
     }
 
     func prepareExport() {
