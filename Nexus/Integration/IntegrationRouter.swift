@@ -23,6 +23,7 @@ public actor IntegrationRouter {
     public enum RouterError: Error, LocalizedError, Sendable {
         case noRoute(IntegrationCapability)
         case malformedPlan
+        case approvalRequired
 
         public var errorDescription: String? {
             switch self {
@@ -30,6 +31,8 @@ public actor IntegrationRouter {
                 return "No integration route is available for \(capability.rawValue)."
             case .malformedPlan:
                 return "The integration gateway returned a malformed execution plan."
+            case .approvalRequired:
+                return "Explicit approval is required before executing an integration tool."
             }
         }
     }
@@ -52,14 +55,9 @@ public actor IntegrationRouter {
         let arguments: [String: AnyCodable] = [
             "objective": .string(request.objective),
             "capabilities": .array(request.capabilities.map { .string($0.rawValue) }),
-            "preferredProviders": .array(
-                request.preferredProviders.map { .string($0.rawValue) }
-            )
+            "preferredProviders": .array(request.preferredProviders.map { .string($0.rawValue) })
         ]
-        let result = try await gateway.callTool(
-            name: "integration_plan",
-            arguments: arguments
-        )
+        let result = try await gateway.callTool(name: "integration_plan", arguments: arguments)
 
         guard case let .object(object) = result,
               case let .string(objective) = object["objective"],
@@ -79,62 +77,43 @@ public actor IntegrationRouter {
     public func createTask(_ request: Request) async throws -> IntegrationTaskStore.Task {
         let executionPlan = try await plan(request)
         let steps = executionPlan.steps.map {
-            IntegrationTaskStore.TaskStep(
-                order: $0.order,
-                capability: $0.capability,
-                connectorID: $0.connectorID,
-                provider: $0.provider
-            )
+            IntegrationTaskStore.TaskStep(order: $0.order, capability: $0.capability, connectorID: $0.connectorID, provider: $0.provider)
         }
-        let task = try await tasks.create(
-            objective: request.objective,
-            steps: steps
-        )
+        let task = try await tasks.create(objective: request.objective, steps: steps)
         _ = try await events.append(
-            IntegrationEventStore.Event(
-                taskID: task.id,
-                type: "task.created",
-                message: request.objective
-            )
+            IntegrationEventStore.Event(taskID: task.id, type: "task.created", message: "Task created.")
         )
         return task
     }
 
     public func pauseTask(_ id: UUID) async throws {
         try await tasks.markPaused(id: id)
-        _ = try await events.append(
-            IntegrationEventStore.Event(
-                taskID: id,
-                type: "task.paused",
-                message: "Task paused and persisted."
-            )
-        )
+        _ = try await events.append(IntegrationEventStore.Event(taskID: id, type: "task.paused", message: "Task paused and persisted."))
     }
 
     public func resumeTask(_ id: UUID) async throws -> IntegrationTaskStore.Task? {
         let task = try await tasks.resume(id: id)
         if task != nil {
             _ = try await events.append(
-                IntegrationEventStore.Event(
-                    taskID: id,
-                    type: "task.resumed",
-                    message: "Task resumed from persistent state."
-                )
+                IntegrationEventStore.Event(taskID: id, type: "task.resumed", message: "Task resumed from persistent state.")
             )
         }
         return task
     }
 
     public func pendingTasks() async -> [IntegrationTaskStore.Task] {
-        await tasks.all().filter {
-            [.queued, .running, .paused, .awaitingApproval].contains($0.status)
-        }
+        await tasks.all().filter { [.queued, .running, .paused, .awaitingApproval].contains($0.status) }
     }
 
     public func executeTool(
         name: String,
-        arguments: [String: AnyCodable] = [:]
+        arguments: [String: AnyCodable] = [:],
+        policy: IntegrationExecutionPolicy = IntegrationExecutionPolicy()
     ) async throws -> AnyCodable {
-        try await gateway.callTool(name: name, arguments: arguments)
+        guard policy.approval == .automatic else {
+            throw RouterError.approvalRequired
+        }
+        try Task.checkCancellation()
+        return try await gateway.callTool(name: name, arguments: arguments)
     }
 }
