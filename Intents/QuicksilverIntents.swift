@@ -9,7 +9,9 @@ import ServicesAI
 @available(iOS 17.0, macOS 14.0, *)
 public struct GetCurrentPersonaIntent: AppIntent {
     public static let title: LocalizedStringResource = "Get Current Persona"
-    public static let description = IntentDescription("Returns the persona currently active in Quicksilver (autonomously chosen or overridden).")
+    public static let description = IntentDescription(
+        "Returns the persona currently active in Quicksilver (autonomously chosen or overridden)."
+    )
     public static let openAppWhenRun: Bool = false
 
     public init() {}
@@ -271,8 +273,8 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             intent: SwitchToForgeIntent(),
             phrases: [
                 "Switch to Forge in \(.applicationName)",
-                "Activate Forge persona",
-                "Start building with Forge"
+                "Activate Forge persona in \(.applicationName)",
+                "Start building with Forge in \(.applicationName)"
             ],
             shortTitle: "Switch to Forge",
             systemImageName: "hammer.fill"

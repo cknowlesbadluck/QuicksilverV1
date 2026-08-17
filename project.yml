@@ -127,7 +127,7 @@ targets:
       - target: Nexus
       - target: QuicksilverIntents
       - package: Sentry
-        product: SentrySPM
+        product: Sentry
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.app

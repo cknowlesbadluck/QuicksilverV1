@@ -239,6 +239,23 @@ jobs:
           echo "=== Errors only ==="
           grep -E "error:|warning:|FAILED|fatal" xcodebuild.log | head -40 || true
 
+      - name: Emit compiler errors as annotations
+        if: failure()
+        run: |
+          set +e
+          escape() {
+            printf '%s' "$1" | sed -e 's/%/%25/g' -e 's/\r/%0D/g' -e ':a;N;$!ba;s/\n/%0A/g'
+          }
+          COUNT=0
+          while IFS= read -r line; do
+            [ -z "$line" ] && continue
+            esc=$(escape "$line")
+            echo "::error::${esc}"
+            COUNT=$((COUNT+1))
+            [ "$COUNT" -ge 15 ] && break
+          done < <(grep -E "error:" xcodebuild.log | sort -u | head -15)
+          echo "Emitted $COUNT annotation(s)."
+
       - name: Upload build logs
         if: always()
         uses: actions/upload-artifact@v7

@@ -82,6 +82,9 @@ struct EternalView: View {
         .animation(PersonaTheme.spring(for: personaID), value: vm.observations.count)
     }
 
+}
+
+private extension EternalView {
     // MARK: - Header
 
     private func header(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
@@ -188,8 +191,8 @@ struct EternalView: View {
             Text(insight.title)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(PersonaTheme.mercurySilver)
-            if !insight.summary.isEmpty {
-                Text(insight.summary)
+            if !insight.body.isEmpty {
+                Text(insight.body)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

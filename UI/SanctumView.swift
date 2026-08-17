@@ -112,6 +112,9 @@ struct SanctumView: View {
         .animation(MotionTokens.stabilization, value: vm.visualState)
     }
 
+}
+
+private extension SanctumView {
     // MARK: - Glyph mapping
 
     private func glyphStates(for vm: SanctumViewModel) -> [(GlyphKind, GlyphVisualState)] {
@@ -253,7 +256,7 @@ struct SanctumView: View {
             Text("Insight")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(accent)
-            Text(insight.summary)
+            Text(insight.title)
                 .font(.subheadline)
                 .foregroundStyle(PersonaTheme.mercurySilver)
         }
