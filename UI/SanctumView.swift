@@ -6,7 +6,6 @@ import Nexus
 /// The Sanctum — primary experiential surface of Mercury.
 /// Not a dashboard. A place.
 /// Quicksilver is already here. Forge and Eternal awaken via persona.
-// swiftlint:disable type_body_length
 struct SanctumView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: SanctumViewModel?
@@ -304,4 +303,3 @@ private extension SanctumView {
         .buttonStyle(.plain)
     }
 }
-// swiftlint:enable type_body_length
