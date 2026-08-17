@@ -188,8 +188,8 @@ struct EternalView: View {
             Text(insight.title)
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(PersonaTheme.mercurySilver)
-            if !insight.summary.isEmpty {
-                Text(insight.summary)
+            if !insight.body.isEmpty {
+                Text(insight.body)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

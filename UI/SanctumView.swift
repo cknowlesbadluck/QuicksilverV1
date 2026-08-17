@@ -253,7 +253,7 @@ struct SanctumView: View {
             Text("Insight")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(accent)
-            Text(insight.summary)
+            Text(insight.title)
                 .font(.subheadline)
                 .foregroundStyle(PersonaTheme.mercurySilver)
         }
