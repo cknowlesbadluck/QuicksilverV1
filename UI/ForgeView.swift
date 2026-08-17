@@ -82,6 +82,9 @@ struct ForgeView: View {
         .animation(PersonaTheme.spring(for: personaID), value: vm.sessionNotes.count)
     }
 
+}
+
+private extension ForgeView {
     // MARK: - Header
 
     private func header(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {

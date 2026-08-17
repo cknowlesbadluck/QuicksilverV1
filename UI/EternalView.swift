@@ -82,6 +82,9 @@ struct EternalView: View {
         .animation(PersonaTheme.spring(for: personaID), value: vm.observations.count)
     }
 
+}
+
+private extension EternalView {
     // MARK: - Header
 
     private func header(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {

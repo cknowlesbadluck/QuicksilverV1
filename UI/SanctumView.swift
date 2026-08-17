@@ -112,6 +112,9 @@ struct SanctumView: View {
         .animation(MotionTokens.stabilization, value: vm.visualState)
     }
 
+}
+
+private extension SanctumView {
     // MARK: - Glyph mapping
 
     private func glyphStates(for vm: SanctumViewModel) -> [(GlyphKind, GlyphVisualState)] {
