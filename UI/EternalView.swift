@@ -36,7 +36,7 @@ struct EternalView: View {
         ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
 
-            AmbientLayer(personaID: personaID, chamber: .eternal)
+            AmbientLayer(personaID: personaID)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: spacing) {

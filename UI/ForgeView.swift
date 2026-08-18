@@ -36,7 +36,7 @@ struct ForgeView: View {
         ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
 
-            AmbientLayer(personaID: personaID, chamber: .forge)
+            AmbientLayer(personaID: personaID)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: spacing) {
