@@ -9,27 +9,54 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   prune:
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - name: Delete merged branches
+      - name: Delete branches from merged PRs (squash/rebase-safe)
         run: |
+          set -euo pipefail
           # Never touch these
-          PROTECTED="main|develop|master|HEAD"
+          PROTECTED_REGEX='^(main|develop|master|HEAD)$'
 
-          git branch -r --merged origin/main \
-            | grep -vE "origin/($PROTECTED)" \
-            | sed 's|origin/||' \
-            | while read branch; do
-                if [ -n "$branch" ]; then
-                  echo "Deleting merged branch: $branch"
+          # gh pr list only sees open PRs by default; --state merged is required
+          # to find branches whose PR was squash/rebase-merged (git branch
+          # --merged misses these entirely since there's no ancestor commit).
+          gh pr list --state merged --limit 500 --json headRefName,number \
+            --jq '.[] | "\(.headRefName)\t\(.number)"' \
+            | while IFS=$'\t' read -r branch pr_number; do
+                [ -z "$branch" ] && continue
+                if echo "$branch" | grep -qE "$PROTECTED_REGEX"; then
+                  continue
+                fi
+                if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+                  echo "Deleting branch from merged PR #$pr_number: $branch"
                   git push origin --delete "$branch" || true
                 fi
+              done
+
+      - name: Delete plain fast-forward-merged branches
+        run: |
+          set -euo pipefail
+          PROTECTED_REGEX='^(main|develop|master|HEAD)$'
+
+          # Fallback for branches merged without going through a PR at all.
+          git branch -r --merged origin/main \
+            | sed 's|origin/||' \
+            | while read -r branch; do
+                [ -z "$branch" ] && continue
+                if echo "$branch" | grep -qE "$PROTECTED_REGEX"; then
+                  continue
+                fi
+                echo "Deleting fast-forward-merged branch: $branch"
+                git push origin --delete "$branch" || true
               done
