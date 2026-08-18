@@ -60,17 +60,17 @@ public final class NexusCoordinator {
         logger.info("Nexus starting", category: logger.nexus)
         automationBridge.configure(nexus: self)
 
-        networkMonitor.onChange = { [weak self] c, e, k in
-            Task { @MainActor in self?.handleNetwork(connected: c, expensive: e, constrained: k) }
+        networkMonitor.onChange = { [weak self] connected, expensive, constrained in
+            Task { @MainActor in self?.handleNetwork(connected: connected, expensive: expensive, constrained: constrained) }
         }
-        batteryMonitor.onChange = { [weak self] l, d in
-            Task { @MainActor in self?.handleBattery(level: l, description: d) }
+        batteryMonitor.onChange = { [weak self] level, description in
+            Task { @MainActor in self?.handleBattery(level: level, description: description) }
         }
-        storageMonitor.onChange = { [weak self] a, t in
-            Task { @MainActor in self?.handleStorage(available: a, total: t) }
+        storageMonitor.onChange = { [weak self] available, total in
+            Task { @MainActor in self?.handleStorage(available: available, total: total) }
         }
-        deviceMonitor.onChange = { [weak self] t, lp in
-            Task { @MainActor in self?.handleDevice(thermal: t, lowPower: lp) }
+        deviceMonitor.onChange = { [weak self] thermal, lowPower in
+            Task { @MainActor in self?.handleDevice(thermal: thermal, lowPower: lowPower) }
         }
 
         networkMonitor.start()
