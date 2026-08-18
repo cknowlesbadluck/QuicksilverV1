@@ -43,8 +43,8 @@ final class ForgeViewModel {
         networkStatus = state.networkStatus.capitalized
         thermalState = state.thermalState.capitalized
 
-        // Brain owns chamber suggestion; UI only observes.
-        isAwake = container.brain.suggestedChamber == .forge
+        // Brain owns persona routing; UI only observes.
+        isAwake = container.brain.activePersonaID.lowercased() == "forge"
             || config.id.lowercased() == "forge"
     }
 

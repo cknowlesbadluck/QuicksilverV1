@@ -5,7 +5,6 @@ import Core
 /// Permanent ambient presence in the Sanctum — no card chrome.
 struct QuicksilverPresenceView: View {
     let personaID: String
-    let chamber: SanctumChamber
     let livingStatus: String
     var visualState: VisualState = .idle
 
@@ -32,16 +31,16 @@ struct QuicksilverPresenceView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .animation(PersonaTheme.spring(for: personaID), value: chamber)
+        .animation(PersonaTheme.spring(for: personaID), value: personaID)
     }
 
     private var presenceTitle: String {
-        switch chamber {
-        case .forge:
+        switch personaID.lowercased() {
+        case "forge":
             return "Forge is awake"
-        case .eternal:
+        case "eternal":
             return "Eternal observes"
-        case .sanctum:
+        default:
             return "Quicksilver"
         }
     }

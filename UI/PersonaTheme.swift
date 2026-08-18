@@ -11,7 +11,7 @@ enum PersonaTheme {
     /// Near-absolute void — primary background.
     static let voidBlack = Color(red: 0.020, green: 0.020, blue: 0.039)   // #05050A
 
-    /// High-energy purple glow — primary accent / chamber pulse.
+    /// High-energy purple glow — primary accent / pulse.
     static let glowPurple = Color(red: 0.545, green: 0.239, blue: 1.000)  // #8B3DFF
 
     /// Toxic / radioactive green — success, health, live signals.
@@ -35,13 +35,10 @@ enum PersonaTheme {
     static func accent(for personaID: String) -> Color {
         switch personaID.lowercased() {
         case "forge":
-            // Forge leans hard into toxic green + purple edge
             return toxicGreen
         case "eternal":
-            // Eternal keeps the glow purple as primary
             return glowPurple
         case "quicksilver":
-            // Quicksilver is silver with purple undertone
             return mercurySilver
         default:
             return toxicGreen
@@ -56,9 +53,17 @@ enum PersonaTheme {
         }
     }
 
+    /// Ambient particle / sheen intensity derived from persona (0...1).
+    static func ambientIntensity(for personaID: String) -> Double {
+        switch personaID.lowercased() {
+        case "forge": return 0.82
+        case "eternal": return 0.58
+        default: return 0.45
+        }
+    }
+
     // MARK: - Density & Geometry
 
-    /// Vertical spacing multiplier: denser (Forge) vs airier (Eternal).
     static func density(for personaID: String) -> CGFloat {
         switch personaID.lowercased() {
         case "forge": return 0.85
@@ -122,13 +127,12 @@ enum PersonaTheme {
         accent(for: personaID).opacity(0.40)
     }
 
-    /// Radioactive edge stroke used on high-energy surfaces (Forge cards, live signals).
     static func radioactiveStroke(for personaID: String, intensity: Double = 1.0) -> Color {
         let base = personaID.lowercased() == "forge" ? toxicGreen : glowPurple
         return base.opacity(0.35 * intensity)
     }
 
-    // MARK: - Policy Summary (legacy helper)
+    // MARK: - Policy Summary
 
     static func policySummary(for personaID: String) -> String {
         let policy = MemoryPolicy.policy(for: personaID)

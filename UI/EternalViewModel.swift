@@ -43,8 +43,8 @@ final class EternalViewModel {
         networkStatus = state.networkStatus.capitalized
         thermalState = state.thermalState.capitalized
 
-        // Brain owns chamber suggestion; UI only observes.
-        isAwake = container.brain.suggestedChamber == .eternal
+        // Brain owns persona routing; UI only observes.
+        isAwake = container.brain.activePersonaID.lowercased() == "eternal"
             || config.id.lowercased() == "eternal"
     }
 

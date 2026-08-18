@@ -6,7 +6,6 @@ import Core
 /// Internal motion is layered and semi-independent.
 struct QuicksilverCoreView: View {
     let personaID: String
-    let chamber: SanctumChamber
     let visualState: VisualState
     var size: CGFloat = 88
 
@@ -23,7 +22,6 @@ struct QuicksilverCoreView: View {
 
     var body: some View {
         ZStack {
-            // Outer atmospheric halo
             Circle()
                 .fill(
                     RadialGradient(
@@ -40,7 +38,6 @@ struct QuicksilverCoreView: View {
                 .frame(width: size * 2.4, height: size * 2.4)
                 .scaleEffect(haloScale)
 
-            // Secondary energy ring (thinking / processing)
             if visualState.isElevated {
                 Circle()
                     .strokeBorder(
@@ -51,7 +48,6 @@ struct QuicksilverCoreView: View {
                     .rotationEffect(.degrees(orbit))
             }
 
-            // Glyph orbit ring
             Circle()
                 .strokeBorder(
                     style: StrokeStyle(lineWidth: 0.8, dash: [2, 10])
@@ -60,7 +56,6 @@ struct QuicksilverCoreView: View {
                 .frame(width: size * 1.35, height: size * 1.35)
                 .rotationEffect(.degrees(-orbit * 0.6))
 
-            // Dark glass shell
             Circle()
                 .fill(
                     RadialGradient(
@@ -75,7 +70,6 @@ struct QuicksilverCoreView: View {
                 )
                 .frame(width: size * 1.08, height: size * 1.08)
 
-            // Liquid mercury core — layered gradients shift with phase
             Circle()
                 .fill(
                     AngularGradient(
@@ -86,7 +80,6 @@ struct QuicksilverCoreView: View {
                 )
                 .frame(width: size, height: size)
                 .overlay(
-                    // Internal highlight (specular)
                     Circle()
                         .fill(
                             RadialGradient(
@@ -112,13 +105,12 @@ struct QuicksilverCoreView: View {
                 .scaleEffect(breath)
                 .offset(x: turbulence * 0.6, y: turbulence * -0.4)
 
-            // Micro-particles near core when elevated
             if visualState.isElevated && !reduceMotion {
-                ForEach(0..<5, id: \.self) { i in
+                ForEach(0..<5, id: \.self) { particleIndex in
                     Circle()
                         .fill(accent.opacity(0.5))
                         .frame(width: 2.5, height: 2.5)
-                        .offset(particleOffset(index: i))
+                        .offset(particleOffset(index: particleIndex))
                 }
             }
         }
@@ -129,20 +121,15 @@ struct QuicksilverCoreView: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
-    // MARK: - Palette
-
     private var coreColors: [Color] {
-        let base = [
+        [
             PersonaTheme.mercurySilver.opacity(0.95),
             accent.opacity(0.85),
             PersonaTheme.liquidMetal,
             accent.opacity(0.7),
             PersonaTheme.mercurySilver.opacity(0.9)
         ]
-        return base
     }
-
-    // MARK: - Motion
 
     private func startMotion() {
         guard !reduceMotion else {
@@ -152,7 +139,6 @@ struct QuicksilverCoreView: View {
             return
         }
 
-        // Breath — slower when idle / sleeping
         let breathDuration: Double
         switch visualState {
         case .sleeping: breathDuration = 5.5
@@ -176,7 +162,6 @@ struct QuicksilverCoreView: View {
             fluidPhase = 360
         }
 
-        // Subtle turbulence only when elevated — personality, not noise
         if visualState.isElevated {
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                 turbulence = 1.8
@@ -198,6 +183,6 @@ struct QuicksilverCoreView: View {
     }
 
     private var accessibilityLabel: String {
-        "Quicksilver core, \(visualState.rawValue), \(chamber.displayName)"
+        "Quicksilver core, \(visualState.rawValue), \(personaID)"
     }
 }

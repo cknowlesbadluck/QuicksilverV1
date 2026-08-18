@@ -9,7 +9,6 @@ import Nexus
 final class SanctumViewModel {
     private(set) var activePersonaID: String = "quicksilver"
     private(set) var livingStatus: String = "Quicksilver is present."
-    private(set) var activeChamber: SanctumChamber = .sanctum
     private(set) var latestInsight: Insight?
     private(set) var batteryLevelText: String = "—"
     private(set) var networkStatus: String = "—"
@@ -39,8 +38,7 @@ final class SanctumViewModel {
         thermalState = state.thermalState.capitalized
         overallHealthScore = state.overallHealthScore
 
-        // Invisible Architecture: chamber + visual state owned by Brain.
-        activeChamber = container.brain.suggestedChamber
+        // Invisible Architecture: visual state owned by Brain.
         visualState = container.brain.visualState
     }
 

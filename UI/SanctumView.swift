@@ -5,7 +5,7 @@ import Nexus
 
 /// The Sanctum — primary experiential surface of Mercury.
 /// Not a dashboard. A place.
-/// Quicksilver is already here. The Forge and Eternal awaken organically.
+/// Quicksilver is already here. Forge and Eternal awaken via persona.
 struct SanctumView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: SanctumViewModel?
@@ -43,12 +43,12 @@ struct SanctumView: View {
                 .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showForge) {
-            RealmGateway(title: "Forge", chamber: .forge, isPresented: $showForge) {
+            RealmGateway(title: "Forge", personaID: "forge", isPresented: $showForge) {
                 ForgeView()
             }
         }
         .sheet(isPresented: $showEternal) {
-            RealmGateway(title: "Eternal", chamber: .eternal, isPresented: $showEternal) {
+            RealmGateway(title: "Eternal", personaID: "eternal", isPresented: $showEternal) {
                 EternalView()
             }
         }
@@ -64,7 +64,6 @@ struct SanctumView: View {
 
             AmbientLayer(
                 personaID: personaID,
-                chamber: vm.activeChamber,
                 visualState: vm.visualState
             )
 
@@ -75,7 +74,6 @@ struct SanctumView: View {
                     VStack(spacing: 28 * PersonaTheme.density(for: personaID)) {
                         QuicksilverPresenceView(
                             personaID: personaID,
-                            chamber: vm.activeChamber,
                             livingStatus: vm.livingStatus,
                             visualState: vm.visualState
                         )
@@ -88,7 +86,7 @@ struct SanctumView: View {
                         }
                         .padding(.vertical, 4)
 
-                        chamberIndicators(vm, accent: accent, radius: radius)
+                        personaIndicators(vm, accent: accent, radius: radius)
 
                         environmentalSignals(vm, radius: radius)
 
@@ -107,7 +105,7 @@ struct SanctumView: View {
         }
         .onAppear { vm.startLiveRefresh() }
         .onDisappear { vm.stopLiveRefresh() }
-        .animation(MotionTokens.spring(for: personaID), value: vm.activeChamber)
+        .animation(MotionTokens.spring(for: personaID), value: personaID)
         .animation(MotionTokens.spring(for: personaID), value: vm.livingStatus)
         .animation(MotionTokens.stabilization, value: vm.visualState)
     }
@@ -119,12 +117,13 @@ private extension SanctumView {
 
     private func glyphStates(for vm: SanctumViewModel) -> [(GlyphKind, GlyphVisualState)] {
         let healthState: GlyphVisualState = vm.overallHealthScore < 40 ? .warning : .idle
+        let persona = vm.activePersonaID.lowercased()
         return [
             (.communication, .attention),
             (.memory, .idle),
             (.diagnostics, healthState),
-            (.development, vm.activeChamber == .forge ? .active : .idle),
-            (.observation, vm.activeChamber == .eternal ? .active : .idle),
+            (.development, persona == "forge" ? .active : .idle),
+            (.observation, persona == "eternal" ? .active : .idle),
             (.configuration, .idle),
             (.health, healthState),
             (.network, .idle)
@@ -144,8 +143,6 @@ private extension SanctumView {
         }
     }
 
-    // MARK: - Presence Bar
-
     private func presenceBar(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack {
             Circle()
@@ -153,7 +150,7 @@ private extension SanctumView {
                 .frame(width: 8, height: 8)
                 .shadow(color: accent.opacity(0.8), radius: 4)
 
-            Text(vm.activeChamber.displayName)
+            Text(vm.activePersonaID.capitalized)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PersonaTheme.mercurySilver)
 
@@ -174,14 +171,13 @@ private extension SanctumView {
         .background(.ultraThinMaterial.opacity(0.35))
     }
 
-    // MARK: - Chamber Indicators
-
-    private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
+    private func personaIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
             Button { showForge = true } label: {
-                chamberChip(
+                personaChip(
                     name: "Forge",
-                    isAwake: vm.activeChamber == .forge || vm.activeChamber == .sanctum,
+                    isAwake: vm.activePersonaID.lowercased() == "forge"
+                        || vm.activePersonaID.lowercased() == "quicksilver",
                     accent: PersonaTheme.accent(for: "forge"),
                     radius: radius
                 )
@@ -189,9 +185,10 @@ private extension SanctumView {
             .buttonStyle(.plain)
 
             Button { showEternal = true } label: {
-                chamberChip(
+                personaChip(
                     name: "Eternal",
-                    isAwake: vm.activeChamber == .eternal || vm.activeChamber == .sanctum,
+                    isAwake: vm.activePersonaID.lowercased() == "eternal"
+                        || vm.activePersonaID.lowercased() == "quicksilver",
                     accent: PersonaTheme.accent(for: "eternal"),
                     radius: radius
                 )
@@ -200,7 +197,7 @@ private extension SanctumView {
         }
     }
 
-    private func chamberChip(name: String, isAwake: Bool, accent: Color, radius: CGFloat) -> some View {
+    private func personaChip(name: String, isAwake: Bool, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 6) {
             Circle()
                 .fill(isAwake ? accent : accent.opacity(0.25))
@@ -220,8 +217,6 @@ private extension SanctumView {
                 .strokeBorder(accent.opacity(isAwake ? 0.45 : 0.12), lineWidth: 1)
         )
     }
-
-    // MARK: - Environmental Signals
 
     private func environmentalSignals(_ vm: SanctumViewModel, radius: CGFloat) -> some View {
         HStack(spacing: 10) {
@@ -249,8 +244,6 @@ private extension SanctumView {
         )
     }
 
-    // MARK: - Insight
-
     private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Insight")
@@ -271,8 +264,6 @@ private extension SanctumView {
                 .strokeBorder(accent.opacity(0.25), lineWidth: 1)
         )
     }
-
-    // MARK: - Ritual Bar
 
     private func ritualBar(accent: Color) -> some View {
         VStack(spacing: 0) {
