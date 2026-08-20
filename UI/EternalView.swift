@@ -290,7 +290,18 @@ private struct ObservatoryLens: View {
             Circle().stroke(accent.opacity(0.28), lineWidth: 1)
             Circle().stroke(PersonaTheme.mercurySilver.opacity(0.5), lineWidth: 2).padding(6)
             Circle()
-                .fill(.radialGradient(colors: [PersonaTheme.mercurySilver.opacity(0.8), accent.opacity(0.25), .clear], center: .center, startRadius: 1, endRadius: 20))
+                .fill(
+                    .radialGradient(
+                        colors: [
+                            PersonaTheme.mercurySilver.opacity(0.8),
+                            accent.opacity(0.25),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 1,
+                        endRadius: 20
+                    )
+                )
                 .padding(9)
             Rectangle()
                 .fill(accent.opacity(0.7))
@@ -315,15 +326,25 @@ private struct ObservatoryField: View {
                     var path = Path()
                     let steps = 40
                     for step in 0...steps {
-                        let a = Double(step) / Double(steps) * .pi * 2
-                        let drift = reduceMotion ? 0 : sin(time * 0.12 + a * 3 + Double(ring)) * (2 + Double(ring))
+                        let angle = Double(step) / Double(steps) * .pi * 2
+                        let drift = reduceMotion
+                            ? 0
+                            : sin(time * 0.12 + angle * 3 + Double(ring)) * (2 + Double(ring))
                         let point = CGPoint(
-                            x: center.x + cos(a) * radius + drift,
-                            y: center.y + sin(a) * radius * 0.42
+                            x: center.x + cos(angle) * radius + drift,
+                            y: center.y + sin(angle) * radius * 0.42
                         )
-                        if step == 0 { path.move(to: point) } else { path.addLine(to: point) }
+                        if step == 0 {
+                            path.move(to: point)
+                        } else {
+                            path.addLine(to: point)
+                        }
                     }
-                    context.stroke(path, with: .color(accent.opacity(0.035 + intensity * 0.025)), lineWidth: 0.8)
+                    context.stroke(
+                        path,
+                        with: .color(accent.opacity(0.035 + intensity * 0.025)),
+                        lineWidth: 0.8
+                    )
                 }
             }
         }
