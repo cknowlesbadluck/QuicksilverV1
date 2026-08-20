@@ -31,8 +31,18 @@ struct MercurySanctumBackdrop: View {
     var body: some View {
         ZStack {
             MercuryVisualTokens.void
-            RadialGradient(colors: [accent.opacity(0.08), .clear], center: .center, startRadius: 24, endRadius: 300)
-            RadialGradient(colors: [MercuryVisualTokens.sanctumPurple.opacity(0.14), .clear], center: UnitPoint(x: 0.20, y: 0.22), startRadius: 10, endRadius: 280)
+            RadialGradient(
+                colors: [accent.opacity(0.08), .clear],
+                center: .center,
+                startRadius: 24,
+                endRadius: 300
+            )
+            RadialGradient(
+                colors: [MercuryVisualTokens.sanctumPurple.opacity(0.14), .clear],
+                center: UnitPoint(x: 0.20, y: 0.22),
+                startRadius: 10,
+                endRadius: 280
+            )
             MercuryAmbientField(state: .idle, accent: accent)
 
             Canvas { context, size in
@@ -43,9 +53,20 @@ struct MercurySanctumBackdrop: View {
                     .init(x: 0.42, y: 0.58), .init(x: 0.58, y: 0.24)
                 ]
                 for point in seed {
-                    let center = CGPoint(x: point.x * size.width, y: point.y * size.height)
-                    let rect = CGRect(x: center.x, y: center.y, width: 1.5, height: 1.5)
-                    context.fill(Path(ellipseIn: rect), with: .color(MercuryVisualTokens.silver.opacity(0.16)))
+                    let center = CGPoint(
+                        x: point.x * size.width,
+                        y: point.y * size.height
+                    )
+                    let rect = CGRect(
+                        x: center.x,
+                        y: center.y,
+                        width: 1.5,
+                        height: 1.5
+                    )
+                    context.fill(
+                        Path(ellipseIn: rect),
+                        with: .color(MercuryVisualTokens.silver.opacity(0.16))
+                    )
                 }
             }
             .blendMode(.screen)
@@ -80,10 +101,19 @@ struct MercuryGlassSurface<Content: View>: View {
     var body: some View {
         content
             .padding(14)
-            .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous))
+            .background(
+                .ultraThinMaterial.opacity(0.42),
+                in: RoundedRectangle(
+                    cornerRadius: MercuryVisualTokens.cornerRadius,
+                    style: .continuous
+                )
+            )
             .overlay {
-                RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.18), lineWidth: 1)
+                RoundedRectangle(
+                    cornerRadius: MercuryVisualTokens.cornerRadius,
+                    style: .continuous
+                )
+                .stroke(accent.opacity(0.18), lineWidth: 1)
             }
     }
 }
@@ -96,16 +126,32 @@ struct MercuryRealmPill: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Circle().fill(active ? accent : accent.opacity(0.24)).frame(width: 7, height: 7)
+            Circle()
+                .fill(active ? accent : accent.opacity(0.24))
+                .frame(width: 7, height: 7)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title.uppercased()).font(.caption.weight(.semibold)).tracking(1.1).foregroundStyle(active ? accent : MercuryVisualTokens.silver)
-                Text(subtitle).font(.caption2).foregroundStyle(MercuryVisualTokens.silver.opacity(0.55))
+                Text(title.uppercased())
+                    .font(.caption.weight(.semibold))
+                    .tracking(1.1)
+                    .foregroundStyle(active ? accent : MercuryVisualTokens.silver)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(MercuryVisualTokens.silver.opacity(0.55))
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(active ? 0.52 : 0.25), in: Capsule())
-        .overlay { Capsule().stroke(accent.opacity(active ? 0.30 : 0.10), lineWidth: 1) }
+        .background(
+            .ultraThinMaterial.opacity(active ? 0.52 : 0.25),
+            in: Capsule()
+        )
+        .overlay {
+            Capsule()
+                .stroke(
+                    accent.opacity(active ? 0.30 : 0.10),
+                    lineWidth: 1
+                )
+        }
     }
 }
