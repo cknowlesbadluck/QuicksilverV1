@@ -6,18 +6,18 @@ import SwiftUI
 /// instruments inside a dark chamber: layered atmosphere, metallic text,
 /// restrained glass, and a living mercury core.
 enum MercuryVisualTokens {
-    static let void = Color(red: 0.020, green: 0.015, blue: 0.040)
-    static let sanctumPurple = Color(red: 0.220, green: 0.105, blue: 0.360)
-    static let quicksilver = Color(red: 0.350, green: 0.950, blue: 0.720)
-    static let quicksilverDeep = Color(red: 0.090, green: 0.280, blue: 0.220)
-    static let silver = Color(red: 0.720, green: 0.760, blue: 0.820)
+    static let void = Color(red: 0.035, green: 0.024, blue: 0.067)
+    static let sanctumPurple = Color(red: 0.427, green: 0.298, blue: 0.608)
+    static let quicksilver = Color(red: 0.725, green: 1.000, blue: 0.000)
+    static let quicksilverDeep = Color(red: 0.180, green: 0.235, blue: 0.030)
+    static let silver = Color(red: 0.720, green: 0.700, blue: 0.780)
     static let ember = Color(red: 0.780, green: 0.340, blue: 0.180)
     static let eternalGold = Color(red: 0.780, green: 0.650, blue: 0.300)
-    static let panel = Color(red: 0.055, green: 0.045, blue: 0.090)
+    static let panel = Color(red: 0.082, green: 0.063, blue: 0.129)
 
-    static let cornerRadius: CGFloat = 18
-    static let largeCornerRadius: CGFloat = 26
-    static let corePulseDuration: TimeInterval = 2.8
+    static let cornerRadius: CGFloat = 16
+    static let largeCornerRadius: CGFloat = 24
+    static let corePulseDuration: TimeInterval = 3.6
     static let realmTransitionDuration: TimeInterval = 0.42
     static let microInteractionDuration: TimeInterval = 0.16
 }
@@ -31,20 +31,19 @@ struct MercurySanctumBackdrop: View {
     var body: some View {
         ZStack {
             MercuryVisualTokens.void
-
             RadialGradient(
-                colors: [accent.opacity(0.20), MercuryVisualTokens.void.opacity(0)],
+                colors: [accent.opacity(0.08), .clear],
                 center: .center,
                 startRadius: 24,
-                endRadius: 270
+                endRadius: 300
             )
-
             RadialGradient(
-                colors: [MercuryVisualTokens.sanctumPurple.opacity(0.18), .clear],
+                colors: [MercuryVisualTokens.sanctumPurple.opacity(0.14), .clear],
                 center: UnitPoint(x: 0.20, y: 0.22),
                 startRadius: 10,
-                endRadius: 260
+                endRadius: 280
             )
+            MercuryAmbientField(state: .idle, accent: accent)
 
             Canvas { context, size in
                 let seed: [CGPoint] = [
@@ -54,9 +53,20 @@ struct MercurySanctumBackdrop: View {
                     .init(x: 0.42, y: 0.58), .init(x: 0.58, y: 0.24)
                 ]
                 for point in seed {
-                    let center = CGPoint(x: point.x * size.width, y: point.y * size.height)
-                    let rect = CGRect(x: center.x, y: center.y, width: 1.5, height: 1.5)
-                    context.fill(Path(ellipseIn: rect), with: .color(MercuryVisualTokens.silver.opacity(0.22)))
+                    let center = CGPoint(
+                        x: point.x * size.width,
+                        y: point.y * size.height
+                    )
+                    let rect = CGRect(
+                        x: center.x,
+                        y: center.y,
+                        width: 1.5,
+                        height: 1.5
+                    )
+                    context.fill(
+                        Path(ellipseIn: rect),
+                        with: .color(MercuryVisualTokens.silver.opacity(0.16))
+                    )
                 }
             }
             .blendMode(.screen)
@@ -67,57 +77,15 @@ struct MercurySanctumBackdrop: View {
 }
 
 /// Living core used as Mercury's persistent visual signature.
-/// TimelineView keeps the pulse independent from the view's local state and
-/// avoids manually scheduling timers in the UI layer.
+/// The visual state now directly controls material energy and deformation.
 struct MercuryPresenceOrb: View {
     let accent: Color
     var size: CGFloat = 132
+    var state: VisualState = .idle
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
-            let phase = timeline.date.timeIntervalSinceReferenceDate / MercuryVisualTokens.corePulseDuration
-            let pulse = 0.5 + 0.5 * sin(phase * .pi * 2.0)
-            let scale = 0.96 + (0.045 * pulse)
-            let opacity = 0.58 + (0.20 * pulse)
-
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(0.055))
-                    .frame(width: size * 1.72, height: size * 1.72)
-
-                Circle()
-                    .fill(accent.opacity(0.09))
-                    .frame(width: size * 1.42, height: size * 1.42)
-
-                Circle()
-                    .stroke(accent.opacity(0.25), lineWidth: 1)
-                    .frame(width: size * 1.30, height: size * 1.30)
-
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                .white.opacity(0.92),
-                                accent.opacity(opacity),
-                                MercuryVisualTokens.quicksilverDeep.opacity(0.72),
-                                .clear
-                            ],
-                            center: .center,
-                            startRadius: 2,
-                            endRadius: size * 0.55
-                        )
-                    )
-                    .frame(width: size, height: size)
-                    .overlay {
-                        Circle()
-                            .stroke(accent.opacity(0.42), lineWidth: 1)
-                    }
-                    .scaleEffect(scale)
-            }
-        }
-        .frame(width: size * 1.72, height: size * 1.72)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Quicksilver core")
+        MercuryLivingMaterial(state: state, size: size, accent: accent)
+            .frame(width: size * 2, height: size * 2)
     }
 }
 
@@ -133,10 +101,19 @@ struct MercuryGlassSurface<Content: View>: View {
     var body: some View {
         content
             .padding(14)
-            .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous))
+            .background(
+                .ultraThinMaterial.opacity(0.42),
+                in: RoundedRectangle(
+                    cornerRadius: MercuryVisualTokens.cornerRadius,
+                    style: .continuous
+                )
+            )
             .overlay {
-                RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous)
-                    .stroke(accent.opacity(0.22), lineWidth: 1)
+                RoundedRectangle(
+                    cornerRadius: MercuryVisualTokens.cornerRadius,
+                    style: .continuous
+                )
+                .stroke(accent.opacity(0.18), lineWidth: 1)
             }
     }
 }
@@ -152,26 +129,29 @@ struct MercuryRealmPill: View {
             Circle()
                 .fill(active ? accent : accent.opacity(0.24))
                 .frame(width: 7, height: 7)
-
             VStack(alignment: .leading, spacing: 2) {
                 Text(title.uppercased())
                     .font(.caption.weight(.semibold))
                     .tracking(1.1)
                     .foregroundStyle(active ? accent : MercuryVisualTokens.silver)
-
                 Text(subtitle)
                     .font(.caption2)
                     .foregroundStyle(MercuryVisualTokens.silver.opacity(0.55))
             }
-
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(active ? 0.52 : 0.25), in: Capsule())
+        .background(
+            .ultraThinMaterial.opacity(active ? 0.52 : 0.25),
+            in: Capsule()
+        )
         .overlay {
             Capsule()
-                .stroke(accent.opacity(active ? 0.34 : 0.12), lineWidth: 1)
+                .stroke(
+                    accent.opacity(active ? 0.30 : 0.10),
+                    lineWidth: 1
+                )
         }
     }
 }

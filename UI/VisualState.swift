@@ -15,6 +15,10 @@ public enum VisualState: String, Sendable, Equatable, CaseIterable {
     case transitioning
     case sleeping
 
+    /// Compatibility state for legacy realm surfaces.
+    /// Maps the former generic elevated state to the semantic processing state.
+    public static var elevated: Self { .processing }
+
     /// Relative energy of the environment (0...1).
     public var ambientEnergy: Double {
         switch self {
