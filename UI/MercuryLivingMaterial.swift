@@ -9,10 +9,16 @@ struct MercuryLivingMaterial: View {
     let state: VisualState
     let size: CGFloat
     let accent: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
+        TimelineView(
+            .animation(
+                minimumInterval: reduceMotion ? 1.0 : 1.0 / 30.0,
+                paused: reduceMotion
+            )
+        ) { timeline in
+            let time = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
             let phase = time / 3.6
             let energy = state.ambientEnergy
             let brightness = state.coreBrightness
@@ -189,10 +195,16 @@ private struct MercurySurfaceCanvas: View {
 struct MercuryAmbientField: View {
     let state: VisualState
     let accent: Color
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: false)) { timeline in
-            let time = timeline.date.timeIntervalSinceReferenceDate
+        TimelineView(
+            .animation(
+                minimumInterval: reduceMotion ? 1.0 : 1.0 / 20.0,
+                paused: reduceMotion
+            )
+        ) { timeline in
+            let time = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
             let energy = state.ambientEnergy
 
             Canvas { context, size in
