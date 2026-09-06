@@ -26,20 +26,23 @@ public struct MemoryQuery: Sendable {
     }
 
     /// Apply the query to an in-memory collection. Deterministic and pure.
+    /// Performance: Combines all predicates into a single-pass filter to eliminate
+    /// up to 4 intermediate array allocations during query execution.
     public func apply(to items: [MemoryItem]) -> [MemoryItem] {
-        var result = items
-
-        if let category {
-            result = result.filter { $0.category == category }
-        }
-        if let personaScope {
-            result = result.filter { $0.personaScope == nil || $0.personaScope == personaScope }
-        }
-        if let minimumImportance {
-            result = result.filter { $0.importance >= minimumImportance }
-        }
-        if let keyPrefix {
-            result = result.filter { $0.key.hasPrefix(keyPrefix) }
+        var result = items.filter { item in
+            if let category, item.category != category {
+                return false
+            }
+            if let personaScope, let itemScope = item.personaScope, itemScope != personaScope {
+                return false
+            }
+            if let minimumImportance, item.importance < minimumImportance {
+                return false
+            }
+            if let keyPrefix, !item.key.hasPrefix(keyPrefix) {
+                return false
+            }
+            return true
         }
 
         result.sort {
@@ -47,8 +50,8 @@ public struct MemoryQuery: Sendable {
             return $0.updatedAt > $1.updatedAt
         }
 
-        if let limit, limit > 0 {
-            result = Array(result.prefix(limit))
+        if let limit, limit > 0, result.count > limit {
+            return Array(result.prefix(limit))
         }
 
         return result
