@@ -1,3 +1,4 @@
+// swiftlint:disable line_length identifier_name
 import SwiftUI
 import Core
 import Personas
@@ -34,7 +35,7 @@ struct ForgeView: View {
 
         return ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
-            AmbientLayer(personaID: "forge", visualState: vm.isAwake ? .elevated : .idle)
+            AmbientLayer(personaID: "forge", visualState: vm.isAwake ? .processing : .idle)
             MercuryRealmBackdrop(personaID: "forge", intensity: vm.isAwake ? 1 : 0.55)
 
             ScrollView {
@@ -101,9 +102,13 @@ struct ForgeView: View {
     }
 
     private func signalTile(_ title: String, _ value: String, _ radius: CGFloat) -> some View {
-        VStack(spacing: 3) { Text(title.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary); Text(value).font(.caption.weight(.semibold)).foregroundStyle(PersonaTheme.mercurySilver).lineLimit(1) }
-            .frame(maxWidth: .infinity).padding(.vertical, 9)
-            .background(.ultraThinMaterial.opacity(0.3), in: RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous))
+        VStack(spacing: 3) {
+            Text(title.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+            Text(value).font(.caption.weight(.semibold)).foregroundStyle(PersonaTheme.mercurySilver).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 9)
+        .background(.ultraThinMaterial.opacity(0.3), in: RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous))
     }
 
     private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
@@ -112,7 +117,8 @@ struct ForgeView: View {
             Text(insight.title).font(.subheadline.weight(.medium)).foregroundStyle(PersonaTheme.mercurySilver)
             if !insight.body.isEmpty { Text(insight.body).font(.caption).foregroundStyle(.secondary) }
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
         .background(.ultraThinMaterial.opacity(0.4), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.24), lineWidth: 1))
     }
@@ -121,10 +127,20 @@ struct ForgeView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("CAPTURE").font(.caption2.weight(.bold)).foregroundStyle(PersonaTheme.toxicGreen)
             HStack(spacing: 10) {
-                TextField("Architecture note, decision, experiment…", text: $noteDraft).textFieldStyle(.plain).padding(12)
-                    .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)).foregroundStyle(PersonaTheme.mercurySilver)
-                Button { let text = noteDraft; noteDraft = ""; Task { await vm.captureNote(text) } } label: { Image(systemName: "plus.circle.fill").font(.title2).foregroundStyle(accent) }.buttonStyle(.plain)
-                    .disabled(noteDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                TextField("Architecture note, decision, experiment…", text: $noteDraft)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous))
+                    .foregroundStyle(PersonaTheme.mercurySilver)
+                Button {
+                    let text = noteDraft
+                    noteDraft = ""
+                    Task { await vm.captureNote(text) }
+                } label: {
+                    Image(systemName: "plus.circle.fill").font(.title2).foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(noteDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
     }
@@ -133,7 +149,11 @@ struct ForgeView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("SESSION NOTES").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
             ForEach(Array(vm.sessionNotes.enumerated()), id: \.offset) { _, note in
-                Text(note).font(.caption).foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9)).padding(10).frame(maxWidth: .infinity, alignment: .leading)
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9))
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     .background(.ultraThinMaterial.opacity(0.25), in: RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous))
             }
         }
@@ -142,23 +162,47 @@ struct ForgeView: View {
     private func constructiveAsk(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ASK THE FORGE").font(.caption2.weight(.bold)).foregroundStyle(PersonaTheme.glowPurple)
-            TextField("Implement, refactor, debug, structure…", text: $askDraft, axis: .vertical).lineLimit(3...6).textFieldStyle(.plain).padding(12)
-                .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)).foregroundStyle(PersonaTheme.mercurySilver)
+            TextField("Implement, refactor, debug, structure…", text: $askDraft, axis: .vertical)
+                .lineLimit(3...6)
+                .textFieldStyle(.plain)
+                .padding(12)
+                .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous))
+                .foregroundStyle(PersonaTheme.mercurySilver)
             Button {
-                let query = askDraft; askDraft = ""; isAsking = true; lastAnswer = nil
-                Task { let answer = await vm.askForge(query); lastAnswer = answer; isAsking = false }
+                let query = askDraft
+                askDraft = ""
+                isAsking = true
+                lastAnswer = nil
+                Task {
+                    let answer = await vm.askForge(query)
+                    lastAnswer = answer
+                    isAsking = false
+                }
             } label: {
-                HStack { if isAsking { ProgressView().tint(PersonaTheme.voidBlack).scaleEffect(0.8) }; Text(isAsking ? "Forging…" : "Forge").font(.subheadline.weight(.semibold)) }
-                    .frame(maxWidth: .infinity).padding(.vertical, 12).background(accent).foregroundStyle(PersonaTheme.voidBlack).clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
-            }.buttonStyle(.plain).disabled(isAsking || askDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                HStack {
+                    if isAsking { ProgressView().tint(PersonaTheme.voidBlack).scaleEffect(0.8) }
+                    Text(isAsking ? "Forging…" : "Forge").font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(accent)
+                .foregroundStyle(PersonaTheme.voidBlack)
+                .clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(isAsking || askDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
     }
 
     private func answerCard(_ answer: String, accent: Color, radius: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 8) { Text("RESPONSE").font(.caption2.weight(.bold)).foregroundStyle(accent); Text(answer).font(.subheadline).foregroundStyle(PersonaTheme.mercurySilver) }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(14)
-            .background(.ultraThinMaterial.opacity(0.4), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.32), lineWidth: 1))
+        VStack(alignment: .leading, spacing: 8) {
+            Text("RESPONSE").font(.caption2.weight(.bold)).foregroundStyle(accent)
+            Text(answer).font(.subheadline).foregroundStyle(PersonaTheme.mercurySilver)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(.ultraThinMaterial.opacity(0.4), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.32), lineWidth: 1))
     }
 }
 
@@ -170,8 +214,8 @@ private struct MercuryDroplet: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
-            let wobble = reduceMotion ? 0 : sin(t * (active ? 1.7 : 0.5)) * 2.5
+            let timeValue = timeline.date.timeIntervalSinceReferenceDate
+            let wobble = reduceMotion ? 0 : sin(timeValue * (active ? 1.7 : 0.5)) * 2.5
             ZStack {
                 Circle().fill(.radialGradient(colors: [PersonaTheme.mercurySilver.opacity(0.9), accent.opacity(0.35), .clear], center: .center, startRadius: 1, endRadius: size * 0.7))
                 Capsule().fill(.linearGradient(colors: [PersonaTheme.mercurySilver, accent.opacity(0.5), PersonaTheme.voidBlack], startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -189,15 +233,15 @@ private struct MercuryRealmBackdrop: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
             Canvas { context, size in
-                let t = timeline.date.timeIntervalSinceReferenceDate
+                let timeValue = timeline.date.timeIntervalSinceReferenceDate
                 let accent = PersonaTheme.accent(for: personaID)
                 let center = CGPoint(x: size.width * 0.5, y: size.height * 0.24)
                 let maxR = min(size.width, size.height) * 0.5
                 for i in 0..<7 {
                     let phase = Double(i) * 0.87
                     let r = maxR * (0.20 + Double(i) * 0.085)
-                    let x = center.x + cos(t * (0.04 + Double(i) * 0.006) + phase) * r * 0.32
-                    let y = center.y + sin(t * (0.05 + Double(i) * 0.004) + phase) * r * 0.18
+                    let x = center.x + cos(timeValue * (0.04 + Double(i) * 0.006) + phase) * r * 0.32
+                    let y = center.y + sin(timeValue * (0.05 + Double(i) * 0.004) + phase) * r * 0.18
                     let rect = CGRect(x: x - 1.2, y: y - 1.2, width: 2.4, height: 2.4)
                     context.fill(Path(ellipseIn: rect), with: .color(accent.opacity(0.04 + intensity * 0.035)))
                 }
