@@ -71,4 +71,7 @@ public enum VisualState: String, Sendable, Equatable, CaseIterable {
             return false
         }
     }
+
+    /// Backwards compatibility extension property mapping elevated activity state to .processing.
+    public static var elevated: VisualState { .processing }
 }
