@@ -31,7 +31,7 @@ struct EternalView: View {
         let spacing = 18 * PersonaTheme.density(for: personaID)
         return ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
-            AmbientLayer(personaID: "eternal", visualState: vm.isAwake ? .processing : .idle)
+            AmbientLayer(personaID: "eternal", visualState: vm.isAwake ? .elevated : .idle)
             ObservatoryField(intensity: vm.isAwake ? 1 : 0.5)
             ScrollView {
                 VStack(alignment: .leading, spacing: spacing) {
