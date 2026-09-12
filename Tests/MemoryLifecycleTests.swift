@@ -19,6 +19,23 @@ final class MemoryLifecycleTests: XCTestCase {
         XCTAssertTrue(manager.items.isEmpty)
     }
 
+    func testBatchDeleteRemovesMultipleItems() async {
+        let store = InMemoryMemoryStore()
+        let bus = EventBus()
+        let logger = LoggerService()
+        let manager = MemoryManager(store: store, eventBus: bus, logger: logger)
+
+        await manager.set(key: "item1", value: "v1", category: .temporary)
+        await manager.set(key: "item2", value: "v2", category: .temporary)
+        await manager.set(key: "item3", value: "v3", category: .temporary)
+
+        let idsToDelete = Set(manager.items.prefix(2).map(\.id))
+        await manager.delete(ids: idsToDelete)
+
+        XCTAssertEqual(manager.items.count, 1)
+        XCTAssertEqual(manager.items.first?.key, "item3")
+    }
+
     func testClearAllEmptiesStore() async {
         let store = InMemoryMemoryStore()
         let bus = EventBus()
@@ -31,6 +48,25 @@ final class MemoryLifecycleTests: XCTestCase {
 
         await manager.clearAll()
         XCTAssertTrue(manager.items.isEmpty)
+    }
+
+    func testPruneBelowRemovesLowImportanceItems() async {
+        let store = InMemoryMemoryStore()
+        let bus = EventBus()
+        let logger = LoggerService()
+        let manager = MemoryManager(store: store, eventBus: bus, logger: logger)
+
+        await manager.set(key: "low1", value: "val1", category: .temporary, importanceBoost: -0.5)
+        await manager.set(key: "low2", value: "val2", category: .temporary, importanceBoost: -0.5)
+        await manager.set(key: "high", value: "val3", category: .preference, importanceBoost: 0.9)
+
+        XCTAssertEqual(manager.items.count, 3)
+
+        let prunedCount = await manager.pruneBelow(importance: 0.5)
+
+        XCTAssertEqual(prunedCount, 2)
+        XCTAssertEqual(manager.items.count, 1)
+        XCTAssertEqual(manager.items.first?.key, "high")
     }
 
     func testExportJSONProducesValidPayload() async throws {

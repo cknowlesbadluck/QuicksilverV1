@@ -53,6 +53,19 @@ public actor SwiftDataMemoryStore: MemoryStore {
         try context.save()
     }
 
+    /// Batch deletion in a single fetch and context save, eliminating N+1 database operations.
+    public func delete(ids: Set<UUID>) async throws {
+        guard !ids.isEmpty else { return }
+        let targetIDs = ids
+        let descriptor = FetchDescriptor<MemoryEntry>(
+            predicate: #Predicate { targetIDs.contains($0.id) }
+        )
+        for entry in try context.fetch(descriptor) {
+            context.delete(entry)
+        }
+        try context.save()
+    }
+
     public func deleteAll(in category: MemoryItem.Category) async throws {
         let categoryRaw = category.rawValue
         let descriptor = FetchDescriptor<MemoryEntry>(

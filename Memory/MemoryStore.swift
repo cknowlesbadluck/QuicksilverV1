@@ -12,6 +12,10 @@ public actor UserDefaultsMemoryStore: MemoryStore {
         self.defaults = defaults
     }
 
+    public init(suiteName: String?) {
+        self.defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
+    }
+
     public func loadAll() async throws -> [MemoryItem] {
         guard let data = defaults.data(forKey: storageKey) else { return [] }
         return try JSONDecoder().decode([MemoryItem].self, from: data)
@@ -31,6 +35,15 @@ public actor UserDefaultsMemoryStore: MemoryStore {
     public func delete(id: UUID) async throws {
         var items = try await loadAll()
         items.removeAll { $0.id == id }
+        let data = try JSONEncoder().encode(items)
+        defaults.set(data, forKey: storageKey)
+    }
+
+    /// Batch deletion in a single read/encode/write cycle, avoiding N+1 disk write operations.
+    public func delete(ids: Set<UUID>) async throws {
+        guard !ids.isEmpty else { return }
+        var items = try await loadAll()
+        items.removeAll { ids.contains($0.id) }
         let data = try JSONEncoder().encode(items)
         defaults.set(data, forKey: storageKey)
     }
