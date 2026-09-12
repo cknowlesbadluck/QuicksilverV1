@@ -62,8 +62,12 @@ struct ForgeView: View {
         .animation(PersonaTheme.spring(for: personaID), value: vm.isAwake)
         .animation(PersonaTheme.spring(for: personaID), value: vm.sessionNotes.count)
     }
+}
 
-    private func realmHeader(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
+// MARK: - Helper View Sections
+
+private extension ForgeView {
+    func realmHeader(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 14) {
             MercuryDroplet(accent: accent, size: 42, active: vm.isAwake)
             VStack(alignment: .leading, spacing: 4) {
@@ -92,7 +96,7 @@ struct ForgeView: View {
         )
     }
 
-    private func awakenCard(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
+    func awakenCard(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Mercury is waiting to move.")
                 .font(.headline)
@@ -124,7 +128,7 @@ struct ForgeView: View {
         )
     }
 
-    private func signalsRow(_ vm: ForgeViewModel, radius: CGFloat) -> some View {
+    func signalsRow(_ vm: ForgeViewModel, radius: CGFloat) -> some View {
         HStack(spacing: 8) {
             signalTile("Battery", vm.batteryLevelText, radius)
             signalTile("Network", vm.networkStatus, radius)
@@ -133,7 +137,7 @@ struct ForgeView: View {
         }
     }
 
-    private func signalTile(_ title: String, _ value: String, _ radius: CGFloat) -> some View {
+    func signalTile(_ title: String, _ value: String, _ radius: CGFloat) -> some View {
         VStack(spacing: 3) {
             Text(title.uppercased())
                 .font(.system(size: 9, weight: .medium))
@@ -151,7 +155,7 @@ struct ForgeView: View {
         )
     }
 
-    private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
+    func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("LATEST INSIGHT")
                 .font(.caption2.weight(.bold))
@@ -177,7 +181,7 @@ struct ForgeView: View {
         )
     }
 
-    private func noteCapture(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
+    func noteCapture(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("CAPTURE")
                 .font(.caption2.weight(.bold))
@@ -206,7 +210,7 @@ struct ForgeView: View {
         }
     }
 
-    private func notesList(_ vm: ForgeViewModel, radius: CGFloat) -> some View {
+    func notesList(_ vm: ForgeViewModel, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("SESSION NOTES")
                 .font(.caption2.weight(.bold))
@@ -225,7 +229,7 @@ struct ForgeView: View {
         }
     }
 
-    private func constructiveAsk(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
+    func constructiveAsk(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("ASK THE FORGE")
                 .font(.caption2.weight(.bold))
@@ -270,7 +274,7 @@ struct ForgeView: View {
         }
     }
 
-    private func answerCard(_ answer: String, accent: Color, radius: CGFloat) -> some View {
+    func answerCard(_ answer: String, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("RESPONSE")
                 .font(.caption2.weight(.bold))
