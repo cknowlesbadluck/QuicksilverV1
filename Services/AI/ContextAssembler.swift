@@ -44,25 +44,31 @@ public struct ContextAssembler: Sendable {
             lines.append("Device: \(device)")
         }
 
+        // Performance Optimization: Using .lazy avoids eagerly allocating intermediate arrays and trimming strings
+        // for snippets beyond maxMemoryLines.
         let memories = input.recentMemorySnippets
+            .lazy
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .prefix(maxMemoryLines)
         if !memories.isEmpty {
             lines.append("Recent memory:")
-            for m in memories {
-                lines.append("- \(m.prefix(160))")
+            for memory in memories {
+                lines.append("- \(memory.prefix(160))")
             }
         }
 
+        // Performance Optimization: Using .lazy avoids eagerly allocating intermediate arrays and trimming strings
+        // for insight titles beyond maxInsightLines.
         let insights = input.latestInsightTitles
+            .lazy
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .prefix(maxInsightLines)
         if !insights.isEmpty {
             lines.append("Recent insights:")
-            for i in insights {
-                lines.append("- \(i.prefix(120))")
+            for insight in insights {
+                lines.append("- \(insight.prefix(120))")
             }
         }
 
