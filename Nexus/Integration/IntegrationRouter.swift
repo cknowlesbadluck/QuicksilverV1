@@ -101,8 +101,11 @@ public actor IntegrationRouter {
         return task
     }
 
+    // Static set of statuses considered pending to prevent array allocations on each filter evaluation and achieve O(1) status lookup.
+    private static let pendingStatuses: Set<IntegrationTaskStore.TaskStatus> = [.queued, .running, .paused, .awaitingApproval]
+
     public func pendingTasks() async -> [IntegrationTaskStore.Task] {
-        await tasks.all().filter { [.queued, .running, .paused, .awaitingApproval].contains($0.status) }
+        await tasks.all().filter { Self.pendingStatuses.contains($0.status) }
     }
 
     public func executeTool(
