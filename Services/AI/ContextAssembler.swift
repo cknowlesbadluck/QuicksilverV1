@@ -53,8 +53,8 @@ public struct ContextAssembler: Sendable {
             .prefix(maxMemoryLines)
         if !memories.isEmpty {
             lines.append("Recent memory:")
-            for m in memories {
-                lines.append("- \(m.prefix(160))")
+            for memory in memories {
+                lines.append("- \(memory.prefix(160))")
             }
         }
 
@@ -67,8 +67,8 @@ public struct ContextAssembler: Sendable {
             .prefix(maxInsightLines)
         if !insights.isEmpty {
             lines.append("Recent insights:")
-            for i in insights {
-                lines.append("- \(i.prefix(120))")
+            for insight in insights {
+                lines.append("- \(insight.prefix(120))")
             }
         }
 
