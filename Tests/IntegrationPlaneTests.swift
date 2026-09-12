@@ -112,4 +112,55 @@ final class IntegrationPlaneTests: XCTestCase {
 
         XCTAssertEqual(events.map(\.type), ["task.created", "task.paused"])
     }
+
+    actor DummyGateway: IntegrationGateway {
+        let id = "dummy"
+        let name = "Dummy"
+        let availableCapabilities: [IntegrationCapability] = []
+        func initialize() async throws {}
+        func listTools() async throws -> [[String: AnyCodable]] { [] }
+        func validateCredentials() async throws -> Bool { true }
+        func callTool(name: String, arguments: [String: AnyCodable]) async throws -> AnyCodable { .object([:]) }
+    }
+
+    func testRouterPendingTasksFiltering() async throws {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("quicksilver-task-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let taskStore = IntegrationTaskStore(fileURL: url)
+        let router = IntegrationRouter(gateway: DummyGateway(), tasks: taskStore)
+
+        let task1 = try await taskStore.create(objective: "Queued Task", steps: [])
+        var task2 = try await taskStore.create(objective: "Running Task", steps: [])
+        task2.status = .running
+        try await taskStore.update(task2)
+
+        var task3 = try await taskStore.create(objective: "Paused Task", steps: [])
+        task3.status = .paused
+        try await taskStore.update(task3)
+
+        var task4 = try await taskStore.create(objective: "Awaiting Approval Task", steps: [])
+        task4.status = .awaitingApproval
+        try await taskStore.update(task4)
+
+        var task5 = try await taskStore.create(objective: "Completed Task", steps: [])
+        task5.status = .completed
+        try await taskStore.update(task5)
+
+        var task6 = try await taskStore.create(objective: "Failed Task", steps: [])
+        task6.status = .failed
+        try await taskStore.update(task6)
+
+        let pending = await router.pendingTasks()
+        let pendingIDs = Set(pending.map(\.id))
+
+        XCTAssertEqual(pending.count, 4)
+        XCTAssertTrue(pendingIDs.contains(task1.id))
+        XCTAssertTrue(pendingIDs.contains(task2.id))
+        XCTAssertTrue(pendingIDs.contains(task3.id))
+        XCTAssertTrue(pendingIDs.contains(task4.id))
+        XCTAssertFalse(pendingIDs.contains(task5.id))
+        XCTAssertFalse(pendingIDs.contains(task6.id))
+    }
 }
