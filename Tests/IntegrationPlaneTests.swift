@@ -117,6 +117,8 @@ final class IntegrationPlaneTests: XCTestCase {
         let id = "dummy"
         let name = "Dummy"
         let availableCapabilities: [IntegrationCapability] = []
+        func initialize() async throws {}
+        func listTools() async throws -> [[String: AnyCodable]] { [] }
         func validateCredentials() async throws -> Bool { true }
         func callTool(name: String, arguments: [String: AnyCodable]) async throws -> AnyCodable { .object([:]) }
     }
