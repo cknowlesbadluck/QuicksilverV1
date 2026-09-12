@@ -15,6 +15,9 @@ public enum VisualState: String, Sendable, Equatable, CaseIterable {
     case transitioning
     case sleeping
 
+    /// Convenience alias for elevated visual state.
+    public static var elevated: VisualState { .processing }
+
     /// Relative energy of the environment (0...1).
     public var ambientEnergy: Double {
         switch self {
