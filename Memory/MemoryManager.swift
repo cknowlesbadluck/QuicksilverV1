@@ -101,11 +101,28 @@ public final class MemoryManager {
         }
     }
 
+    /// Deletes multiple memory items in a single batch persistence call to prevent N+1 store queries.
+    public func delete(ids: Set<UUID>) async {
+        guard !ids.isEmpty else { return }
+        do {
+            try await store.delete(ids: ids)
+            items.removeAll { ids.contains($0.id) }
+            for id in ids {
+                await eventBus.publish(.memoryDidUpdate(itemID: id.uuidString))
+            }
+        } catch {
+            logger.error("Failed to delete memory items: \(error.localizedDescription)", category: logger.memory)
+        }
+    }
+
     @discardableResult
     public func clearAll() async -> Bool {
-        for id in items.map(\.id) {
-            await delete(id: id)
+        let victimIDs = Set(items.map(\.id))
+        guard !victimIDs.isEmpty else {
+            logger.info("Memory cleared by user request", category: logger.memory)
+            return true
         }
+        await delete(ids: victimIDs)
         guard items.isEmpty else {
             logger.error("Memory clear failed; \(items.count) item(s) remain", category: logger.memory)
             return false
@@ -117,8 +134,11 @@ public final class MemoryManager {
     @discardableResult
     public func pruneBelow(importance threshold: Double) async -> Int {
         let victims = items.filter { $0.importance < threshold }
-        for item in victims { await delete(id: item.id) }
-        if !victims.isEmpty { logger.info("Pruned \(victims.count) memory items below importance \(threshold)", category: logger.memory) }
+        guard !victims.isEmpty else { return 0 }
+        let victimIDs = Set(victims.map(\.id))
+        // Batch deletion resolves N+1 query problem by invoking a single store deletion
+        await delete(ids: victimIDs)
+        logger.info("Pruned \(victims.count) memory items below importance \(threshold)", category: logger.memory)
         return victims.count
     }
 

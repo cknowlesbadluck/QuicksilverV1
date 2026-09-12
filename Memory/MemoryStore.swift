@@ -35,6 +35,15 @@ public actor UserDefaultsMemoryStore: MemoryStore {
         defaults.set(data, forKey: storageKey)
     }
 
+    /// Batch deletion in a single read/encode/write cycle, avoiding N+1 disk write operations.
+    public func delete(ids: Set<UUID>) async throws {
+        guard !ids.isEmpty else { return }
+        var items = try await loadAll()
+        items.removeAll { ids.contains($0.id) }
+        let data = try JSONEncoder().encode(items)
+        defaults.set(data, forKey: storageKey)
+    }
+
     public func deleteAll(in category: MemoryItem.Category) async throws {
         var items = try await loadAll()
         items.removeAll { $0.category == category }
