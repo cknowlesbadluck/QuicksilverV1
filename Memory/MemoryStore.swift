@@ -12,6 +12,10 @@ public actor UserDefaultsMemoryStore: MemoryStore {
         self.defaults = defaults
     }
 
+    public init(suiteName: String?) {
+        self.defaults = suiteName.flatMap { UserDefaults(suiteName: $0) } ?? .standard
+    }
+
     public func loadAll() async throws -> [MemoryItem] {
         guard let data = defaults.data(forKey: storageKey) else { return [] }
         return try JSONDecoder().decode([MemoryItem].self, from: data)

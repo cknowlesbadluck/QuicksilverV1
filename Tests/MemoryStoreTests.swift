@@ -60,9 +60,8 @@ final class MemoryStoreTests: XCTestCase {
 
     func testUserDefaultsBatchDelete() async throws {
         let suiteName = "test.memory.batch.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let store = UserDefaultsMemoryStore(defaults: defaults)
+        defer { UserDefaults.standard.removePersistentDomain(forName: suiteName) }
+        let store = UserDefaultsMemoryStore(suiteName: suiteName)
 
         let item1 = MemoryItem(key: "ud1", category: .temporary, value: "x")
         let item2 = MemoryItem(key: "ud2", category: .temporary, value: "y")
