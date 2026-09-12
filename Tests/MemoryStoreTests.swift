@@ -2,6 +2,7 @@ import XCTest
 @testable import Core
 @testable import Memory
 
+@MainActor
 final class MemoryStoreTests: XCTestCase {
 
     func testInMemorySaveAndLoad() async throws {
