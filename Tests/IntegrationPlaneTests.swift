@@ -113,7 +113,7 @@ final class IntegrationPlaneTests: XCTestCase {
         XCTAssertEqual(events.map(\.type), ["task.created", "task.paused"])
     }
 
-    struct DummyGateway: IntegrationGateway {
+    actor DummyGateway: IntegrationGateway {
         let id = "dummy"
         let name = "Dummy"
         let availableCapabilities: [IntegrationCapability] = []
