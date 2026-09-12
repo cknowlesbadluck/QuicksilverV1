@@ -34,7 +34,7 @@ struct ForgeView: View {
 
         return ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
-            AmbientLayer(personaID: "forge", visualState: vm.isAwake ? .processing : .idle)
+            AmbientLayer(personaID: "forge", visualState: vm.isAwake ? .elevated : .idle)
             MercuryRealmBackdrop(personaID: "forge", intensity: vm.isAwake ? 1 : 0.55)
 
             ScrollView {
