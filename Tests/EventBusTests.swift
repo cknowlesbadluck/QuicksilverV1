@@ -129,10 +129,10 @@ final class EventBusTests: XCTestCase {
         let bus = EventBus()
 
         await withTaskGroup(of: Void.self) { group in
-            for i in 0..<50 {
+            for index in 0..<50 {
                 group.addTask {
                     let id = await bus.subscribe { _ in }
-                    await bus.publish(.custom(name: "test", payload: ["index": "\(i)"]))
+                    await bus.publish(.custom(name: "test", payload: ["index": "\(index)"]))
                     await bus.unsubscribe(id)
                 }
             }
