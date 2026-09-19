@@ -26,16 +26,16 @@ public final class LoggerService: @unchecked Sendable {
         self.ui = Logger(subsystem: subsystem, category: "UI")
     }
 
-    public func debug(_ message: String, category: Logger? = nil) {
-        (category ?? general).debug("\(message, privacy: .public)")
+    public func debug(_ message: String, category: Logger? = nil, privacy: OSLogPrivacy = .private) {
+        (category ?? general).debug("\(message, privacy: privacy)")
     }
 
-    public func info(_ message: String, category: Logger? = nil) {
-        (category ?? general).info("\(message, privacy: .public)")
+    public func info(_ message: String, category: Logger? = nil, privacy: OSLogPrivacy = .private) {
+        (category ?? general).info("\(message, privacy: privacy)")
     }
 
-    public func error(_ message: String, category: Logger? = nil) {
-        (category ?? general).error("\(message, privacy: .public)")
+    public func error(_ message: String, category: Logger? = nil, privacy: OSLogPrivacy = .private) {
+        (category ?? general).error("\(message, privacy: privacy)")
     }
 
     /// Redacts values that look like API keys or long secrets before they can

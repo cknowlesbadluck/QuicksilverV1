@@ -12,15 +12,15 @@ enum QuicksilverLogger {
     static let persona = Logger(subsystem: subsystem, category: "Persona")
     static let ui = Logger(subsystem: subsystem, category: "UI")
 
-    static func debug(_ message: String, category: Logger = general) {
-        category.debug("\(message, privacy: .public)")
+    static func debug(_ message: String, category: Logger = general, privacy: OSLogPrivacy = .private) {
+        category.debug("\(message, privacy: privacy)")
     }
 
-    static func info(_ message: String, category: Logger = general) {
-        category.info("\(message, privacy: .public)")
+    static func info(_ message: String, category: Logger = general, privacy: OSLogPrivacy = .private) {
+        category.info("\(message, privacy: privacy)")
     }
 
-    static func error(_ message: String, category: Logger = general) {
-        category.error("\(message, privacy: .public)")
+    static func error(_ message: String, category: Logger = general, privacy: OSLogPrivacy = .private) {
+        category.error("\(message, privacy: privacy)")
     }
 }
