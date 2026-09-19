@@ -28,8 +28,8 @@ final class LoggerServiceTests: XCTestCase {
         XCTAssertEqual(LoggerService.redact(""), "<empty>")
 
         // Keys starting with xai- or sk- or containing "key" or >20 chars
-        XCTAssertEqual(LoggerService.redact("sk-12345678901234567890"), "<redacted len=22>")
-        XCTAssertEqual(LoggerService.redact("xai-98765432109876543210"), "<redacted len=23>")
+        XCTAssertEqual(LoggerService.redact("sk-12345678901234567890"), "<redacted len=23>")
+        XCTAssertEqual(LoggerService.redact("xai-98765432109876543210"), "<redacted len=24>")
         XCTAssertEqual(LoggerService.redact("mySecretKey"), "<redacted len=11>")
         XCTAssertEqual(LoggerService.redact("1234567890123456789012"), "<redacted len=22>")
 
