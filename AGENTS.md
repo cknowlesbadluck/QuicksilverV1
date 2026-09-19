@@ -14,6 +14,12 @@ Native iOS intelligence platform. Primary target: iPhone 14 / iOS 27. CI floor: 
 - **PersonaTheme + MotionTokens** are the only visual/motion sources. No magic numbers in views.
 - No “chamber” terminology. Personas (Quicksilver / Forge / Eternal) are the experiential distinction.
 
+## Autonomy Policy
+- Owner-authorized multi-step agent loops are permitted.
+- Once the owner authorizes autonomy or approves a body of work, the agent may open PRs, update Linear, continue across steps, and propose/execute subsequent vertical slices without requiring a fresh human gate for every micro-decision.
+- Residual stop conditions always apply: CI failure, architecture invariant violation, or clear drift from the authorized goal.
+- The owner retains the right to revoke autonomy or require a gate at any time. Final merge decisions remain under human control when the owner so chooses.
+
 ## Master Visual Directive (summary)
 Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Glyphs are instruments. Realms are spatial. Do not introduce generic AI chat UI patterns.
 
@@ -45,4 +51,3 @@ Current focus: purge + Memory Brain → CI green → SideStore smoke → then de
 - Complete, paste-ready files preferred.
 - Respect existing naming and file layout.
 - Do not introduce new Core protocols unless strictly required.
-- Humans own the merge decision.
