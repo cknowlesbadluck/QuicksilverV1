@@ -34,13 +34,15 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 - **Slice A (persona experience)** — merged to `main` (PR #52). PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.
 - **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
 - **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
-- SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
+- **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
 
 ## Surfaces
 
 | Screen | Role |
 |--------|------|
-| **Home** | Persona switcher + accent, Nexus health, latest insight |
+| **Home / Sanctum** | Persona switcher + accent, Nexus health, latest insight |
+| **Forge** | Creation / engineering realm |
+| **Eternal** | Observation / continuity realm |
 | **Ask** | Persona-aware chat with Memory history |
 | **Memory** | Policy-filtered notes, delete / clear / export |
 | **Diagnostics** | Live insights + signals |
@@ -92,13 +94,14 @@ This repository also includes editor and Codespaces recommendations to make work
 
 ## On-device (iPhone 14 / iOS 27) — SideStore path
 
-Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
+Full instructions and first-run checklist: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**  
+Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**
 
 1. Trigger **Actions → Archive IPA → Run workflow** (Release).
 2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
 4. Settings → paste xAI key → enable AI Service.
-5. Validate Home → Diagnostics → Memory → Ask → persona switch (accent + tone).
+5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → persona switch.
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 
