@@ -26,30 +26,30 @@ public final class LoggerService: @unchecked Sendable {
         self.ui = Logger(subsystem: subsystem, category: "UI")
     }
 
-    public func debug(_ message: String, category: Logger? = nil, privacy: OSLogPrivacy = .private) {
+    public func debug(_ message: String, category: Logger? = nil, isPrivate: Bool = true) {
         let log = category ?? general
-        if privacy == .public {
-            log.debug("\(message, privacy: .public)")
-        } else {
+        if isPrivate {
             log.debug("\(message, privacy: .private)")
+        } else {
+            log.debug("\(message, privacy: .public)")
         }
     }
 
-    public func info(_ message: String, category: Logger? = nil, privacy: OSLogPrivacy = .private) {
+    public func info(_ message: String, category: Logger? = nil, isPrivate: Bool = true) {
         let log = category ?? general
-        if privacy == .public {
-            log.info("\(message, privacy: .public)")
-        } else {
+        if isPrivate {
             log.info("\(message, privacy: .private)")
+        } else {
+            log.info("\(message, privacy: .public)")
         }
     }
 
-    public func error(_ message: String, category: Logger? = nil, privacy: OSLogPrivacy = .private) {
+    public func error(_ message: String, category: Logger? = nil, isPrivate: Bool = true) {
         let log = category ?? general
-        if privacy == .public {
-            log.error("\(message, privacy: .public)")
-        } else {
+        if isPrivate {
             log.error("\(message, privacy: .private)")
+        } else {
+            log.error("\(message, privacy: .public)")
         }
     }
 

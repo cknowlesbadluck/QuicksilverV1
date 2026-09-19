@@ -12,15 +12,15 @@ final class LoggerServiceTests: XCTestCase {
 
     func testLoggerServiceCustomCategoryAndPrivacy() {
         let logger = LoggerService()
-        logger.debug("Public debug message", category: logger.nexus, privacy: .public)
-        logger.info("Private info message", category: logger.ai, privacy: .private)
+        logger.debug("Public debug message", category: logger.nexus, isPrivate: false)
+        logger.info("Private info message", category: logger.ai, isPrivate: true)
         logger.error("Custom error message", category: logger.memory)
     }
 
     func testQuicksilverLoggerLogging() {
         QuicksilverLogger.debug("Test debug message")
-        QuicksilverLogger.info("Test info message", category: QuicksilverLogger.nexus, privacy: .public)
-        QuicksilverLogger.error("Test error message", category: QuicksilverLogger.ui, privacy: .private)
+        QuicksilverLogger.info("Test info message", category: QuicksilverLogger.nexus, isPrivate: false)
+        QuicksilverLogger.error("Test error message", category: QuicksilverLogger.ui, isPrivate: true)
     }
 
     func testLoggerServiceRedaction() {
