@@ -69,37 +69,7 @@ struct SanctumView: View {
 
             VStack(spacing: 0) {
                 presenceBar(vm, accent: accent, radius: radius)
-
-                ScrollView {
-                    VStack(spacing: 28 * PersonaTheme.density(for: personaID)) {
-                        QuicksilverPresenceView(
-                            personaID: personaID,
-                            livingStatus: vm.livingStatus,
-                            visualState: vm.visualState
-                        )
-
-                        GlyphStrip(
-                            glyphs: glyphStates(for: vm),
-                            personaID: personaID
-                        ) { kind in
-                            handleGlyph(kind)
-                        }
-                        .padding(.vertical, 4)
-
-                        personaIndicators(vm, accent: accent, radius: radius)
-
-                        environmentalSignals(vm, radius: radius)
-
-                        if let insight = vm.latestInsight {
-                            insightCard(insight, accent: accent, radius: radius)
-                        }
-
-                        Spacer(minLength: 64)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                }
-
+                sanctumScrollView(vm, personaID: personaID, accent: accent, radius: radius)
                 ritualBar(accent: accent)
             }
         }
@@ -113,6 +83,42 @@ struct SanctumView: View {
 }
 
 private extension SanctumView {
+    private func sanctumScrollView(
+        _ vm: SanctumViewModel,
+        personaID: String,
+        accent: Color,
+        radius: CGFloat
+    ) -> some View {
+        ScrollView {
+            VStack(spacing: 28 * PersonaTheme.density(for: personaID)) {
+                QuicksilverPresenceView(
+                    personaID: personaID,
+                    livingStatus: vm.livingStatus,
+                    visualState: vm.visualState
+                )
+
+                GlyphStrip(
+                    glyphs: glyphStates(for: vm),
+                    personaID: personaID
+                ) { kind in
+                    handleGlyph(kind)
+                }
+                .padding(.vertical, 4)
+
+                personaIndicators(vm, accent: accent, radius: radius)
+
+                environmentalSignals(vm, radius: radius)
+
+                if let insight = vm.latestInsight {
+                    insightCard(insight, accent: accent, radius: radius)
+                }
+
+                Spacer(minLength: 64)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+        }
+    }
     // MARK: - Glyph mapping
 
     private func glyphStates(for vm: SanctumViewModel) -> [(GlyphKind, GlyphVisualState)] {
