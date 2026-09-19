@@ -29,10 +29,14 @@ struct EternalView: View {
         let accent = PersonaTheme.accent(for: personaID)
         let radius = PersonaTheme.cardCornerRadius(for: personaID)
         let spacing = 18 * PersonaTheme.density(for: personaID)
+        // .thinking is elevated (see VisualState.isElevated). There is no .elevated case.
+        let visualState: VisualState = vm.isAwake ? .thinking : .idle
+        let fieldIntensity = vm.isAwake ? 1.0 : 0.5
+
         return ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
-            AmbientLayer(personaID: "eternal", visualState: vm.isAwake ? .elevated : .idle)
-            ObservatoryField(intensity: vm.isAwake ? 1 : 0.5)
+            AmbientLayer(personaID: "eternal", visualState: visualState)
+            ObservatoryField(intensity: fieldIntensity)
             ScrollView {
                 VStack(alignment: .leading, spacing: spacing) {
                     realmHeader(vm, accent: accent, radius: radius)
