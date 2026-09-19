@@ -2,7 +2,7 @@
 
 **Primary device:** iPhone 14 / **iOS 27**  
 **Build floor (CI):** iOS 18.0 — the Archive workflow produces a binary that installs and runs on iOS 27.  
-**Current ship:** 0.1.0 (build **6**)  
+**Current ship:** 0.2.0 (**build 7**)  
 **Goal:** Install Quicksilver via SideStore with zero Mac required.
 
 > **Mandatory distribution path:** `Actions → Archive IPA → Run workflow` → download **Quicksilver-unsigned-IPA** → install in SideStore.  
@@ -10,7 +10,7 @@
 
 ## Why the deployment target is not 27.0 yet
 
-GitHub-hosted `macos-15` runners currently ship Xcode 16 / iOS 18 SDK. Setting `IPHONEOS_DEPLOYMENT_TARGET = 27.0` would make every Archive job fail until an Xcode with the iOS 27 SDK is available on the runner. A lower deployment target is the standard, correct way to keep producing SideStore IPAs that still run on newer OS versions.
+GitHub-hosted `macos-15` runners currently ship Xcode with the iOS 18 SDK. Setting `IPHONEOS_DEPLOYMENT_TARGET = 27.0` would make every Archive job fail until an Xcode with the iOS 27 SDK is available on the runner. A lower deployment target is the standard, correct way to keep producing SideStore IPAs that still run on newer OS versions.
 
 When CI gains an iOS 27 SDK, raise `Package.swift`, `project.yml`, and `AppConfiguration.minimumOSVersion` together.
 
@@ -19,13 +19,13 @@ When CI gains an iOS 27 SDK, raise `Package.swift`, `project.yml`, and `AppConfi
 1. SideStore (or SideStore + LiveContainer) already installed and working on the device.  
 2. LocalDevVPN installed from the App Store and connected whenever you refresh or install.  
 3. Free or paid Apple ID signed into SideStore.  
-4. GitHub account that can trigger Actions on this repository.
+4. GitHub account that can trigger Actions on this repository.  
 5. Device running **iOS 27** (or any version ≥ the build floor).
 
 ## Produce the IPA (cloud) — Unsigned path (no secrets needed)
 
 1. On your iPhone, open the repository:  
-   https://github.com/Toobadtokeep2026-star/Quicksilver
+   https://github.com/cknowlesbadluck/QuicksilverV1
 2. Go to **Actions** → **Archive IPA** → **Run workflow**.
 3. Choose configuration (`Release` recommended).
 4. Wait for the job to finish (usually 4–8 minutes on macos-15 runners).
@@ -62,16 +62,20 @@ When secrets are present you get both artifacts: unsigned + signed.
 4. Trust the new developer profile if prompted (Settings → General → VPN & Device Management).
 5. Launch Quicksilver.
 
-## First-run checklist (iOS 27) — build 6
+## First-run checklist (iOS 27) — 0.2.0 build 7
 
 1. Settings → paste your xAI API key → enable AI Service.
-2. Home → confirm persona switcher, accent stroke, and Nexus health.
-3. Switch personas (Forge / Quicksilver / Eternal) — accent, density, and insight tone should change.
-4. Diagnostics → live signals + persona-toned insights.
-5. Memory → policy label visible (threshold · scope · write); add a note, swipe delete, Clear All, Export.
-6. Ask → persona-colored bubbles and send button; send a message with the active persona.
-7. Shortcuts: Current Persona, Remember, Ask Nexus, Full Status.
-8. Background the app 5–10 minutes, then return — state should survive.
+2. Sanctum / Home → confirm persona switcher, accent, and Nexus health.
+3. Switch personas (Quicksilver / Forge / Eternal) — accent, density, and insight tone should change.
+4. Enter Forge → Awaken Forge, capture a note, ask a constructive question.
+5. Enter Eternal → Awaken Eternal, capture an observation, ask a reflective question.
+6. Diagnostics → live signals + persona-toned insights.
+7. Memory → policy label visible (threshold · scope · write); add a note, swipe delete, Clear All, Export.
+8. Ask → persona-colored bubbles and send button; send a message with the active persona.
+9. Shortcuts: Current Persona, Remember, Ask Nexus, Full Status (and any Slice C phrases if present).
+10. Background the app 5–10 minutes, then return — state should survive.
+11. Force-quit + relaunch → state intact.
+12. Confirm no excessive battery drain while backgrounded.
 
 ## Refresh / reinstall
 
@@ -82,8 +86,8 @@ When secrets are present you get both artifacts: unsigned + signed.
 ## Notes specific to this project
 
 - Bundle ID: `com.quicksilver.app`
-- Display name: Quicksilver
-- Version: **0.1.0 (build 6)**
+- Display name: Quicksilver (project may surface as Mercury in some places)
+- Version: **0.2.0 (build 7)**
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
 - Privacy Manifest (`PrivacyInfo.xcprivacy`) is embedded.
