@@ -1,12 +1,12 @@
 # Quicksilver Hardening Report & Roadmap
 
-**Last updated:** 2026-08-16 (Fixed Sentry module link: `SentrySPM` only exposes the internal ObjC target, not the importable `Sentry` module — now links the `Sentry` product)
+**Last updated:** 2026-09-20 (Primary validation device updated to iPhone 16e)
 
 ## Device / OS policy
 
 | Layer | Value | Reason |
 |-------|-------|--------|
-| Primary validation device | iPhone 14 / **iOS 27** | User device |
+| Primary validation device | iPhone 16e / **iOS 27** | User device |
 | `IPHONEOS_DEPLOYMENT_TARGET` | **18.0** | CI runners (Xcode 16) only ship iOS 18 SDK |
 | `AppConfiguration.minimumOSVersion` | 18.0 | Matches build floor |
 | `AppConfiguration.primaryDeviceOSVersion` | 27.0 | Honest about where we test |
@@ -95,7 +95,7 @@ The existing `prune-branches.yml` will automatically delete *merged* remote bran
 
 ---
 
-## Device Validation Checklist (iPhone 14 / iOS 27)
+## Device Validation Checklist (iPhone 16e / iOS 27)
 
 1. Trigger **Actions → Archive IPA → Run workflow** (Release)
 2. Download **Quicksilver-unsigned-IPA** artifact
