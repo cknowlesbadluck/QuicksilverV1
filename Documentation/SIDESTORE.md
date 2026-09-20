@@ -1,6 +1,6 @@
 # Quicksilver → SideStore (iPhone-only path)
 
-**Primary device:** iPhone 14 / **iOS 27**  
+**Primary device:** iPhone 16e / **iOS 27**  
 **Build floor (CI):** iOS 18.0 — the Archive workflow produces a binary that installs and runs on iOS 27.  
 **Current ship:** 0.2.0 (**build 7**)  
 **Goal:** Install Quicksilver via SideStore with zero Mac required.
@@ -62,7 +62,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 4. Trust the new developer profile if prompted (Settings → General → VPN & Device Management).
 5. Launch Quicksilver.
 
-## First-run checklist (iOS 27) — 0.2.0 build 7
+## First-run checklist (iPhone 16e / iOS 27) — 0.2.0 build 7
 
 1. Settings → paste your xAI API key → enable AI Service.
 2. Sanctum / Home → confirm persona switcher, accent, and Nexus health.
@@ -76,6 +76,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 10. Background the app 5–10 minutes, then return — state should survive.
 11. Force-quit + relaunch → state intact.
 12. Confirm no excessive battery drain while backgrounded.
+13. Confirm Console / sysdiagnose shows no raw keys, tokens, or memory contents under default logging (privacy default is now `.private`).
 
 ## Refresh / reinstall
 
@@ -86,14 +87,15 @@ When secrets are present you get both artifacts: unsigned + signed.
 ## Notes specific to this project
 
 - Bundle ID: `com.quicksilver.app`
-- Display name: Quicksilver (project may surface as Mercury in some places)
+- Display name: Quicksilver
 - Version: **0.2.0 (build 7)**
 - No private APIs, no special entitlements required.
 - Persona prompt files ship inside the IPA from `Resources/Personas/`.
 - Privacy Manifest (`PrivacyInfo.xcprivacy`) is embedded.
-- Build floor: iOS 18.0 | Primary validation device: iOS 27
+- Build floor: iOS 18.0 | Primary validation device: iPhone 16e / iOS 27
 - Built with Swift 6 strict concurrency.
 - Memory is warm-loaded at launch so Ask / Intents work without opening Memory first.
+- LoggerService and QuicksilverLogger default to `.private` privacy.
 
 ## Failure modes
 
