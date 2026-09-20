@@ -2,7 +2,7 @@
 
 Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
 
-**Primary device target:** iPhone 14 / **iOS 27**  
+**Primary device target:** iPhone 16e / **iOS 27**  
 **Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.  
 **Current ship:** 0.2.0 (**build 7**)
 
@@ -92,7 +92,7 @@ Security note: piping remote scripts into a shell executes code from the network
 
 This repository also includes editor and Codespaces recommendations to make working with Swift easier (.vscode/extensions.json and .devcontainer/devcontainer.json).
 
-## On-device (iPhone 14 / iOS 27) — SideStore path
+## On-device (iPhone 16e / iOS 27) — SideStore path
 
 Full instructions and first-run checklist: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**  
 Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**
