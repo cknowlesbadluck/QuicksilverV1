@@ -109,4 +109,71 @@ final class CoreContractsTests: XCTestCase {
         XCTAssertFalse(VisualState.sleeping.isElevated)
         XCTAssertEqual(VisualState.elevated, .processing)
     }
+
+    // MARK: - IntentEngine
+
+    func testIntentEngineDiagnose() {
+        let engine = IntentEngine()
+        let intent = engine.classify("why is the battery draining so fast")
+        XCTAssertEqual(intent.kind, .diagnose)
+        XCTAssertGreaterThan(intent.confidence, 0.8)
+    }
+
+    func testIntentEngineRemember() {
+        let engine = IntentEngine()
+        let intent = engine.classify("remember this for later")
+        XCTAssertEqual(intent.kind, .remember)
+    }
+
+    func testIntentEngineCreate() {
+        let engine = IntentEngine()
+        let intent = engine.classify("implement the new architecture module")
+        XCTAssertEqual(intent.kind, .create)
+    }
+
+    func testIntentEngineInquireDefault() {
+        let engine = IntentEngine()
+        let intent = engine.classify("what do you think about this approach")
+        XCTAssertEqual(intent.kind, .inquire)
+    }
+
+    func testIntentEngineEmpty() {
+        let engine = IntentEngine()
+        let intent = engine.classify("   ")
+        XCTAssertEqual(intent.kind, .unknown)
+        XCTAssertEqual(intent.confidence, 0)
+    }
+
+    // MARK: - AspectPolicy
+
+    func testAspectPolicyTurnMapping() {
+        let policy = AspectPolicy()
+        XCTAssertEqual(policy.aspectForTurn(intent: Intent(kind: .create)), .forge)
+        XCTAssertEqual(policy.aspectForTurn(intent: Intent(kind: .diagnose)), .forge)
+        XCTAssertEqual(policy.aspectForTurn(intent: Intent(kind: .observe)), .eternal)
+        XCTAssertEqual(policy.aspectForTurn(intent: Intent(kind: .remember)), .eternal)
+        XCTAssertEqual(policy.aspectForTurn(intent: Intent(kind: .inquire)), .quicksilver)
+    }
+
+    func testAspectPolicyDwellPreventsChange() {
+        let policy = AspectPolicy(minimumDwellSeconds: 60 * 60)
+        let recent = Date()
+        let result = policy.preferredAspect(
+            current: .quicksilver,
+            lastChangedAt: recent,
+            intent: Intent(kind: .create)
+        )
+        XCTAssertNil(result)
+    }
+
+    func testAspectPolicyLowPowerTiltsForge() {
+        let policy = AspectPolicy(minimumDwellSeconds: 0)
+        let result = policy.preferredAspect(
+            current: .quicksilver,
+            lastChangedAt: nil,
+            intent: nil,
+            isLowPower: true
+        )
+        XCTAssertEqual(result, .forge)
+    }
 }

@@ -3,14 +3,17 @@ import Observation
 import Core
 import Personas
 import Nexus
+import Memory
 
-/// View model for The Eternal Observatory.
+/// View model for The Observatory (Eternal chamber).
 /// All intelligence and chamber decisions come from MercuryBrain.
+/// UI only observes aspect + continuity instruments.
 @MainActor
 @Observable
 final class EternalViewModel {
     private(set) var activePersonaID: String = "eternal"
-    private(set) var livingStatus: String = "Eternal is quiescent."
+    private(set) var activeAspect: Aspect = .quicksilver
+    private(set) var livingStatus: String = "Observatory is quiescent."
     private(set) var latestInsight: Insight?
     private(set) var overallHealthScore: Int = 100
     private(set) var batteryLevelText: String = "—"
@@ -21,8 +24,18 @@ final class EternalViewModel {
     /// Lightweight observational notes captured while in Eternal (local UI state only).
     private(set) var observations: [String] = []
 
+    /// Continuity constellation — high-importance memory items (persona-scoped).
+    private(set) var constellation: [ConstellationNode] = []
+
     private let container: DependencyContainer
     private var refreshTask: Task<Void, Never>?
+
+    struct ConstellationNode: Identifiable, Equatable {
+        let id: String
+        let summary: String
+        let category: String
+        let importance: Double
+    }
 
     init(container: DependencyContainer) {
         self.container = container
@@ -32,6 +45,7 @@ final class EternalViewModel {
     func refresh() {
         let config = container.activeConfiguration
         activePersonaID = config.id
+        activeAspect = container.brain.activeAspect
 
         container.brain.refreshLivingStatus()
         livingStatus = container.brain.livingStatus
@@ -43,9 +57,9 @@ final class EternalViewModel {
         networkStatus = state.networkStatus.capitalized
         thermalState = state.thermalState.capitalized
 
-        // Brain owns persona routing; UI only observes.
-        isAwake = container.brain.activePersonaID.lowercased() == "eternal"
-            || config.id.lowercased() == "eternal"
+        isAwake = activeAspect == .eternal
+
+        constellation = buildConstellation(personaID: config.id)
     }
 
     func startLiveRefresh(interval: Duration = .seconds(4)) {
@@ -64,13 +78,13 @@ final class EternalViewModel {
         refreshTask = nil
     }
 
-    /// Switch into Eternal persona via Brain (never directly via PersonaManager).
+    /// Enter the Observatory chamber via Brain.
     func awakenEternal() async {
         do {
             try await container.brain.switchPersona(to: "eternal")
             refresh()
         } catch {
-            livingStatus = "Eternal could not awaken: \(error.localizedDescription)"
+            livingStatus = "Observatory could not awaken: \(error.localizedDescription)"
         }
     }
 
@@ -89,14 +103,40 @@ final class EternalViewModel {
     /// Ask the Brain a reflective / pattern question while in Eternal context.
     func askEternal(_ query: String) async -> String {
         do {
-            if container.brain.activePersonaID.lowercased() != "eternal" {
+            if container.brain.activeAspect != .eternal {
                 try await container.brain.switchPersona(to: "eternal")
             }
             let answer = try await container.brain.ask(query)
             refresh()
             return answer
         } catch {
-            return "Eternal is silent: \(error.localizedDescription)"
+            return "Observatory is silent: \(error.localizedDescription)"
+        }
+    }
+
+    /// Continuity instrument: ask Brain to surface patterns across recent memory.
+    func runContinuityInstrument() async -> String {
+        let query = "From recent memory and device signals, surface the most important continuity patterns. Be precise and minimal."
+        return await askEternal(query)
+    }
+
+    // MARK: - Constellation
+
+    private func buildConstellation(personaID: String) -> [ConstellationNode] {
+        let policy = container.personaManager.activeMemoryPolicy
+        let query = MemoryQuery(
+            personaScope: personaID,
+            minimumImportance: max(policy.retentionThreshold, 0.35),
+            limit: 8
+        )
+        let items = container.memoryManager.items(matching: query)
+        return items.map { item in
+            ConstellationNode(
+                id: item.id.uuidString,
+                summary: String(item.value.prefix(120)),
+                category: item.category.rawValue,
+                importance: item.importance
+            )
         }
     }
 }
