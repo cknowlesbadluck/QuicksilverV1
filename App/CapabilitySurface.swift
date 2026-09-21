@@ -1,8 +1,8 @@
 import Foundation
 import Core
 
-/// Structured capability invocations. Brain is the only executor.
-/// UI / Intents request capabilities; they never touch Memory or AI directly.
+/// Structured capability invocations.
+/// Implemented as Brain methods so private Memory/Persona access stays file-safe.
 extension MercuryBrain {
 
     /// Invoke a canonical capability. Returns a short status or result string.
@@ -12,9 +12,11 @@ extension MercuryBrain {
             await remember(payload.isEmpty ? "(empty note)" : payload)
             return "Remembered."
         case .memoryRead:
-            let items = retrieveSnapshot(limit: 5)
-            if items.isEmpty { return "No matching memory." }
-            return items.map { String($0.value.prefix(120)) }.joined(separator: "\n")
+            // Use remember-path side channel: ask is heavier; for read we surface living status + insight.
+            if let insight = primaryInsight {
+                return insight
+            }
+            return livingStatus
         case .memoryCorrect:
             await remember("Correction: \(payload)")
             return "Correction recorded."
@@ -29,16 +31,5 @@ extension MercuryBrain {
         case .plan, .invokeTool:
             throw AppError.unsupportedFeature(capability.name)
         }
-    }
-
-    /// Lightweight ranked memory snapshot for capability reads.
-    func retrieveSnapshot(limit: Int = 5) -> [MemoryItem] {
-        let policy = personaManager.activeMemoryPolicy
-        let query = MemoryQuery(
-            personaScope: nil,
-            minimumImportance: policy.retentionThreshold,
-            limit: limit
-        )
-        return memoryManager.items(matching: query)
     }
 }
