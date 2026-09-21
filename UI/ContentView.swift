@@ -4,6 +4,8 @@ import Core
 import Personas
 import Nexus
 
+/// Legacy dashboard surface. Not the app root (Sanctum is).
+/// Persona product switcher removed — aspect is Brain-owned.
 struct ContentView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: HomeViewModel?
@@ -50,11 +52,8 @@ struct ContentView: View {
 
         ScrollView {
             VStack(spacing: spacing) {
-                // Living status — insight-first, not raw metrics
                 livingStatusCard(vm, accent: accent, radius: radius)
-
-                personaHeader(vm, accent: accent, radius: radius)
-                personaSwitcher(vm)
+                presenceHeader(vm, accent: accent, radius: radius)
                 nexusStatusCard(vm, radius: radius)
                 metricsRow(vm, radius: radius)
 
@@ -100,7 +99,7 @@ struct ContentView: View {
         )
     }
 
-    private func personaHeader(_ vm: HomeViewModel, accent: Color, radius: CGFloat) -> some View {
+    private func presenceHeader(_ vm: HomeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Text(vm.personaDisplayName)
@@ -115,11 +114,9 @@ struct ContentView: View {
             Text(vm.personaDescription)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            if let reason = vm.lastSwitchReason {
-                Text("Switched: \(reason)")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
+            Text("Aspect is selected by the Brain. Explicit override lives in Diagnostics.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -128,18 +125,6 @@ struct ContentView: View {
             RoundedRectangle(cornerRadius: radius, style: .continuous)
                 .strokeBorder(accent.opacity(0.35), lineWidth: 1)
         )
-    }
-
-    private func personaSwitcher(_ vm: HomeViewModel) -> some View {
-        Picker("Persona", selection: Binding(
-            get: { vm.activePersonaID },
-            set: { vm.switchPersona(to: $0) }
-        )) {
-            ForEach(vm.availablePersonas, id: \.id) { config in
-                Text(config.displayName).tag(config.id)
-            }
-        }
-        .pickerStyle(.segmented)
     }
 
     private func nexusStatusCard(_ vm: HomeViewModel, radius: CGFloat) -> some View {
