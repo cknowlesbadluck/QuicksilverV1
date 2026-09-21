@@ -36,43 +36,39 @@ final class SettingsViewModel {
     }
     
     func saveGrokKey() {
-        save(
-            draft: grokKeyDraft,
-            configure: container.aiService.configureGrokAPIKey,
-            success: "Grok key saved to Keychain."
-        )
+        let trimmed = grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            statusMessage = "Enter a non-empty Grok API key."
+            statusIsError = true
+            return
+        }
+        guard container.aiService.configureGrokAPIKey(trimmed) else {
+            statusMessage = "Could not save the Grok key to the Keychain."
+            statusIsError = true
+            return
+        }
         grokKeyDraft = ""
+        statusMessage = "Grok key saved to Keychain."
+        statusIsError = false
         refresh()
     }
     
     func saveGeminiKey() {
-        save(
-            draft: geminiKeyDraft,
-            configure: container.aiService.configureGeminiAPIKey,
-            success: "Gemini key saved to Keychain."
-        )
-        geminiKeyDraft = ""
-        refresh()
-    }
-    
-    private func save(
-        draft: String,
-        configure: (String?) -> Bool,
-        success: String
-    ) {
-        let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            statusMessage = "Enter a non-empty API key."
+            statusMessage = "Enter a non-empty Gemini API key."
             statusIsError = true
             return
         }
-        guard configure(trimmed) else {
-            statusMessage = "Could not save the API key to the Keychain."
+        guard container.aiService.configureGeminiAPIKey(trimmed) else {
+            statusMessage = "Could not save the Gemini key to the Keychain."
             statusIsError = true
             return
         }
-        statusMessage = success
+        geminiKeyDraft = ""
+        statusMessage = "Gemini key saved to Keychain."
         statusIsError = false
+        refresh()
     }
     
     func clearGrokKey() {

@@ -41,7 +41,6 @@ public final class AIService {
         let grok = grokKey.flatMap { $0.isEmpty ? nil : GrokAIProvider.make(apiKey: $0) }
         let gemini = geminiKey.flatMap { $0.isEmpty ? nil : GeminiAIProvider.make(apiKey: $0) }
         
-        // Grok is intentionally the conversational default. Gemini is the automatic fallback.
         if let grok {
             return (grok, gemini)
         }
@@ -107,7 +106,6 @@ public final class AIService {
         !(KeychainStore.string(forKey: Self.geminiAPIKeyKeychainAccount)?.isEmpty ?? true)
     }
     
-    /// Compatibility entry point for the existing Settings surface.
     @discardableResult
     public func configureAPIKey(_ key: String?) -> Bool {
         configureGrokAPIKey(key)
@@ -143,16 +141,36 @@ public final class AIService {
         )
     }
     
-    public func complete(prompt: String, systemPrompt: String? = nil, temperature: Double = 0.7, maxTokens: Int = 1024) async throws -> AIResponse {
-        try await execute(prompt: prompt, systemPrompt: systemPrompt, temperature: temperature, maxTokens: maxTokens)
+    public func complete(
+        prompt: String,
+        systemPrompt: String? = nil,
+        temperature: Double = 0.7,
+        maxTokens: Int = 1024
+    ) async throws -> AIResponse {
+        try await execute(
+            prompt: prompt,
+            systemPrompt: systemPrompt,
+            temperature: temperature,
+            maxTokens: maxTokens
+        )
     }
     
-    private func execute(prompt: String, systemPrompt: String?, temperature: Double, maxTokens: Int) async throws -> AIResponse {
+    private func execute(
+        prompt: String,
+        systemPrompt: String?,
+        temperature: Double,
+        maxTokens: Int
+    ) async throws -> AIResponse {
         guard featureFlags.isEnabled("aiServiceEnabled") || primaryProvider.id == "mock" else {
             throw AppError.unsupportedFeature("AI service is currently disabled by feature flag")
         }
         
-        let request = AIRequest(prompt: prompt, systemPrompt: systemPrompt, temperature: temperature, maxTokens: maxTokens)
+        let request = AIRequest(
+            prompt: prompt,
+            systemPrompt: systemPrompt,
+            temperature: temperature,
+            maxTokens: maxTokens
+        )
         isProcessing = true
         await eventBus.publish(.aiRequestStarted(requestID: request.id.uuidString))
         logger.debug("AI request started: \(request.id)", category: logger.ai)
@@ -167,7 +185,7 @@ public final class AIService {
                     throw error
                 }
                 logger.info(
-                    "Primary AI provider failed; attempting free-tier fallback: \(fallback.displayName)",
+                    "Primary AI provider failed; attempting fallback: \(fallback.displayName)",
                     category: logger.ai
                 )
                 raw = try await fallback.complete(request)

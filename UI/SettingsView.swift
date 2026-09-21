@@ -57,42 +57,50 @@ struct SettingsView: View {
     @ViewBuilder
     private func credentialsSection(_ vm: SettingsViewModel) -> some View {
         Section("API Keys") {
-            SecureField("Grok / xAI API key", text: Binding(
-                get: { vm.grokKeyDraft },
-                set: { vm.grokKeyDraft = $0 }
-            ))
-            .textContentType(.password)
-            .autocorrectionDisabled()
-            
-            Button("Save Grok Key") {
-                vm.saveGrokKey()
-            }
-            .disabled(vm.grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            
-            if vm.hasGrokKey {
-                Button("Remove Grok Key", role: .destructive) {
-                    vm.clearGrokKey()
-                }
-            }
-            
+            grokCredentials(vm)
             Divider()
-            
-            SecureField("Gemini / Google API key", text: Binding(
-                get: { vm.geminiKeyDraft },
-                set: { vm.geminiKeyDraft = $0 }
-            ))
-            .textContentType(.password)
-            .autocorrectionDisabled()
-            
-            Button("Save Gemini Key") {
-                vm.saveGeminiKey()
+            geminiCredentials(vm)
+        }
+    }
+    
+    @ViewBuilder
+    private func grokCredentials(_ vm: SettingsViewModel) -> some View {
+        SecureField("Grok / xAI API key", text: Binding(
+            get: { vm.grokKeyDraft },
+            set: { vm.grokKeyDraft = $0 }
+        ))
+        .textContentType(.password)
+        .autocorrectionDisabled()
+        
+        Button("Save Grok Key") {
+            vm.saveGrokKey()
+        }
+        .disabled(vm.grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        
+        if vm.hasGrokKey {
+            Button("Remove Grok Key", role: .destructive) {
+                vm.clearGrokKey()
             }
-            .disabled(vm.geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            
-            if vm.hasGeminiKey {
-                Button("Remove Gemini Key", role: .destructive) {
-                    vm.clearGeminiKey()
-                }
+        }
+    }
+    
+    @ViewBuilder
+    private func geminiCredentials(_ vm: SettingsViewModel) -> some View {
+        SecureField("Gemini / Google API key", text: Binding(
+            get: { vm.geminiKeyDraft },
+            set: { vm.geminiKeyDraft = $0 }
+        ))
+        .textContentType(.password)
+        .autocorrectionDisabled()
+        
+        Button("Save Gemini Key") {
+            vm.saveGeminiKey()
+        }
+        .disabled(vm.geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        
+        if vm.hasGeminiKey {
+            Button("Remove Gemini Key", role: .destructive) {
+                vm.clearGeminiKey()
             }
         }
     }
@@ -111,7 +119,7 @@ struct SettingsView: View {
             Text("Aspects")
         } footer: {
             Text(
-                "Aspect surfacing should remain automatic. The intelligence provider is independent "
+                "Aspect surfacing remains automatic. The intelligence provider is independent "
                 + "of Quicksilver, Forge, and Eternal."
             )
         }
