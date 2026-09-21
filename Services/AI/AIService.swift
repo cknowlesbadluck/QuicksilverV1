@@ -23,7 +23,6 @@ public final class AIService {
         self.eventBus = eventBus
         self.logger = logger
         self.featureFlags = featureFlags
-        
         if let provider {
             self.primaryProvider = provider
             self.secondaryProvider = nil
@@ -37,7 +36,6 @@ public final class AIService {
     private static func makeConfiguredProviders() -> (primary: AIProvider, secondary: AIProvider?) {
         let grokKey = KeychainStore.string(forKey: grokAPIKeyKeychainAccount)
         let geminiKey = KeychainStore.string(forKey: geminiAPIKeyKeychainAccount)
-        
         let grok = grokKey.flatMap { $0.isEmpty ? nil : GrokAIProvider.make(apiKey: $0) }
         let gemini = geminiKey.flatMap { $0.isEmpty ? nil : GeminiAIProvider.make(apiKey: $0) }
         
@@ -83,7 +81,8 @@ public final class AIService {
         primaryProvider = configured.primary
         secondaryProvider = configured.secondary
         logger.info(
-            "AI routing rebuilt: primary=\(primaryProvider.displayName), fallback=\(secondaryProvider?.displayName ?? "none")",
+            "AI routing rebuilt: primary=\(primaryProvider.displayName), "
+            + "fallback=\(secondaryProvider?.displayName ?? "none")",
             category: logger.ai
         )
     }
@@ -97,11 +96,9 @@ public final class AIService {
     public var currentProviderID: String { primaryProvider.id }
     public var currentProviderName: String { primaryProvider.displayName }
     public var fallbackProviderName: String? { secondaryProvider?.displayName }
-    
     public var hasGrokKey: Bool {
         !(KeychainStore.string(forKey: Self.grokAPIKeyKeychainAccount)?.isEmpty ?? true)
     }
-    
     public var hasGeminiKey: Bool {
         !(KeychainStore.string(forKey: Self.geminiAPIKeyKeychainAccount)?.isEmpty ?? true)
     }
@@ -177,20 +174,7 @@ public final class AIService {
         defer { isProcessing = false }
         
         do {
-            let raw: AIResponse
-            do {
-                raw = try await primaryProvider.complete(request)
-            } catch {
-                guard let fallback = secondaryProvider, fallback.isAvailable else {
-                    throw error
-                }
-                logger.info(
-                    "Primary AI provider failed; attempting fallback: \(fallback.displayName)",
-                    category: logger.ai
-                )
-                raw = try await fallback.complete(request)
-            }
-            
+            let raw = try await performProviderRequest(request)
             switch ResponseValidator.validate(raw) {
             case .accept(let response):
                 lastResponse = response
@@ -204,6 +188,19 @@ public final class AIService {
         } catch {
             logger.error("AI request failed: \(error.localizedDescription)", category: logger.ai)
             throw error
+        }
+    }
+    
+    private func performProviderRequest(_ request: AIRequest) async throws -> AIResponse {
+        do {
+            return try await primaryProvider.complete(request)
+        } catch {
+            guard let fallback = secondaryProvider, fallback.isAvailable else { throw error }
+            logger.info(
+                "Primary AI provider failed; attempting fallback: \(fallback.displayName)",
+                category: logger.ai
+            )
+            return try await fallback.complete(request)
         }
     }
 }

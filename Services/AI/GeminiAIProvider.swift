@@ -1,8 +1,6 @@
 import Foundation
 import Core
 
-/// Direct Gemini API provider for personal, sideloaded Quicksilver use.
-/// Credentials are supplied by AIService from the iOS Keychain.
 struct GeminiAIProvider: AIProvider {
     let id = "gemini"
     let displayName = "Gemini (Google)"
@@ -26,9 +24,14 @@ struct GeminiAIProvider: AIProvider {
     
     func complete(_ request: AIRequest) async throws -> AIResponse {
         try Task.checkCancellation()
-        guard isAvailable else { throw AppError.apiKeyMissing }
-        
-        guard var components = URLComponents(string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent") else {
+        let data = try await performRequest(request)
+        return try decode(data: data, requestID: request.id)
+    }
+    
+    private func performRequest(_ request: AIRequest) async throws -> Data {
+        guard var components = URLComponents(
+            string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent"
+        ) else {
             throw AppError.configurationMissing("Gemini base URL")
         }
         components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
@@ -40,19 +43,7 @@ struct GeminiAIProvider: AIProvider {
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
         urlRequest.timeoutInterval = 45
-        
-        let body = GeminiAPI.GenerateContentRequest(
-            systemInstruction: request.systemPrompt.map { .init(parts: [.init(text: $0)]) },
-            contents: [.init(role: "user", parts: [.init(text: request.prompt)])],
-            generationConfig: .init(
-                temperature: request.temperature,
-                maxOutputTokens: request.maxTokens
-            )
-        )
-        
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
-        urlRequest.httpBody = try encoder.encode(body)
+        urlRequest.httpBody = try JSONEncoder().encode(makeBody(request))
         
         let data: Data
         let response: URLResponse
@@ -65,18 +56,35 @@ struct GeminiAIProvider: AIProvider {
         }
         
         try Task.checkCancellation()
-        
         guard let http = response as? HTTPURLResponse else {
             throw AppError.networkUnavailable
         }
-        
         guard (200...299).contains(http.statusCode) else {
             throw AppError.aiRequestFailed("Gemini API request failed (HTTP \(http.statusCode))")
         }
-        
+        return data
+    }
+    
+    private func makeBody(_ request: AIRequest) -> GeminiAPI.GenerateContentRequest {
+        GeminiAPI.GenerateContentRequest(
+            systemInstruction: request.systemPrompt.map {
+                .init(parts: [.init(text: $0)])
+            },
+            contents: [.init(role: "user", parts: [.init(text: request.prompt)])],
+            generationConfig: .init(
+                temperature: request.temperature,
+                maxOutputTokens: request.maxTokens
+            )
+        )
+    }
+    
+    private func decode(data: Data, requestID: UUID) throws -> AIResponse {
         let decoded: GeminiAPI.GenerateContentResponse
         do {
-            decoded = try decoder.decode(GeminiAPI.GenerateContentResponse.self, from: data)
+            decoded = try JSONDecoder().decode(
+                GeminiAPI.GenerateContentResponse.self,
+                from: data
+            )
         } catch {
             throw AppError.aiRequestFailed("Failed to decode Gemini response")
         }
@@ -84,21 +92,19 @@ struct GeminiAIProvider: AIProvider {
         guard let candidate = decoded.candidates.first else {
             throw AppError.aiRequestFailed("Gemini response contained no candidates")
         }
-        
         let content = candidate.content.parts.compactMap(\.text).joined()
         guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw AppError.aiRequestFailed("Gemini response contained no text")
         }
         
-        let usage: AIResponse.Usage? = decoded.usageMetadata.map {
-            .init(
+        let usage = decoded.usageMetadata.map {
+            AIResponse.Usage(
                 promptTokens: $0.promptTokenCount ?? 0,
                 completionTokens: $0.candidatesTokenCount ?? 0
             )
         }
-        
         return AIResponse(
-            requestID: request.id,
+            requestID: requestID,
             content: content,
             finishReason: candidate.finishReason == "MAX_TOKENS" ? .length : .stop,
             usage: usage
