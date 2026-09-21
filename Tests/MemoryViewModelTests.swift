@@ -26,7 +26,7 @@ final class MemoryViewModelTests: XCTestCase {
         )
     }
 
-    func testLoadItemsMatchingQueryAndSorting() async {
+    func testLoadItemsMatchingQueryAndSorting() async throws {
         let store = InMemoryMemoryStore()
         let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
@@ -34,31 +34,34 @@ final class MemoryViewModelTests: XCTestCase {
         let now = Date()
         let olderDate = now.addingTimeInterval(-3600)
 
-        // Add items directly via memoryManager
-        await container.memoryManager.set(
+        let lowImportanceItem = MemoryItem(
             key: "low_importance",
+            category: .temporary,
             value: "Low Importance Note",
-            category: .temporary,
-            importanceBoost: 0.1,
-            personaScope: nil
+            importance: 0.2
         )
 
-        await container.memoryManager.set(
+        let highRecentItem = MemoryItem(
             key: "high_importance_recent",
-            value: "High Importance Recent Note",
             category: .temporary,
-            importanceBoost: 0.8,
-            personaScope: nil
+            value: "High Importance Recent Note",
+            createdAt: now,
+            updatedAt: now,
+            importance: 0.9
         )
 
-        await container.memoryManager.set(
+        let highOlderItem = MemoryItem(
             key: "high_importance_older",
-            value: "High Importance Older Note",
             category: .temporary,
-            importanceBoost: 0.8,
+            value: "High Importance Older Note",
+            createdAt: olderDate,
             updatedAt: olderDate,
-            personaScope: nil
+            importance: 0.9
         )
+
+        try await store.save(lowImportanceItem)
+        try await store.save(highRecentItem)
+        try await store.save(highOlderItem)
 
         await viewModel.load()
 
