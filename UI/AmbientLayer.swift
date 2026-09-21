@@ -53,8 +53,8 @@ struct AmbientLayer: View {
                     let segments = 18
 
                     for segment in 0..<segments {
-                        let t = Double(segment) / Double(segments - 1)
-                        let angle = -1.05 + t * 2.10 + time * (0.006 + intensity * 0.008)
+                        let progress = Double(segment) / Double(segments - 1)
+                        let angle = -1.05 + progress * 2.10 + time * (0.006 + intensity * 0.008)
                         let wobble = sin(angle * 3.0 + seed + time * 0.12) * 5.0 * intensity
                         let point = CGPoint(
                             x: center.x + cos(angle) * (radius + wobble),

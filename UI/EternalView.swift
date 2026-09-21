@@ -375,8 +375,8 @@ private struct ObservatoryLens: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 8.0 : 1.0 / 30.0)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
-            let angle = reduceMotion ? 0.0 : t * (active ? 0.32 : 0.08)
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            let angle = reduceMotion ? 0.0 : time * (active ? 0.32 : 0.08)
             ZStack {
                 Circle().stroke(accent.opacity(0.28), lineWidth: 1)
                 Circle()
@@ -412,9 +412,9 @@ private struct ObservatoryField: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 8.0 : 1.0 / 30.0)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
+            let time = timeline.date.timeIntervalSinceReferenceDate
             Canvas { context, size in
-                drawRings(context: context, size: size, time: t)
+                drawRings(context: context, size: size, time: time)
             }
         }
         .ignoresSafeArea()
