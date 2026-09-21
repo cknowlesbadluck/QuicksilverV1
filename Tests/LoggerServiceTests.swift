@@ -66,7 +66,13 @@ final class LoggerServiceTests: XCTestCase {
 
     func testRedactNormalStringsAboveMaxVisible() {
         XCTAssertEqual(LoggerService.redact("hello", maxVisible: 4), "hell…<redacted>")
-        XCTAssertEqual(LoggerService.redact("secret-val", maxVisible: 3), "sec…<redacted>")
+        // "secret-val" contains "secret" and must take the keyword path, not prefix truncation
+        XCTAssertEqual(LoggerService.redact("secret-val", maxVisible: 3), "<redacted len=10>")
         XCTAssertEqual(LoggerService.redact("12345678901234567890", maxVisible: 4), "1234…<redacted>") // length 20
+    }
+
+    func testRedactTokenAndBearerKeywords() {
+        XCTAssertEqual(LoggerService.redact("mytokenvalue"), "<redacted len=12>")
+        XCTAssertEqual(LoggerService.redact("Bearer abc.def"), "<redacted len=14>")
     }
 }
