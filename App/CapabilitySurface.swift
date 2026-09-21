@@ -12,11 +12,10 @@ extension MercuryBrain {
             await remember(payload.isEmpty ? "(empty note)" : payload)
             return "Remembered."
         case .memoryRead:
-            let items = retrieveForCapability()
+            let items = retrieveSnapshot(limit: 5)
             if items.isEmpty { return "No matching memory." }
-            return items.prefix(5).map { String($0.value.prefix(120)) }.joined(separator: "\n")
+            return items.map { String($0.value.prefix(120)) }.joined(separator: "\n")
         case .memoryCorrect:
-            // Correction = write a corrective note; full edit path later.
             await remember("Correction: \(payload)")
             return "Correction recorded."
         case .diagnose:
@@ -32,11 +31,14 @@ extension MercuryBrain {
         }
     }
 
-    private func retrieveForCapability() -> [MemoryItem] {
-        // Mirrors Brain private path without exposing MemoryManager to UI.
-        // Uses the same ranked query as prompt assembly.
-        let mirror = Mirror(reflecting: self)
-        // Prefer the public ask path for complex retrieval; this is a light scan.
-        return []
+    /// Lightweight ranked memory snapshot for capability reads.
+    func retrieveSnapshot(limit: Int = 5) -> [MemoryItem] {
+        let policy = personaManager.activeMemoryPolicy
+        let query = MemoryQuery(
+            personaScope: nil,
+            minimumImportance: policy.retentionThreshold,
+            limit: limit
+        )
+        return memoryManager.items(matching: query)
     }
 }
