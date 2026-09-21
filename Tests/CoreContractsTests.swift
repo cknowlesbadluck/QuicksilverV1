@@ -22,8 +22,9 @@ final class CoreContractsTests: XCTestCase {
 
     func testIntentEquality() {
         let id = UUID()
-        let first = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9)
-        let second = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9)
+        let now = Date()
+        let first = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9, createdAt: now)
+        let second = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9, createdAt: now)
         XCTAssertEqual(first, second)
     }
 

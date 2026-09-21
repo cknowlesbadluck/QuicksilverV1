@@ -7,13 +7,13 @@ import ServicesAI
 @Observable
 final class SettingsViewModel {
     var apiKeyDraft: String = ""
-    private(set) var hasStoredKey: Bool = false
-    private(set) var providerName: String = ""
-    private(set) var aiEnabled: Bool = false
-    private(set) var personaAutonomyEnabled: Bool = true
-    private(set) var lastSwitchReason: String?
-    private(set) var statusMessage: String?
-    private(set) var statusIsError: Bool = false
+    var hasStoredKey: Bool = false
+    var providerName: String = ""
+    var aiEnabled: Bool = false
+    var personaAutonomyEnabled: Bool = true
+    var lastSwitchReason: String?
+    var statusMessage: String?
+    var statusIsError: Bool = false
 
     private let container: DependencyContainer
 
