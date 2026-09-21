@@ -177,4 +177,63 @@ final class CoreContractsTests: XCTestCase {
         )
         XCTAssertEqual(result, .forge)
     }
+
+    // MARK: - IntelligenceBroker
+
+    func testBrokerAllowsInteractive() {
+        let broker = IntelligenceBroker()
+        let decision = broker.evaluate(
+            IntelligenceBroker.TurnRequest(
+                intent: Intent(kind: .inquire),
+                aspect: .quicksilver,
+                plan: .interactive,
+                estimatedContextTokens: 1_000
+            )
+        )
+        if case .allow = decision {
+            XCTAssertTrue(true)
+        } else {
+            XCTFail("expected allow")
+        }
+    }
+
+    func testBrokerElevatesForge() {
+        let broker = IntelligenceBroker()
+        let decision = broker.evaluate(
+            IntelligenceBroker.TurnRequest(
+                intent: Intent(kind: .create),
+                aspect: .forge,
+                plan: .interactive,
+                estimatedContextTokens: 500
+            )
+        )
+        if case .allow(let plan) = decision {
+            XCTAssertEqual(plan.priority, .high)
+        } else {
+            XCTFail("expected allow elevated")
+        }
+    }
+
+    func testBrokerDegradesOversizedContext() {
+        let broker = IntelligenceBroker()
+        let decision = broker.evaluate(
+            IntelligenceBroker.TurnRequest(
+                intent: Intent(kind: .inquire),
+                aspect: .quicksilver,
+                plan: .interactive,
+                estimatedContextTokens: 50_000
+            )
+        )
+        if case .degrade(let plan, _) = decision {
+            XCTAssertLessThanOrEqual(plan.maxOutputTokens, 512)
+        } else {
+            XCTFail("expected degrade")
+        }
+    }
+
+    func testBrokerDefaultPlans() {
+        let broker = IntelligenceBroker()
+        XCTAssertEqual(broker.defaultPlan(for: Intent(kind: .create)).priority, .high)
+        XCTAssertFalse(broker.defaultPlan(for: Intent(kind: .observe)).allowExternalCalls)
+    }
 }
