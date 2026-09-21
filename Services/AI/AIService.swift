@@ -50,13 +50,13 @@ public final class AIService {
     
     public func configureGrokAPIKey(_ key: String?) -> Bool {
         let normalized = key?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let normalized, !normalized.isEmpty else {
-            KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
-        } else {
+        if let normalized, !normalized.isEmpty {
             guard KeychainStore.set(normalized, forKey: Self.grokAPIKeyKeychainAccount) else {
                 logger.error("Keychain write failed for Grok API key", category: logger.ai)
                 return false
             }
+        } else {
+            KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
         }
         rebuildProviders()
         return true
@@ -64,13 +64,13 @@ public final class AIService {
     
     public func configureGeminiAPIKey(_ key: String?) -> Bool {
         let normalized = key?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let normalized, !normalized.isEmpty else {
-            KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
-        } else {
+        if let normalized, !normalized.isEmpty {
             guard KeychainStore.set(normalized, forKey: Self.geminiAPIKeyKeychainAccount) else {
                 logger.error("Keychain write failed for Gemini API key", category: logger.ai)
                 return false
             }
+        } else {
+            KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
         }
         rebuildProviders()
         return true
