@@ -26,6 +26,7 @@ final class MercuryBrain {
 
     private let intentEngine = IntentEngine()
     private let aspectPolicy = AspectPolicy()
+    private let broker = IntelligenceBroker()
 
     private(set) var personality = PersonalityState()
     private(set) var primaryInsight: String?
@@ -67,21 +68,46 @@ final class MercuryBrain {
         let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
         await applyAspect(turnAspect, reason: "turn intent \(intent.kind.rawValue)")
 
-        // Feed PersonaManager only coarse description — no QueryIntent/TaskKind bridge.
         personaManager.updateTaskContext(description: query)
 
         let config = PersonaConfiguration.forAspect(activeAspect)
         personality.adjustForAspect(activeAspect)
 
         let relevantMemory = retrieveRelevantMemory()
+        let estimatedTokens = estimateContextTokens(systemHint: config.systemPrompt, memory: relevantMemory, query: query)
+
+        let plan = broker.defaultPlan(for: intent)
+        let decision = broker.evaluate(
+            IntelligenceBroker.TurnRequest(
+                intent: intent,
+                aspect: activeAspect,
+                plan: plan,
+                estimatedContextTokens: estimatedTokens
+            )
+        )
+
+        let effectivePlan: ResourcePlan
+        switch decision {
+        case .allow(let p):
+            effectivePlan = p
+        case .degrade(let p, let reason):
+            logger.info("Broker degrade: \(reason)", category: logger.general)
+            effectivePlan = p
+        case .deny(let reason):
+            visualState = .warning
+            refreshLivingStatus()
+            throw AppError.aiUnavailable(reason)
+        }
+
         let system = buildSystemPrompt(for: config, memory: relevantMemory)
+        let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
 
         do {
             let response = try await aiService.complete(
                 prompt: query,
                 systemPrompt: system,
                 temperature: config.preferredTemperature,
-                maxTokens: config.maxTokensHint
+                maxTokens: maxTokens
             )
 
             visualState = .speaking
@@ -183,7 +209,6 @@ final class MercuryBrain {
                 thermalState: nexus.state.thermalState,
                 hasRecentMemoryHints: !retrieveRelevantMemory().isEmpty
             )
-            // Allow turn-level visual even when dwell blocks a durable switch.
             if preferred != aspect && preferred != nil {
                 if visualState == .thinking || visualState == .idle {
                     visualState = aspect.defaultVisualState
@@ -195,7 +220,6 @@ final class MercuryBrain {
         activeAspect = aspect
         lastAspectChangeAt = Date()
 
-        // Project aspect onto PersonaManager so expression config stays aligned.
         do {
             try await personaManager.switchTo(id: aspect.rawValue)
         } catch {
@@ -248,7 +272,7 @@ final class MercuryBrain {
         }
     }
 
-    // MARK: - Memory
+    // MARK: - Memory / budget helpers
 
     private func retrieveRelevantMemory() -> [MemoryItem] {
         let policy = personaManager.activeMemoryPolicy
@@ -258,6 +282,13 @@ final class MercuryBrain {
             limit: 5
         )
         return memoryManager.items(matching: memoryQuery)
+    }
+
+    /// Rough token estimate (~4 chars/token). Good enough for budget gating.
+    private func estimateContextTokens(systemHint: String, memory: [MemoryItem], query: String) -> Int {
+        let memoryChars = memory.reduce(0) { $0 + $1.value.count }
+        let totalChars = systemHint.count + memoryChars + query.count
+        return totalChars / 4
     }
 
     // MARK: - Prompt
