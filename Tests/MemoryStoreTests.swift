@@ -82,14 +82,14 @@ final class MemoryStoreTests: XCTestCase {
         let store = try SwiftDataMemoryStore(inMemory: true)
         let itemCount = 50
 
-        for i in 0..<itemCount {
-            let item = MemoryItem(key: "key-\(i)", category: .temporary, value: "value-\(i)")
+        for index in 0..<itemCount {
+            let item = MemoryItem(key: "key-\(index)", category: .temporary, value: "value-\(index)")
             try await store.save(item)
         }
 
         // Keep 5 items in a different category
-        for i in 0..<5 {
-            let item = MemoryItem(key: "pref-\(i)", category: .preference, value: "pref-\(i)")
+        for index in 0..<5 {
+            let item = MemoryItem(key: "pref-\(index)", category: .preference, value: "pref-\(index)")
             try await store.save(item)
         }
 
