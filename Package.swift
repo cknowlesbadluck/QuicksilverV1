@@ -39,7 +39,7 @@ let package = Package(
             name: "UI",
             dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
             path: ".",
-            sources: ["UI", "App/DependencyContainer.swift", "App/MercuryBrain.swift"]
+            sources: ["UI/SettingsViewModel.swift", "App/DependencyContainer.swift", "App/MercuryBrain.swift"]
         ),
         .testTarget(
             name: "QuicksilverCoreTests",
