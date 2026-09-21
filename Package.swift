@@ -35,9 +35,23 @@ let package = Package(
             dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
             path: "Intents"
         ),
+        .target(
+            name: "Quicksilver",
+            dependencies: [
+                "Core",
+                "Memory",
+                "Personas",
+                "ServicesAI",
+                "Nexus",
+                "QuicksilverIntents",
+                .product(name: "Sentry", package: "sentry-cocoa")
+            ],
+            path: ".",
+            sources: ["App", "UI"]
+        ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "Quicksilver"],
             path: "Tests"
         ),
     ]
