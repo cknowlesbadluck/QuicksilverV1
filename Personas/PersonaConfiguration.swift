@@ -1,3 +1,4 @@
+import Core
 import Foundation
 
 /// Data-driven configuration for a persona.
