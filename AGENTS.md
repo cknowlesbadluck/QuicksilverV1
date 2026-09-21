@@ -42,6 +42,8 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 Work one focused production cut at a time. Prefer small, reviewable PRs.
 Current focus: CI green → provider verification → SideStore smoke → legacy persona/bridge cleanup → depth.
 
+Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
+
 ## Testing & CI
 - SPM unit tests must stay green.
 - Simulator Build must pass before merge.
