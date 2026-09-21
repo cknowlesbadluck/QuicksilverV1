@@ -103,8 +103,9 @@ public final class MemoryManager {
 
     @discardableResult
     public func clearAll() async -> Bool {
-        for id in items.map(\.id) {
-            await delete(id: id)
+        // Iterate over items directly to avoid intermediate Array<UUID> allocation from .map(\.id)
+        for item in items {
+            await delete(id: item.id)
         }
         guard items.isEmpty else {
             logger.error("Memory clear failed; \(items.count) item(s) remain", category: logger.memory)
