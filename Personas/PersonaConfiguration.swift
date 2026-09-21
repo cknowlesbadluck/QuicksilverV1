@@ -93,5 +93,13 @@ public struct PersonaConfiguration: Sendable, Codable, Equatable {
         maxTokensHint: 2048
     )
 
+    public static func forAspect(_ aspect: Aspect) -> PersonaConfiguration {
+        switch aspect {
+        case .forge: return .forge
+        case .eternal: return .eternal
+        case .quicksilver: return .quicksilver
+        }
+    }
+
     public static let all: [PersonaConfiguration] = [.forge, .quicksilver, .eternal]
 }
