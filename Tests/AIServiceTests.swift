@@ -130,6 +130,25 @@ final class AIServiceTests: XCTestCase {
         XCTAssertFalse(response.content.isEmpty)
         XCTAssertEqual(response.finishReason, .stop)
     }
+
+    func testClearAllAPIKeysRemovesKeysAndResetsProvider() {
+        let bus = EventBus()
+        let logger = LoggerService()
+        let flags = FeatureFlags()
+        let service = AIService(eventBus: bus, logger: logger, featureFlags: flags)
+
+        _ = service.configureGrokAPIKey("test-grok-key")
+        _ = service.configureGeminiAPIKey("test-gemini-key")
+
+        XCTAssertTrue(service.hasGrokKey)
+        XCTAssertTrue(service.hasGeminiKey)
+
+        service.clearAllAPIKeys()
+
+        XCTAssertFalse(service.hasGrokKey)
+        XCTAssertFalse(service.hasGeminiKey)
+        XCTAssertEqual(service.currentProviderID, "mock")
+    }
 }
 
 private struct AlwaysOnStubProvider: AIProvider {

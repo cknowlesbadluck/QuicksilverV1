@@ -84,6 +84,15 @@ final class SettingsViewModel {
         statusMessage = "Gemini key removed."
         statusIsError = false
     }
+
+    func clearAPIKey() {
+        container.aiService.clearAllAPIKeys()
+        grokKeyDraft = ""
+        geminiKeyDraft = ""
+        refresh()
+        statusMessage = "API keys removed."
+        statusIsError = false
+    }
     
     func setAIEnabled(_ enabled: Bool) {
         container.featureFlags.set("aiServiceEnabled", enabled: enabled)

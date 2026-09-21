@@ -35,9 +35,15 @@ let package = Package(
             dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
             path: "Intents"
         ),
+        .target(
+            name: "UI",
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
+            path: ".",
+            sources: ["UI", "App/DependencyContainer.swift", "App/MercuryBrain.swift"]
+        ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "UI"],
             path: "Tests"
         ),
     ]
