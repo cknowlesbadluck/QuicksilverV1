@@ -78,7 +78,7 @@ public struct PersonaDecisionPolicy: Sendable {
     private func fromTaskDescription(_ description: String?) -> PersonaConfiguration? {
         guard let text = description?.lowercased() else { return nil }
 
-        if containsAny(text, ["architect", "implement", "refactor", "debug", "fix", "fix", "precision", "structure"]) {
+        if containsAny(text, ["architect", "implement", "refactor", "debug", "fix", "precision", "structure"]) {
             return .forge
         }
         if containsAny(text, ["idea", "brainstorm", "explore", "what if", "creative", "strategy", "option"]) {
@@ -133,7 +133,15 @@ public struct PersonaDecisionPolicy: Sendable {
         candidate.id == current.id ? nil : candidate
     }
 
+    /// Efficiently checks if `text` contains any keyword in `keywords`.
+    /// Performance note: Using an explicit for-in loop avoids closure allocation overhead
+    /// and enables clean short-circuiting upon finding the first matching substring.
     private func containsAny(_ text: String, _ keywords: [String]) -> Bool {
-        keywords.contains { text.contains($0) }
+        for keyword in keywords {
+            if text.contains(keyword) {
+                return true
+            }
+        }
+        return false
     }
 }
