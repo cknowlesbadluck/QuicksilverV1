@@ -1,3 +1,4 @@
+#if canImport(UIKit)
 import XCTest
 @testable import Core
 @testable import ServicesAI
@@ -165,3 +166,4 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.statusIsError)
     }
 }
+#endif
