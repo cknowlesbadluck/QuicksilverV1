@@ -64,7 +64,7 @@ final class MercuryBrain {
     }
 
     var activePersonaID: String { personaManager.activePersonaID }
-    var activeConfiguration: PersonaConfiguration { personaManager.activeConfiguration }
+    var activeConfiguration: PersonaConfiguration { PersonaConfiguration.forAspect(activeAspect) }
 
     /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
@@ -90,8 +90,8 @@ final class MercuryBrain {
 
         personality.adjustFor(intent: legacyIntent, kind: legacyKind)
 
-        let config = personaManager.activeConfiguration
-        let relevantMemory = retrieveRelevantMemory(for: query, personaID: config.id)
+        let config = PersonaConfiguration.forAspect(activeAspect)
+        let relevantMemory = retrieveRelevantMemory(for: query)
         let system = buildSystemPrompt(for: config, memory: relevantMemory)
 
         do {
@@ -130,7 +130,6 @@ final class MercuryBrain {
 
     func remember(_ content: String) async {
         let truncated = String(content.prefix(500))
-        let personaID = personaManager.activePersonaID
         let policy = personaManager.activeMemoryPolicy
 
         let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
@@ -148,9 +147,9 @@ final class MercuryBrain {
             key: "note.brain.\(UUID().uuidString.prefix(8))",
             value: truncated,
             category: .temporary,
-            metadata: ["source": "mercury-brain", "persona": personaID],
+            metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
             importanceBoost: policy.writeImportanceHint,
-            personaScope: personaID
+            personaScope: nil
         )
 
         personality.noteInsight()
@@ -209,7 +208,7 @@ final class MercuryBrain {
             intent: Intent(kind: .unknown), // already decided for turn
             isLowPower: nexus.state.lowPowerMode,
             thermalState: nexus.state.thermalState,
-            hasRecentMemoryHints: !retrieveRelevantMemory(for: "", personaID: activePersonaID).isEmpty
+            hasRecentMemoryHints: !retrieveRelevantMemory(for: "").isEmpty
         ), preferred == aspect {
             activeAspect = preferred
             lastAspectChangeAt = Date()
@@ -285,10 +284,10 @@ final class MercuryBrain {
 
     /// Retrieve a small, ranked, persona-aware set of memory items for prompt injection.
     /// Hard limit + importance floor keeps the prompt lean and private.
-    private func retrieveRelevantMemory(for query: String, personaID: String) -> [MemoryItem] {
+    private func retrieveRelevantMemory(for query: String) -> [MemoryItem] {
         let policy = personaManager.activeMemoryPolicy
         let memoryQuery = MemoryQuery(
-            personaScope: personaID,
+            personaScope: nil,
             minimumImportance: policy.retentionThreshold,
             limit: 5
         )
