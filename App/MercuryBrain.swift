@@ -124,11 +124,18 @@ final class MercuryBrain {
         }
     }
 
-    /// Explicit aspect / persona entry (diagnostics, chamber awaken, Intents).
+    /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
     func switchPersona(to id: String) async throws {
         let aspect = mapPersonaToAspect(id)
         visualState = .transitioning
         await applyAspect(aspect, reason: "explicit switch", force: true)
+        visualState = environmentalBaseline()
+    }
+
+    /// Switch by Aspect (preferred diagnostics API).
+    func switchAspect(to aspect: Aspect) async throws {
+        visualState = .transitioning
+        await applyAspect(aspect, reason: "explicit aspect", force: true)
         visualState = environmentalBaseline()
     }
 
@@ -158,6 +165,46 @@ final class MercuryBrain {
         visualState = .processing
         refreshLivingStatus()
         stabilizeVisualStateAfterSuccess()
+    }
+
+    /// Ranked memory snapshot for capability reads and diagnostics.
+    func retrieveSnapshot(limit: Int = 5) -> [MemoryItem] {
+        let policy = personaManager.activeMemoryPolicy
+        let memoryQuery = MemoryQuery(
+            personaScope: nil,
+            minimumImportance: policy.retentionThreshold,
+            limit: limit
+        )
+        return memoryManager.items(matching: memoryQuery)
+    }
+
+    /// Structured capability invocations.
+    func invoke(_ capability: Capability, payload: String = "") async throws -> String {
+        switch capability.kind {
+        case .memoryWrite:
+            await remember(payload.isEmpty ? "(empty note)" : payload)
+            return "Remembered."
+        case .memoryRead:
+            let items = retrieveSnapshot(limit: 5)
+            if items.isEmpty { return "No matching memory." }
+            return items.map { item in
+                let snippet = String(item.value.prefix(140))
+                return "[\(item.category.rawValue)] \(snippet)"
+            }.joined(separator: "\n")
+        case .memoryCorrect:
+            await remember("Correction: \(payload)")
+            return "Correction recorded."
+        case .diagnose:
+            return try await ask(
+                payload.isEmpty
+                    ? "Diagnose current device health, thermal, and power. Be precise."
+                    : payload
+            )
+        case .express:
+            return try await ask(payload.isEmpty ? "Summarize current status." : payload)
+        case .plan, .invokeTool:
+            throw AppError.unsupportedFeature(capability.name)
+        }
     }
 
     func refreshLivingStatus() {
@@ -221,7 +268,7 @@ final class MercuryBrain {
         lastAspectChangeAt = Date()
 
         do {
-            try await personaManager.switchTo(id: aspect.rawValue)
+            try await personaManager.switchTo(id: aspect.rawValue, reason: "aspect projection (\(reason))")
         } catch {
             logger.error("Aspect projection failed: \(error.localizedDescription)", category: logger.persona)
         }
@@ -275,16 +322,9 @@ final class MercuryBrain {
     // MARK: - Memory / budget helpers
 
     private func retrieveRelevantMemory() -> [MemoryItem] {
-        let policy = personaManager.activeMemoryPolicy
-        let memoryQuery = MemoryQuery(
-            personaScope: nil,
-            minimumImportance: policy.retentionThreshold,
-            limit: 5
-        )
-        return memoryManager.items(matching: memoryQuery)
+        retrieveSnapshot(limit: 5)
     }
 
-    /// Rough token estimate (~4 chars/token). Good enough for budget gating.
     private func estimateContextTokens(systemHint: String, memory: [MemoryItem], query: String) -> Int {
         let memoryChars = memory.reduce(0) { $0 + $1.value.count }
         let totalChars = systemHint.count + memoryChars + query.count
