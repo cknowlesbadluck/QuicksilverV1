@@ -37,12 +37,12 @@ final class SettingsViewModel {
     
     func saveGrokKey() {
         let trimmed = grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        if trimmed.isEmpty {
             statusMessage = "Enter a non-empty Grok API key."
             statusIsError = true
             return
         }
-        guard container.aiService.configureGrokAPIKey(trimmed) else {
+        if !container.aiService.configureGrokAPIKey(trimmed) {
             statusMessage = "Could not save the Grok key to the Keychain."
             statusIsError = true
             return
@@ -55,12 +55,12 @@ final class SettingsViewModel {
     
     func saveGeminiKey() {
         let trimmed = geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
+        if trimmed.isEmpty {
             statusMessage = "Enter a non-empty Gemini API key."
             statusIsError = true
             return
         }
-        guard container.aiService.configureGeminiAPIKey(trimmed) else {
+        if !container.aiService.configureGeminiAPIKey(trimmed) {
             statusMessage = "Could not save the Gemini key to the Keychain."
             statusIsError = true
             return
@@ -87,16 +87,19 @@ final class SettingsViewModel {
     
     func setAIEnabled(_ enabled: Bool) {
         container.featureFlags.set("aiServiceEnabled", enabled: enabled)
-        if enabled {
-            let grokKey = KeychainStore.string(forKey: AIService.grokAPIKeyKeychainAccount)
-            let geminiKey = KeychainStore.string(forKey: AIService.geminiAPIKeyKeychainAccount)
-            _ = container.aiService.configureGrokAPIKey(grokKey)
-            _ = container.aiService.configureGeminiAPIKey(geminiKey)
-        } else {
+        if !enabled {
             container.aiService.setProvider(MockAIProvider())
+            refresh()
+            statusMessage = "AI Service disabled (Mock only)."
+            statusIsError = false
+            return
         }
+        let grokKey = KeychainStore.string(forKey: AIService.grokAPIKeyKeychainAccount)
+        let geminiKey = KeychainStore.string(forKey: AIService.geminiAPIKeyKeychainAccount)
+        _ = container.aiService.configureGrokAPIKey(grokKey)
+        _ = container.aiService.configureGeminiAPIKey(geminiKey)
         refresh()
-        statusMessage = enabled ? "AI Service enabled." : "AI Service disabled (Mock only)."
+        statusMessage = "AI Service enabled."
         statusIsError = false
     }
     
