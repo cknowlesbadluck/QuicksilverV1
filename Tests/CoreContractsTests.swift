@@ -22,9 +22,9 @@ final class CoreContractsTests: XCTestCase {
 
     func testIntentEquality() {
         let id = UUID()
-        let a = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9)
-        let b = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9)
-        XCTAssertEqual(a, b)
+        let first = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9)
+        let second = Intent(id: id, kind: .remember, rawText: "note this", confidence: 0.9)
+        XCTAssertEqual(first, second)
     }
 
     // MARK: - Aspect
@@ -73,11 +73,18 @@ final class CoreContractsTests: XCTestCase {
         XCTAssertEqual(ResourcePlan.background.priority, .low)
         XCTAssertFalse(ResourcePlan.background.allowExternalCalls)
         XCTAssertEqual(ResourcePlan.elevated.priority, .high)
-        XCTAssertGreaterThan(ResourcePlan.elevated.maxContextTokens, ResourcePlan.interactive.maxContextTokens)
+        XCTAssertGreaterThan(
+            ResourcePlan.elevated.maxContextTokens,
+            ResourcePlan.interactive.maxContextTokens
+        )
     }
 
     func testResourcePlanClamps() {
-        let plan = ResourcePlan(maxContextTokens: -10, maxOutputTokens: -5, maxWallClockSeconds: 0.1)
+        let plan = ResourcePlan(
+            maxContextTokens: -10,
+            maxOutputTokens: -5,
+            maxWallClockSeconds: 0.1
+        )
         XCTAssertEqual(plan.maxContextTokens, 0)
         XCTAssertEqual(plan.maxOutputTokens, 0)
         XCTAssertEqual(plan.maxWallClockSeconds, 1)
