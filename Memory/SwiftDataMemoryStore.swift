@@ -44,23 +44,24 @@ public actor SwiftDataMemoryStore: MemoryStore {
     }
 
     public func delete(id: UUID) async throws {
-        let descriptor = FetchDescriptor<MemoryEntry>(
-            predicate: #Predicate { $0.id == id }
+        // Performance: Use batch delete to execute a direct store operation by ID,
+        // avoiding loading matching entities into memory and row-by-row iteration.
+        try context.delete(
+            model: MemoryEntry.self,
+            where: #Predicate { $0.id == id }
         )
-        for entry in try context.fetch(descriptor) {
-            context.delete(entry)
-        }
         try context.save()
     }
 
     public func deleteAll(in category: MemoryItem.Category) async throws {
         let categoryRaw = category.rawValue
-        let descriptor = FetchDescriptor<MemoryEntry>(
-            predicate: #Predicate { $0.categoryRaw == categoryRaw }
+        // Performance optimization (resolves N+1 query): Use batch delete request directly
+        // at the persistent store level instead of fetching all entries into memory and
+        // calling context.delete(entry) individually.
+        try context.delete(
+            model: MemoryEntry.self,
+            where: #Predicate { $0.categoryRaw == categoryRaw }
         )
-        for entry in try context.fetch(descriptor) {
-            context.delete(entry)
-        }
         try context.save()
     }
 }
