@@ -83,10 +83,8 @@ public struct IntentEngine: Sendable {
     /// Performance note: Using an explicit for-in loop avoids closure allocation overhead
     /// and enables clean short-circuiting upon finding the first matching substring.
     private func containsAny(_ text: String, _ keywords: [String]) -> Bool {
-        for keyword in keywords {
-            if text.contains(keyword) {
-                return true
-            }
+        for keyword in keywords where text.contains(keyword) {
+            return true
         }
         return false
     }
