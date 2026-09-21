@@ -9,7 +9,7 @@ let package = Package(
     ],
     products: [
         .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]),
-        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
+        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"])
     ],
     dependencies: [
         // Official Sentry Cocoa SDK (compile-from-source product recommended)
@@ -53,6 +53,6 @@ let package = Package(
             name: "QuicksilverCoreTests",
             dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "Quicksilver"],
             path: "Tests"
-        ),
+        )
     ]
 )
