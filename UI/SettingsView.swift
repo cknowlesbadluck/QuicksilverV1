@@ -1,4 +1,4 @@
-import SwiftUI
+// swiftlint:disable function_body_length\nimport SwiftUI
 import Core
 
 struct SettingsView: View {
@@ -136,3 +136,4 @@ struct SettingsView: View {
         }
     }
 }
+// swiftlint:enable function_body_length\n

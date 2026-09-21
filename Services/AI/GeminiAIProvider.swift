@@ -49,9 +49,10 @@ struct GeminiAIProvider: AIProvider {
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: urlRequest)
-        } catch is CancellationError {
-            throw CancellationError()
         } catch {
+            if Task.isCancelled {
+                throw CancellationError()
+            }
             throw AppError.networkUnavailable
         }
         
