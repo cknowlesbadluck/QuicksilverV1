@@ -10,21 +10,23 @@ struct GrokAIProvider: AIProvider {
     private let model: String
     private let session: URLSession
 
-    init(apiKey: String, model: String = "grok-3", baseURL: URL? = nil, session: URLSession = .shared) throws {
+    init(apiKey: String, model: String = "grok-4.6", baseURL: URL? = nil, session: URLSession = .shared) throws {
         guard !apiKey.isEmpty else { throw AppError.apiKeyMissing }
-
         let resolved: URL
-        if let baseURL { resolved = baseURL }
-        else if let defaultURL = URL(string: "https://api.x.ai/v1") { resolved = defaultURL }
-        else { throw AppError.configurationMissing("xAI base URL") }
-
+        if let baseURL {
+            resolved = baseURL
+        } else if let defaultURL = URL(string: "https://api.x.ai/v1") {
+            resolved = defaultURL
+        } else {
+            throw AppError.configurationMissing("xAI base URL")
+        }
         self.apiKey = apiKey
         self.model = model
         self.baseURL = resolved
         self.session = session
     }
 
-    static func make(apiKey: String, model: String = "grok-3") -> GrokAIProvider? {
+    static func make(apiKey: String, model: String = "grok-4.6") -> GrokAIProvider? {
         try? GrokAIProvider(apiKey: apiKey, model: model)
     }
 
@@ -32,9 +34,11 @@ struct GrokAIProvider: AIProvider {
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
         try Task.checkCancellation()
+        let data = try await performRequest(request)
+        return try decode(data: data, requestID: request.id)
+    }
 
-        guard isAvailable else { throw AppError.apiKeyMissing }
-
+    private func performRequest(_ request: AIRequest) async throws -> Data {
         let endpoint = baseURL.appendingPathComponent("chat/completions")
         var urlRequest = URLRequest(url: endpoint)
         urlRequest.httpMethod = "POST"
@@ -55,36 +59,32 @@ struct GrokAIProvider: AIProvider {
             max_tokens: request.maxTokens,
             stream: false
         )
+        urlRequest.httpBody = try JSONEncoder().encode(body)
 
-        // Construct coders per-request: JSONEncoder/Decoder are not Sendable.
-        let encoder = JSONEncoder()
-        let decoder = JSONDecoder()
-        urlRequest.httpBody = try encoder.encode(body)
-
-        let data: Data
-        let response: URLResponse
+        let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await session.data(for: urlRequest)
-        } catch is CancellationError {
-            throw CancellationError()
         } catch {
-            // Never surface the raw error if it might contain request details
+            if Task.isCancelled {
+                throw CancellationError()
+            }
             throw AppError.networkUnavailable
         }
 
         try Task.checkCancellation()
-
         guard let http = response as? HTTPURLResponse else {
             throw AppError.networkUnavailable
         }
-
         guard (200...299).contains(http.statusCode) else {
             throw AppError.aiRequestFailed("Grok API request failed (HTTP \(http.statusCode))")
         }
+        return data
+    }
 
+    private func decode(data: Data, requestID: UUID) throws -> AIResponse {
         let decoded: GrokAPI.ChatResponse
         do {
-            decoded = try decoder.decode(GrokAPI.ChatResponse.self, from: data)
+            decoded = try JSONDecoder().decode(GrokAPI.ChatResponse.self, from: data)
         } catch {
             throw AppError.aiRequestFailed("Failed to decode Grok response")
         }
@@ -92,19 +92,22 @@ struct GrokAIProvider: AIProvider {
         guard let first = decoded.choices.first else {
             throw AppError.aiRequestFailed("Grok response contained no choices")
         }
-
         let finishReason: AIResponse.FinishReason
         switch first.finish_reason {
-        case "length": finishReason = .length
-        default: finishReason = .stop
+        case "length":
+            finishReason = .length
+        default:
+            finishReason = .stop
         }
 
-        let usage: AIResponse.Usage? = decoded.usage.map {
-            .init(promptTokens: $0.prompt_tokens ?? 0, completionTokens: $0.completion_tokens ?? 0)
+        let usage = decoded.usage.map {
+            AIResponse.Usage(
+                promptTokens: $0.prompt_tokens ?? 0,
+                completionTokens: $0.completion_tokens ?? 0
+            )
         }
-
         return AIResponse(
-            requestID: request.id,
+            requestID: requestID,
             content: first.message.content,
             finishReason: finishReason,
             usage: usage

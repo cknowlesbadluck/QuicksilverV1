@@ -5,7 +5,8 @@ import Nexus
 
 /// The Sanctum — primary experiential surface of Mercury.
 /// Not a dashboard. A place.
-/// Quicksilver is already here. Forge and Eternal awaken via persona.
+/// Quicksilver is already here. Forge and Eternal are aspects of the same presence,
+/// not separate products the user switches between.
 struct SanctumView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: SanctumViewModel?
@@ -43,71 +44,73 @@ struct SanctumView: View {
                 .preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showForge) {
-            RealmGateway(title: "Forge", personaID: "forge", isPresented: $showForge) {
+            RealmGateway(title: "The Workshop", personaID: "forge", isPresented: $showForge) {
                 ForgeView()
             }
         }
         .sheet(isPresented: $showEternal) {
-            RealmGateway(title: "Eternal", personaID: "eternal", isPresented: $showEternal) {
+            RealmGateway(title: "The Observatory", personaID: "eternal", isPresented: $showEternal) {
                 EternalView()
             }
         }
     }
 
     private func sanctumContent(_ vm: SanctumViewModel) -> some View {
-        let personaID = vm.activePersonaID
-        let accent = PersonaTheme.accent(for: personaID)
-        let radius = PersonaTheme.cardCornerRadius(for: personaID)
+        // Drive visual language from the aspect the Brain selected, not a user picker.
+        let accentID = vm.presenceAccentID
+        let accent = PersonaTheme.accent(for: accentID)
+        let radius = PersonaTheme.cardCornerRadius(for: accentID)
 
         return ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
 
             AmbientLayer(
-                personaID: personaID,
+                personaID: accentID,
                 visualState: vm.visualState
             )
 
             VStack(spacing: 0) {
-                presenceBar(vm, accent: accent, radius: radius)
-                sanctumScrollView(vm, personaID: personaID, accent: accent, radius: radius)
+                presenceBar(vm, accent: accent)
+                sanctumScrollView(vm, accentID: accentID, accent: accent, radius: radius)
                 ritualBar(accent: accent)
             }
         }
         .onAppear { vm.startLiveRefresh() }
         .onDisappear { vm.stopLiveRefresh() }
-        .animation(MotionTokens.spring(for: personaID), value: personaID)
-        .animation(MotionTokens.spring(for: personaID), value: vm.livingStatus)
+        .animation(MotionTokens.spring(for: accentID), value: accentID)
+        .animation(MotionTokens.spring(for: accentID), value: vm.livingStatus)
         .animation(MotionTokens.stabilization, value: vm.visualState)
+        .animation(MotionTokens.spring(for: accentID), value: vm.activeAspect)
     }
-
 }
 
 private extension SanctumView {
     private func sanctumScrollView(
         _ vm: SanctumViewModel,
-        personaID: String,
+        accentID: String,
         accent: Color,
         radius: CGFloat
     ) -> some View {
         ScrollView {
-            VStack(spacing: 28 * PersonaTheme.density(for: personaID)) {
+            VStack(spacing: 28 * PersonaTheme.density(for: accentID)) {
                 QuicksilverPresenceView(
-                    personaID: personaID,
+                    personaID: accentID,
                     livingStatus: vm.livingStatus,
                     visualState: vm.visualState
                 )
 
                 GlyphStrip(
                     glyphs: glyphStates(for: vm),
-                    personaID: personaID
+                    personaID: accentID
                 ) { kind in
                     handleGlyph(kind)
                 }
                 .padding(.vertical, 4)
 
-                personaIndicators(vm, accent: accent, radius: radius)
+                // Quiet chamber indicators — not a persona switcher.
+                chamberIndicators(vm, accent: accent, radius: radius)
 
-                environmentalSignals(vm, radius: radius)
+                environmentalSignals(vm)
 
                 if let insight = vm.latestInsight {
                     insightCard(insight, accent: accent, radius: radius)
@@ -119,17 +122,18 @@ private extension SanctumView {
             .padding(.top, 8)
         }
     }
+
     // MARK: - Glyph mapping
 
     private func glyphStates(for vm: SanctumViewModel) -> [(GlyphKind, GlyphVisualState)] {
         let healthState: GlyphVisualState = vm.overallHealthScore < 40 ? .warning : .idle
-        let persona = vm.activePersonaID.lowercased()
+        let aspect = vm.activeAspect
         return [
             (.communication, .attention),
             (.memory, .idle),
             (.diagnostics, healthState),
-            (.development, persona == "forge" ? .active : .idle),
-            (.observation, persona == "eternal" ? .active : .idle),
+            (.development, aspect == .forge ? .active : .idle),
+            (.observation, aspect == .eternal ? .active : .idle),
             (.configuration, .idle),
             (.health, healthState),
             (.network, .idle)
@@ -149,23 +153,25 @@ private extension SanctumView {
         }
     }
 
-    private func presenceBar(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
-        HStack {
+    private func presenceBar(_ vm: SanctumViewModel, accent: Color) -> some View {
+        HStack(spacing: 10) {
             Circle()
                 .fill(accent)
                 .frame(width: 8, height: 8)
                 .shadow(color: accent.opacity(0.8), radius: 4)
 
-            Text(vm.activePersonaID.capitalized)
+            Text(vm.activeAspect.diagnosticLabel)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PersonaTheme.mercurySilver)
 
-            Spacer()
+            Text("·")
+                .foregroundStyle(.tertiary)
 
             Text(vm.visualState.rawValue.uppercased())
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.5))
-                .padding(.trailing, 6)
+                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.55))
+
+            Spacer()
 
             Text(vm.livingStatus)
                 .font(.caption2)
@@ -177,13 +183,14 @@ private extension SanctumView {
         .background(.ultraThinMaterial.opacity(0.35))
     }
 
-    private func personaIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
+    /// Chamber indicators. These open places; they do not switch "AI products".
+    private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 12) {
             Button { showForge = true } label: {
-                personaChip(
-                    name: "Forge",
-                    isAwake: vm.activePersonaID.lowercased() == "forge"
-                        || vm.activePersonaID.lowercased() == "quicksilver",
+                chamberChip(
+                    name: "Workshop",
+                    subtitle: "Forge",
+                    isActive: vm.activeAspect == .forge,
                     accent: PersonaTheme.accent(for: "forge"),
                     radius: radius
                 )
@@ -191,10 +198,10 @@ private extension SanctumView {
             .buttonStyle(.plain)
 
             Button { showEternal = true } label: {
-                personaChip(
-                    name: "Eternal",
-                    isAwake: vm.activePersonaID.lowercased() == "eternal"
-                        || vm.activePersonaID.lowercased() == "quicksilver",
+                chamberChip(
+                    name: "Observatory",
+                    subtitle: "Eternal",
+                    isActive: vm.activeAspect == .eternal,
                     accent: PersonaTheme.accent(for: "eternal"),
                     radius: radius
                 )
@@ -203,28 +210,40 @@ private extension SanctumView {
         }
     }
 
-    private func personaChip(name: String, isAwake: Bool, accent: Color, radius: CGFloat) -> some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(isAwake ? accent : accent.opacity(0.25))
-                .frame(width: 6, height: 6)
-            Text(name)
-                .font(.caption2.weight(isAwake ? .semibold : .regular))
-                .foregroundStyle(isAwake ? PersonaTheme.mercurySilver : .secondary)
+    private func chamberChip(
+        name: String,
+        subtitle: String,
+        isActive: Bool,
+        accent: Color,
+        radius: CGFloat
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(isActive ? accent : accent.opacity(0.25))
+                    .frame(width: 6, height: 6)
+                Text(name)
+                    .font(.caption.weight(isActive ? .semibold : .regular))
+                    .foregroundStyle(isActive ? PersonaTheme.mercurySilver : .secondary)
+            }
+            Text(subtitle)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.tertiary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(isAwake ? 0.55 : 0.25))
+                .fill(.ultraThinMaterial.opacity(isActive ? 0.55 : 0.22))
         )
         .overlay(
             RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .strokeBorder(accent.opacity(isAwake ? 0.45 : 0.12), lineWidth: 1)
+                .strokeBorder(accent.opacity(isActive ? 0.45 : 0.10), lineWidth: 1)
         )
     }
 
-    private func environmentalSignals(_ vm: SanctumViewModel, radius: CGFloat) -> some View {
+    private func environmentalSignals(_ vm: SanctumViewModel) -> some View {
         HStack(spacing: 10) {
             signalPill(title: "Battery", value: vm.batteryLevelText)
             signalPill(title: "Network", value: vm.networkStatus)
@@ -246,7 +265,7 @@ private extension SanctumView {
         .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.35))
+                .fill(.ultraThinMaterial.opacity(0.28))
         )
     }
 

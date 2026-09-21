@@ -6,98 +6,155 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel?
 
     var body: some View {
-        Group {
+        Form {
             if let vm = viewModel {
-                content(vm)
-            } else {
+                IntelligenceSettingsSection(viewModel: vm)
+                CredentialSettingsSection(viewModel: vm)
+                AspectSettingsSection(viewModel: vm)
+                StatusSettingsSection(viewModel: vm)
+            }
+        }
+        .overlay {
+            if viewModel == nil {
                 ProgressView()
-                    .onAppear { viewModel = SettingsViewModel(container: container) }
             }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    @ViewBuilder
-    private func content(_ vm: SettingsViewModel) -> some View {
-        Form {
-            intelligenceSection(vm)
-            personasSection(vm)
-            apiKeySection(vm)
-            statusSection(vm)
+        .onAppear {
+            if viewModel == nil {
+                viewModel = SettingsViewModel(container: container)
+            }
         }
-        .onAppear { vm.refresh() }
     }
+}
 
-    @ViewBuilder
-    private func intelligenceSection(_ vm: SettingsViewModel) -> some View {
+private struct IntelligenceSettingsSection: View {
+    let viewModel: SettingsViewModel
+
+    var body: some View {
         Section {
             Toggle("AI Service", isOn: Binding(
-                get: { vm.aiEnabled },
-                set: { vm.setAIEnabled($0) }
+                get: { viewModel.aiEnabled },
+                set: { viewModel.setAIEnabled($0) }
             ))
-            LabeledContent("Provider", value: vm.providerName)
-            LabeledContent("Key stored", value: vm.hasStoredKey ? "Yes (Keychain)" : "No")
+            LabeledContent("Primary", value: viewModel.providerName)
+            if let fallback = viewModel.fallbackProviderName {
+                LabeledContent("Fallback", value: fallback)
+            }
+            LabeledContent(
+                "Grok",
+                value: viewModel.hasGrokKey ? "Configured" : "Not configured"
+            )
+            LabeledContent(
+                "Gemini",
+                value: viewModel.hasGeminiKey ? "Configured" : "Not configured"
+            )
+            LabeledContent("Routing", value: "Automatic")
+            LabeledContent("Billing", value: "Account controlled")
         } header: {
             Text("Intelligence")
         } footer: {
             Text(
-                "Keys are stored in the device Keychain (AfterFirstUnlockThisDeviceOnly). "
-                + "They are never written to UserDefaults or logs."
+                "Grok is Quicksilver's conversational default. Gemini is the automatic fallback. "
+                + "Keys remain on this device in the Keychain. Provider pricing and quotas are controlled by the account."
             )
         }
     }
+}
 
-    @ViewBuilder
-    private func personasSection(_ vm: SettingsViewModel) -> some View {
+private struct CredentialSettingsSection: View {
+    let viewModel: SettingsViewModel
+
+    var body: some View {
+        Section("API Keys") {
+            GrokCredentialFields(viewModel: viewModel)
+            Divider()
+            GeminiCredentialFields(viewModel: viewModel)
+        }
+    }
+}
+
+private struct GrokCredentialFields: View {
+    let viewModel: SettingsViewModel
+
+    var body: some View {
+        SecureField("Grok / xAI API key", text: Binding(
+            get: { viewModel.grokKeyDraft },
+            set: { viewModel.grokKeyDraft = $0 }
+        ))
+        .textContentType(.password)
+        .autocorrectionDisabled()
+
+        Button("Save Grok Key") {
+            viewModel.saveGrokKey()
+        }
+        .disabled(viewModel.grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+        if viewModel.hasGrokKey {
+            Button("Remove Grok Key", role: .destructive) {
+                viewModel.clearGrokKey()
+            }
+        }
+    }
+}
+
+private struct GeminiCredentialFields: View {
+    let viewModel: SettingsViewModel
+
+    var body: some View {
+        SecureField("Gemini / Google API key", text: Binding(
+            get: { viewModel.geminiKeyDraft },
+            set: { viewModel.geminiKeyDraft = $0 }
+        ))
+        .textContentType(.password)
+        .autocorrectionDisabled()
+
+        Button("Save Gemini Key") {
+            viewModel.saveGeminiKey()
+        }
+        .disabled(viewModel.geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+        if viewModel.hasGeminiKey {
+            Button("Remove Gemini Key", role: .destructive) {
+                viewModel.clearGeminiKey()
+            }
+        }
+    }
+}
+
+private struct AspectSettingsSection: View {
+    let viewModel: SettingsViewModel
+
+    var body: some View {
         Section {
             Toggle("Persona Autonomy", isOn: Binding(
-                get: { vm.personaAutonomyEnabled },
-                set: { vm.setPersonaAutonomy($0) }
+                get: { viewModel.personaAutonomyEnabled },
+                set: { viewModel.setPersonaAutonomy($0) }
             ))
-            if let reason = vm.lastSwitchReason {
+            if let reason = viewModel.lastSwitchReason {
                 LabeledContent("Last switch", value: reason)
             }
         } header: {
-            Text("Personas")
+            Text("Aspects")
         } footer: {
             Text(
-                "When enabled, Quicksilver may switch personas based on task, battery, thermal, "
-                + "and time context. Manual switches always work."
+                "Aspect surfacing remains automatic. The intelligence provider is independent "
+                + "of Quicksilver, Forge, and Eternal."
             )
         }
     }
+}
 
-    @ViewBuilder
-    private func apiKeySection(_ vm: SettingsViewModel) -> some View {
-        Section("xAI API Key") {
-            SecureField("Paste xAI API key", text: Binding(
-                get: { vm.apiKeyDraft },
-                set: { vm.apiKeyDraft = $0 }
-            ))
-            .textContentType(.password)
-            .autocorrectionDisabled()
+private struct StatusSettingsSection: View {
+    let viewModel: SettingsViewModel
 
-            Button("Save Key") {
-                vm.saveAPIKey()
-            }
-            .disabled(vm.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-            if vm.hasStoredKey {
-                Button("Remove Key", role: .destructive) {
-                    vm.clearAPIKey()
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func statusSection(_ vm: SettingsViewModel) -> some View {
-        if let message = vm.statusMessage {
+    var body: some View {
+        if let message = viewModel.statusMessage {
             Section {
                 Text(message)
                     .font(.caption)
-                    .foregroundStyle(vm.statusIsError ? .red : .secondary)
+                    .foregroundStyle(viewModel.statusIsError ? .red : .secondary)
             }
         }
     }

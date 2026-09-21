@@ -3,8 +3,8 @@ import Core
 import Personas
 import Nexus
 
-/// The Eternal Observatory — observation, diagnostics, memory, long-term patterns.
-/// Its visual language is Living Mercury under Controlled Chaos.
+/// The Observatory — Eternal chamber for observation, continuity, memory, long-horizon patterns.
+/// Constellation is real Memory items; intelligence still flows only through MercuryBrain.
 struct EternalView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: EternalViewModel?
@@ -12,6 +12,7 @@ struct EternalView: View {
     @State private var askDraft = ""
     @State private var lastAnswer: String?
     @State private var isAsking = false
+    @State private var isScanning = false
 
     var body: some View {
         Group {
@@ -33,11 +34,11 @@ struct EternalView: View {
 
     @ViewBuilder
     private func eternalContent(_ vm: EternalViewModel) -> some View {
-        let personaID = vm.activePersonaID
-        let accent = PersonaTheme.accent(for: personaID)
-        let radius = PersonaTheme.cardCornerRadius(for: personaID)
-        let spacing = 18 * PersonaTheme.density(for: personaID)
-        let visualState: VisualState = vm.isAwake ? .thinking : .idle
+        let accentID = vm.activeAspect == .eternal ? "eternal" : vm.activePersonaID
+        let accent = PersonaTheme.accent(for: accentID)
+        let radius = PersonaTheme.cardCornerRadius(for: accentID)
+        let spacing = 18 * PersonaTheme.density(for: accentID)
+        let visualState: VisualState = vm.isAwake ? .listening : .idle
         let fieldIntensity = vm.isAwake ? 1.0 : 0.5
 
         ZStack {
@@ -46,15 +47,16 @@ struct EternalView: View {
             ObservatoryField(intensity: fieldIntensity)
             scrollContent(vm, accent: accent, radius: radius, spacing: spacing)
         }
-        .navigationTitle("Eternal")
+        .navigationTitle("Observatory")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             vm.refresh()
             vm.startLiveRefresh()
         }
         .onDisappear { vm.stopLiveRefresh() }
-        .animation(PersonaTheme.spring(for: personaID), value: vm.isAwake)
-        .animation(PersonaTheme.spring(for: personaID), value: vm.observations.count)
+        .animation(PersonaTheme.spring(for: accentID), value: vm.isAwake)
+        .animation(PersonaTheme.spring(for: accentID), value: vm.observations.count)
+        .animation(PersonaTheme.spring(for: accentID), value: vm.constellation.count)
     }
 
     @ViewBuilder
@@ -71,6 +73,7 @@ struct EternalView: View {
                     awakenCard(vm, accent: accent, radius: radius)
                 }
                 signalsRow(vm, radius: radius)
+                constellationPanel(vm, accent: accent, radius: radius)
                 if let insight = vm.latestInsight {
                     insightCard(insight, accent: accent, radius: radius)
                 }
@@ -92,7 +95,7 @@ struct EternalView: View {
         HStack(spacing: 14) {
             ObservatoryLens(accent: accent, active: vm.isAwake)
             VStack(alignment: .leading, spacing: 4) {
-                Text("THE ETERNAL")
+                Text("THE OBSERVATORY")
                     .font(.caption.weight(.bold))
                     .tracking(1.8)
                     .foregroundStyle(PersonaTheme.mercurySilver)
@@ -119,13 +122,13 @@ struct EternalView: View {
             Text("Mercury is listening.")
                 .font(.headline)
                 .foregroundStyle(PersonaTheme.mercurySilver)
-            Text("Awaken the observational field: patterns, continuity, diagnostics, memory.")
+            Text("Enter the observational field: patterns, continuity, diagnostics, memory.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Button {
                 Task { await vm.awakenEternal() }
             } label: {
-                Text("Awaken Eternal")
+                Text("Enter Observatory")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
@@ -168,6 +171,64 @@ struct EternalView: View {
             .ultraThinMaterial.opacity(0.3),
             in: RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous)
         )
+    }
+
+    private func constellationPanel(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("CONSTELLATION")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(PersonaTheme.glowPurple)
+                Spacer()
+                Button {
+                    isScanning = true
+                    lastAnswer = nil
+                    Task {
+                        let result = await vm.runContinuityInstrument()
+                        lastAnswer = result
+                        isScanning = false
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        if isScanning { ProgressView().scaleEffect(0.7) }
+                        Text(isScanning ? "Scanning…" : "Continuity")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(isScanning)
+            }
+
+            if vm.constellation.isEmpty {
+                Text("No high-importance memory nodes yet. Capture observations to seed the field.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.ultraThinMaterial.opacity(0.22), in: RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous))
+            } else {
+                ForEach(vm.constellation) { node in
+                    HStack(alignment: .top, spacing: 10) {
+                        Circle()
+                            .fill(accent.opacity(0.35 + node.importance * 0.5))
+                            .frame(width: 8, height: 8)
+                            .padding(.top, 4)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(node.summary)
+                                .font(.caption)
+                                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.92))
+                            Text(node.category.uppercased())
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.ultraThinMaterial.opacity(0.25), in: RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous))
+                }
+            }
+        }
     }
 
     private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
@@ -243,7 +304,7 @@ struct EternalView: View {
 
     private func reflectiveAsk(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ASK THE ETERNAL")
+            Text("ASK THE OBSERVATORY")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(PersonaTheme.toxicGreen)
             TextField("Pattern, history, continuity, diagnose…", text: $askDraft, axis: .vertical)

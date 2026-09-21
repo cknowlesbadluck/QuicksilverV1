@@ -12,7 +12,8 @@ import Nexus
 /// or memory strategies. The Brain decides.
 ///
 /// Responsibilities:
-/// - Understand intent
+/// - Understand intent (via IntentEngine)
+/// - Select aspect (via AspectPolicy)
 /// - Retrieve context (memory + Nexus signals + persona state)
 /// - Decide when to use tools / AI providers
 /// - Plan and validate responses
@@ -30,11 +31,17 @@ final class MercuryBrain {
     private let eventBus: EventBus
     private let logger: LoggerService
 
+    private let intentEngine = IntentEngine()
+    private let aspectPolicy = AspectPolicy()
+
     private(set) var personality = PersonalityState()
     private(set) var primaryInsight: String?
     private(set) var livingStatus: String = "Quicksilver is present. Observing."
     /// Explicit visual communication state — UI only observes.
     private(set) var visualState: VisualState = .idle
+    /// Current aspect of the single entity (driven by policy).
+    private(set) var activeAspect: Aspect = .quicksilver
+    private var lastAspectChangeAt: Date?
 
     init(
         personaManager: PersonaManager,
@@ -52,11 +59,12 @@ final class MercuryBrain {
         self.logger = logger
 
         personality.applyPersonaBias(personaID: personaManager.activePersonaID)
+        activeAspect = mapPersonaToAspect(personaManager.activePersonaID)
         refreshLivingStatus()
     }
 
     var activePersonaID: String { personaManager.activePersonaID }
-    var activeConfiguration: PersonaConfiguration { personaManager.activeConfiguration }
+    var activeConfiguration: PersonaConfiguration { PersonaConfiguration.forAspect(activeAspect) }
 
     /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
@@ -64,19 +72,26 @@ final class MercuryBrain {
         personality.noteInteraction()
         visualState = .thinking
 
-        let lower = query.lowercased()
-        let (intent, kind) = classify(query: lower)
+        // 1. Classify with the new Core IntentEngine
+        let intent = intentEngine.classify(query)
+
+        // 2. Decide aspect for this turn (immediate, no dwell)
+        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
+        applyAspectIfNeeded(turnAspect, reason: "turn intent \(intent.kind.rawValue)")
+
+        // 3. Bridge to legacy QueryIntent / TaskKind so existing PersonaDecisionPolicy still works
+        let (legacyIntent, legacyKind) = bridgeToLegacy(intent)
 
         personaManager.updateTaskContext(
             description: query,
-            kind: kind,
-            queryIntent: intent
+            kind: legacyKind,
+            queryIntent: legacyIntent
         )
 
-        personality.adjustFor(intent: intent, kind: kind)
+        personality.adjustFor(intent: legacyIntent, kind: legacyKind)
 
-        let config = personaManager.activeConfiguration
-        let relevantMemory = retrieveRelevantMemory(for: query, personaID: config.id)
+        let config = PersonaConfiguration.forAspect(activeAspect)
+        let relevantMemory = retrieveRelevantMemory(for: query)
         let system = buildSystemPrompt(for: config, memory: relevantMemory)
 
         do {
@@ -106,6 +121,8 @@ final class MercuryBrain {
         try await personaManager.switchTo(id: id)
         personality.applyPersonaBias(personaID: id)
         nexus.updatePersonaContext(id)
+        activeAspect = mapPersonaToAspect(id)
+        lastAspectChangeAt = Date()
         refreshLivingStatus()
         logger.info("Mercury Brain: persona → \(id)", category: logger.persona)
         visualState = environmentalBaseline()
@@ -113,8 +130,11 @@ final class MercuryBrain {
 
     func remember(_ content: String) async {
         let truncated = String(content.prefix(500))
-        let personaID = personaManager.activePersonaID
         let policy = personaManager.activeMemoryPolicy
+
+        let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
+        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
+        applyAspectIfNeeded(turnAspect, reason: "remember")
 
         personaManager.updateTaskContext(
             description: "Capture memory: \(String(truncated.prefix(80)))",
@@ -127,9 +147,9 @@ final class MercuryBrain {
             key: "note.brain.\(UUID().uuidString.prefix(8))",
             value: truncated,
             category: .temporary,
-            metadata: ["source": "mercury-brain", "persona": personaID],
+            metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
             importanceBoost: policy.writeImportanceHint,
-            personaScope: personaID
+            personaScope: nil
         )
 
         personality.noteInsight()
@@ -170,6 +190,66 @@ final class MercuryBrain {
         visualState = environmentalBaseline()
     }
 
+    // MARK: - Aspect application
+
+    private func applyAspectIfNeeded(_ aspect: Aspect, reason: String) {
+        guard aspect != activeAspect else {
+            // Still bias visual for the turn
+            if visualState == .thinking || visualState == .idle {
+                visualState = aspect.defaultVisualState
+            }
+            return
+        }
+
+        // Autonomous change path (respects dwell inside policy for longer-lived switches)
+        if let preferred = aspectPolicy.preferredAspect(
+            current: activeAspect,
+            lastChangedAt: lastAspectChangeAt,
+            intent: Intent(kind: .unknown), // already decided for turn
+            isLowPower: nexus.state.lowPowerMode,
+            thermalState: nexus.state.thermalState,
+            hasRecentMemoryHints: !retrieveRelevantMemory(for: "").isEmpty
+        ), preferred == aspect {
+            activeAspect = preferred
+            lastAspectChangeAt = Date()
+            logger.info("Mercury Brain: aspect → \(preferred.rawValue) [\(reason)]", category: logger.persona)
+        } else {
+            // For the current turn we still adopt the visual language
+            activeAspect = aspect
+        }
+
+        if visualState == .thinking || visualState == .idle {
+            visualState = aspect.defaultVisualState
+        }
+    }
+
+    private func mapPersonaToAspect(_ personaID: String) -> Aspect {
+        switch personaID {
+        case "forge": return .forge
+        case "eternal": return .eternal
+        default: return .quicksilver
+        }
+    }
+
+    // MARK: - Bridge to legacy types (temporary)
+
+    private func bridgeToLegacy(_ intent: Intent) -> (QueryIntent, TaskKind) {
+        switch intent.kind {
+        case .create:
+            return (.preciseTechnical, .building)
+        case .diagnose:
+            return (.diagnostic, .debugging)
+        case .observe, .retrieve:
+            return (.reflective, .reflecting)
+        case .remember:
+            return (.reflective, .reflecting)
+        case .express, .inquire:
+            return (.strategic, .exploring)
+        case .switchAspect, .unknown:
+            return (.unknown, .unknown)
+        }
+    }
+
     // MARK: - Visual baseline from Nexus
 
     private func environmentalBaseline() -> VisualState {
@@ -187,7 +267,8 @@ final class MercuryBrain {
         if state.overallHealthScore < 55 {
             return .processing
         }
-        return .idle
+        // Prefer aspect default when environment is calm
+        return activeAspect.defaultVisualState
     }
 
     private func stabilizeVisualStateAfterSuccess() {
@@ -203,10 +284,10 @@ final class MercuryBrain {
 
     /// Retrieve a small, ranked, persona-aware set of memory items for prompt injection.
     /// Hard limit + importance floor keeps the prompt lean and private.
-    private func retrieveRelevantMemory(for query: String, personaID: String) -> [MemoryItem] {
+    private func retrieveRelevantMemory(for query: String) -> [MemoryItem] {
         let policy = personaManager.activeMemoryPolicy
         let memoryQuery = MemoryQuery(
-            personaScope: personaID,
+            personaScope: nil,
             minimumImportance: policy.retentionThreshold,
             limit: 5
         )
@@ -214,39 +295,6 @@ final class MercuryBrain {
     }
 
     // MARK: - Internals
-
-    private func classify(query: String) -> (QueryIntent, TaskKind) {
-        let technicalKeywords = [
-            "architect", "implement", "refactor", "debug", "error", "crash",
-            "test", "structure", "precision", "swift", "xcode", "spm",
-            "git", "commit", "pr ", "pull request"
-        ]
-        if containsAny(query, technicalKeywords) {
-            return (.preciseTechnical, .building)
-        }
-        let reflectiveKeywords = [
-            "reflect", "remember", "history", "pattern", "long-term",
-            "why did", "continuity", "archive", "memory"
-        ]
-        if containsAny(query, reflectiveKeywords) {
-            return (.reflective, .reflecting)
-        }
-        let creativeKeywords = [
-            "idea", "brainstorm", "what if", "explore", "creative",
-            "option", "strategy", "imagine"
-        ]
-        if containsAny(query, creativeKeywords) {
-            return (.creative, .exploring)
-        }
-        let diagnosticKeywords = [
-            "diagnose", "why is", "broken", "failing", "battery",
-            "network", "health", "thermal"
-        ]
-        if containsAny(query, diagnosticKeywords) {
-            return (.diagnostic, .debugging)
-        }
-        return (.strategic, .exploring)
-    }
 
     private func buildSystemPrompt(for config: PersonaConfiguration, memory: [MemoryItem]) -> String {
         var prompt = config.systemPrompt
@@ -280,11 +328,8 @@ Core stance:
         let health = nexus.state.overallHealthScore
         let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
         prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
+        prompt += "\nActive aspect: \(activeAspect.diagnosticLabel)."
 
         return prompt
-    }
-
-    private func containsAny(_ text: String, _ keywords: [String]) -> Bool {
-        keywords.contains { text.contains($0) }
     }
 }

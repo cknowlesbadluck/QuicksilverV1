@@ -2,7 +2,7 @@
 
 ## Vision
 
-Mercury is a personal AI operating companion for iPhone.
+Mercury is the title of Quicksilver, a personal AI operating companion for iPhone.
 
 The user does not open an application.
 The user enters **The Sanctum** — an immense, corrupted, still-functioning throne room outside conventional space.
@@ -15,7 +15,8 @@ Sense → Think → Express → Act
 - **Mercury Brain** reasons, plans, and decides (Invisible Architecture)
 - **Personality Engine** shapes expression and behavior
 - **Memory** provides continuity
-- **Personas + UI** express presence
+- **Aspect Policy** determines contextual expression
+- **Quicksilver + UI** express presence
 
 ## Experiential Layers
 
@@ -23,8 +24,8 @@ Sense → Think → Express → Act
 |-------|------|
 | **The Sanctum** | Primary place. Cosmic + Norse + liquid mercury + broken monuments. |
 | **Quicksilver Presence** | Permanent ambient entity. Not summoned. |
-| **The Forge** | Creation, engineering, Swift, architecture, experiments. Persona-driven. |
-| **The Eternal** | Observation, diagnostics, memory, long-term patterns. Persona-driven. |
+| **The Workshop** | Forge aspect: creation, engineering, Swift, architecture, experiments. |
+| **The Observatory** | Eternal aspect: observation, diagnostics, memory, long-term patterns. |
 | **The Codex** | Governance of Mercury (voice, memory, keys, autonomy). Not Settings. |
 
 ## Strict Dependency Direction
@@ -50,11 +51,12 @@ The Brain decides.
 
 Central intelligence coordinator (`App/MercuryBrain.swift`).
 
-- Intent classification
-- Context assembly (Memory + Nexus + persona)
+- Intent classification via `IntentEngine`
+- Aspect selection via `AspectPolicy`
+- Context assembly (Memory + Nexus + active aspect)
 - Personality influence
 - Living status generation
-- Unified `ask` / `remember` / `switchPersona` surface
+- Unified `ask` / `remember` surface; aspect selection is autonomous
 - Owns `VisualState` (UI only observes)
 
 ## Personality Engine
@@ -88,7 +90,7 @@ Ambient particles, glyph rotation, reflective presence. Intensity derived from a
 - Depth over quantity.
 - Personality over generic functionality.
 - Every interaction must strengthen the illusion that the user has entered a place, not opened an app.
-- No “chamber” terminology — personas are the sole experiential lever.
+- Quicksilver is the persistent identity. Forge and Eternal are aspects of that identity; UI must not expose persona selection.
 
 ## Autonomy Policy
 

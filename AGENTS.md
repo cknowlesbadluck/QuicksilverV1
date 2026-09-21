@@ -1,10 +1,10 @@
 # AGENTS.md — Quicksilver / Mercury
 
 ## Project
-Native iOS intelligence platform. Primary target: iPhone 14 / iOS 27. CI floor: iOS 18.0.
+Native iOS intelligence platform. Primary target: iPhone 16e / iOS 27. CI floor: iOS 18.0.
 
 ## Non-negotiable Architecture
-- Sense (Nexus) → Think (MercuryBrain + Memory + AI) → Express (Personas + UI)
+- Sense (Nexus) → Think (MercuryBrain + Memory + AI) → Express (Quicksilver aspect + UI)
 - Core owns all protocols and shared models (MemoryItem, VisualState, etc.)
 - MercuryBrain is the only intelligence surface. UI and Intents must prefer the Brain.
 - Nexus is persona-agnostic. PersonaID is a tag only.
@@ -12,7 +12,7 @@ Native iOS intelligence platform. Primary target: iPhone 14 / iOS 27. CI floor: 
 - Public Apple APIs only. SideStore-first. No private APIs.
 - **VisualState is owned by MercuryBrain.** UI only observes.
 - **PersonaTheme + MotionTokens** are the only visual/motion sources. No magic numbers in views.
-- No “chamber” terminology. Personas (Quicksilver / Forge / Eternal) are the experiential distinction.
+- Quicksilver is one persistent entity. Forge and Eternal are aspects, not selectable personas, products, or assistants.
 
 ## Autonomy Policy
 - Owner-authorized multi-step agent loops are permitted.
@@ -34,13 +34,13 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 1. CI green (Structure, Lint, SPM tests, Simulator Build)
 2. SideStore IPA path reliable
 3. Memory-augmented Brain landed
-4. Chamber terminology fully purged
+4. Aspect architecture is the only identity model
 5. VisualState propagation complete
 6. Depth (Forge / Eternal instruments) only after the ship loop is solid
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: purge + Memory Brain → CI green → SideStore smoke → then depth.
+Current focus: CI green → provider verification → SideStore smoke → legacy persona/bridge cleanup → depth.
 
 ## Testing & CI
 - SPM unit tests must stay green.

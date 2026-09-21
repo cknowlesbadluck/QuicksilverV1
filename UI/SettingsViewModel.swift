@@ -6,9 +6,12 @@ import ServicesAI
 @MainActor
 @Observable
 final class SettingsViewModel {
-    var apiKeyDraft: String = ""
-    private(set) var hasStoredKey: Bool = false
+    var grokKeyDraft: String = ""
+    var geminiKeyDraft: String = ""
+    private(set) var hasGrokKey: Bool = false
+    private(set) var hasGeminiKey: Bool = false
     private(set) var providerName: String = ""
+    private(set) var fallbackProviderName: String?
     private(set) var aiEnabled: Bool = false
     private(set) var personaAutonomyEnabled: Bool = true
     private(set) var lastSwitchReason: String?
@@ -23,69 +26,87 @@ final class SettingsViewModel {
     }
 
     func refresh() {
-        let key = KeychainStore.string(forKey: AIService.apiKeyKeychainAccount)
-        hasStoredKey = !(key?.isEmpty ?? true)
+        hasGrokKey = container.aiService.hasGrokKey
+        hasGeminiKey = container.aiService.hasGeminiKey
         providerName = container.aiService.currentProviderName
+        fallbackProviderName = container.aiService.fallbackProviderName
         aiEnabled = container.featureFlags.isEnabled("aiServiceEnabled")
         personaAutonomyEnabled = container.featureFlags.isEnabled("personaAutonomy")
         lastSwitchReason = container.personaManager.lastSwitchReason
     }
 
-    func saveAPIKey() {
-        let trimmed = apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else {
-            statusMessage = "Enter a non-empty key"
+    func saveGrokKey() {
+        let trimmed = grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            statusMessage = "Enter a non-empty Grok API key."
             statusIsError = true
             return
         }
-
-        let saved = container.aiService.configureAPIKey(trimmed)
-        guard saved else {
-            statusMessage = "Could not save the key to the Keychain."
+        if !container.aiService.configureGrokAPIKey(trimmed) {
+            statusMessage = "Could not save the Grok key to the Keychain."
             statusIsError = true
             return
         }
-
-        apiKeyDraft = ""
+        grokKeyDraft = ""
+        statusMessage = "Grok key saved to Keychain."
+        statusIsError = false
         refresh()
-
-        if container.aiService.currentProviderID == "grok" {
-            statusMessage = "Key saved. Provider: Grok"
-            statusIsError = false
-        } else if !aiEnabled {
-            statusMessage = "Key saved to Keychain. Enable AI Service to use Grok."
-            statusIsError = false
-        } else {
-            statusMessage = "Key saved. Provider: \(container.aiService.currentProviderName)"
-            statusIsError = false
-        }
     }
 
-    func clearAPIKey() {
-        container.aiService.configureAPIKey(nil)
-        apiKeyDraft = ""
+    func saveGeminiKey() {
+        let trimmed = geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            statusMessage = "Enter a non-empty Gemini API key."
+            statusIsError = true
+            return
+        }
+        if !container.aiService.configureGeminiAPIKey(trimmed) {
+            statusMessage = "Could not save the Gemini key to the Keychain."
+            statusIsError = true
+            return
+        }
+        geminiKeyDraft = ""
+        statusMessage = "Gemini key saved to Keychain."
+        statusIsError = false
         refresh()
-        statusMessage = "Key removed. Provider: Mock"
+    }
+
+    func clearGrokKey() {
+        _ = container.aiService.configureGrokAPIKey(nil)
+        refresh()
+        statusMessage = "Grok key removed."
+        statusIsError = false
+    }
+
+    func clearGeminiKey() {
+        _ = container.aiService.configureGeminiAPIKey(nil)
+        refresh()
+        statusMessage = "Gemini key removed."
         statusIsError = false
     }
 
     func setAIEnabled(_ enabled: Bool) {
         container.featureFlags.set("aiServiceEnabled", enabled: enabled)
-        if enabled {
-            let key = KeychainStore.string(forKey: AIService.apiKeyKeychainAccount)
-            container.aiService.configureAPIKey(key)
-        } else {
+        if !enabled {
             container.aiService.setProvider(MockAIProvider())
+            refresh()
+            statusMessage = "AI Service disabled (Mock only)."
+            statusIsError = false
+            return
         }
+        let grokKey = KeychainStore.string(forKey: AIService.grokAPIKeyKeychainAccount)
+        let geminiKey = KeychainStore.string(forKey: AIService.geminiAPIKeyKeychainAccount)
+        _ = container.aiService.configureGrokAPIKey(grokKey)
+        _ = container.aiService.configureGeminiAPIKey(geminiKey)
         refresh()
-        statusMessage = enabled ? "AI Service enabled" : "AI Service disabled (Mock only)"
+        statusMessage = "AI Service enabled."
         statusIsError = false
     }
 
     func setPersonaAutonomy(_ enabled: Bool) {
         container.featureFlags.set("personaAutonomy", enabled: enabled)
         refresh()
-        statusMessage = enabled ? "Persona autonomy enabled" : "Persona autonomy disabled (manual only)"
+        statusMessage = enabled ? "Persona autonomy enabled." : "Persona autonomy disabled."
         statusIsError = false
     }
 }

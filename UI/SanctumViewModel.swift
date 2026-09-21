@@ -8,6 +8,7 @@ import Nexus
 @Observable
 final class SanctumViewModel {
     private(set) var activePersonaID: String = "quicksilver"
+    private(set) var activeAspect: Aspect = .quicksilver
     private(set) var livingStatus: String = "Quicksilver is present."
     private(set) var latestInsight: Insight?
     private(set) var batteryLevelText: String = "—"
@@ -30,6 +31,7 @@ final class SanctumViewModel {
 
         container.brain.refreshLivingStatus()
         livingStatus = container.brain.livingStatus
+        activeAspect = container.brain.activeAspect
 
         let state = container.nexus.state
         latestInsight = state.recentInsights.first
@@ -38,7 +40,7 @@ final class SanctumViewModel {
         thermalState = state.thermalState.capitalized
         overallHealthScore = state.overallHealthScore
 
-        // Invisible Architecture: visual state owned by Brain.
+        // Invisible Architecture: visual state and aspect owned by Brain.
         visualState = container.brain.visualState
     }
 
@@ -56,5 +58,10 @@ final class SanctumViewModel {
     func stopLiveRefresh() {
         refreshTask?.cancel()
         refreshTask = nil
+    }
+
+    /// Accent source for the living place — prefer aspect over legacy persona ID.
+    var presenceAccentID: String {
+        activeAspect.rawValue
     }
 }

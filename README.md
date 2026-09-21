@@ -1,13 +1,13 @@
 # Quicksilver
 
-Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
+Native iOS intelligence framework: one persistent Quicksilver entity with autonomous aspects, Nexus diagnostics, Memory, and AI.
 
 **Primary device target:** iPhone 16e / **iOS 27**  
 **Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.  
 **Current ship:** 0.2.0 (**build 7**)
 
 ```
-SENSE (Nexus) → THINK (Core + AI + Memory) → EXPRESS (Personas + UI)
+SENSE (Nexus) → THINK (Core + Brain + Memory + AI) → EXPRESS (Aspect + UI)
 ```
 
 ## Cloud development (no local Mac required)
@@ -31,8 +31,8 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 
 ## Status
 
-- **Slice A (persona experience)** — merged to `main` (PR #52). PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.
-- **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
+- **Aspect architecture** — merged to `main` (PR #98). IntentEngine, AspectPolicy, Brain-owned active aspect, Sanctum presence, Workshop/Observatory surfaces.
+- **Provider routing** — Grok primary with Gemini fallback; credentials remain device-local in Keychain.
 - **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
 - **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
 - **Hygiene (2026-09-19)** — Logger privacy defaulted to `.private`, primary validation device updated to iPhone 16e, AppConfiguration version aligned.
@@ -41,13 +41,13 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 
 | Screen | Role |
 |--------|------|
-| **Home / Sanctum** | Persona switcher + accent, Nexus health, latest insight |
-| **Forge** | Creation / engineering realm |
-| **Eternal** | Observation / continuity realm |
+| **Home / Sanctum** | Living Quicksilver presence + Nexus health + latest insight |
+| **Workshop** | Forge aspect: creation / engineering instruments |
+| **Observatory** | Eternal aspect: observation / continuity / memory |
 | **Ask** | Persona-aware chat with Memory history |
 | **Memory** | Policy-filtered notes, delete / clear / export |
 | **Diagnostics** | Live insights + signals |
-| **Settings** | xAI key (Keychain) + AI feature flag |
+| **Settings** | Grok/Gemini Keychain credentials + automatic provider routing |
 
 ## Architecture
 
@@ -74,20 +74,16 @@ Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**
 1. Trigger **Actions → Archive IPA → Run workflow** (Release).
 2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
-4. Settings → paste xAI key → enable AI Service.
+4. Settings → configure Grok and/or Gemini keys → enable AI Service. Grok is primary when configured; Gemini is fallback. Provider availability and billing remain account-controlled.
 5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → persona switch.
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 
-## Personas
+## Entity and aspects
 
-| Persona | Role |
-|---------|------|
-| Quicksilver | Adaptive daily intelligence |
-| Forge | Disciplined builder |
-| Eternal | Continuity & long-term coherence |
+Quicksilver is the single persistent entity. Forge and Eternal are autonomous aspects surfaced by context; they are not selectable personas or separate assistants.
 
-Prompts: `Resources/Personas/*.txt` (embedded fallback if missing).
+Prompts: `Resources/Personas/*.txt` provide aspect-specific behavioral grounding.
 
 ## Principles
 

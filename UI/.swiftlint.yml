@@ -1,0 +1,10 @@
+# SwiftUI presentation files intentionally allow larger view compositions and local closure identifiers.
+# Architectural code outside UI remains governed by the root strict configuration.
+disabled_rules:
+  - file_length
+  - function_body_length
+  - identifier_name
+  - line_length
+  - nesting
+  - statement_position
+  - type_body_length
