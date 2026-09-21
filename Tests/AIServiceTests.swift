@@ -5,6 +5,21 @@ import XCTest
 @MainActor
 final class AIServiceTests: XCTestCase {
 
+    func testGeminiProviderContract() {
+        let provider = GeminiAIProvider.make(apiKey: "test-key")
+        XCTAssertNotNil(provider)
+        XCTAssertEqual(provider?.id, "gemini")
+        XCTAssertEqual(provider?.displayName, "Gemini (Google)")
+        XCTAssertTrue(provider?.isAvailable == true)
+    }
+
+    func testGrokProviderContractUsesCurrentModelPath() {
+        let provider = GrokAIProvider.make(apiKey: "test-key")
+        XCTAssertNotNil(provider)
+        XCTAssertEqual(provider?.id, "grok")
+        XCTAssertTrue(provider?.isAvailable == true)
+    }
+
     func testMockProviderReturnsResponse() async throws {
         let bus = EventBus()
         let logger = LoggerService()
