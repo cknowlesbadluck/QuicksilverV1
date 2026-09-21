@@ -25,7 +25,11 @@ final class DependencyContainer {
     /// for complex reasoning instead of reaching into individual services.
     let brain: MercuryBrain
 
-    init(environment: AppEnvironment = .current, configuration: AppConfiguration = .shared) {
+    init(
+        environment: AppEnvironment = .current,
+        configuration: AppConfiguration = .shared,
+        memoryStore: MemoryStore? = nil
+    ) {
         self.environment = environment
         self.configuration = configuration
         self.featureFlags = FeatureFlags()
@@ -38,15 +42,18 @@ final class DependencyContainer {
             featureFlags: featureFlags
         )
 
-        let memoryStore: MemoryStore
-        if let swiftDataStore = try? SwiftDataMemoryStore() {
-            memoryStore = swiftDataStore
+        let store: MemoryStore
+        if let memoryStore {
+            store = memoryStore
+            logger.info("Memory backend: Custom injected store", category: logger.memory)
+        } else if let swiftDataStore = try? SwiftDataMemoryStore() {
+            store = swiftDataStore
             logger.info("Memory backend: SwiftData", category: logger.memory)
         } else {
-            memoryStore = UserDefaultsMemoryStore()
+            store = UserDefaultsMemoryStore()
             logger.info("Memory backend: UserDefaults (SwiftData unavailable)", category: logger.memory)
         }
-        self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
+        self.memoryManager = MemoryManager(store: store, eventBus: eventBus, logger: logger)
 
         self.aiService = AIService(eventBus: eventBus, logger: logger, featureFlags: featureFlags)
 

@@ -31,13 +31,18 @@ let package = Package(
             exclude: ["PIPELINE.md"]
         ),
         .target(
+            name: "UI",
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
+            path: "UI"
+        ),
+        .target(
             name: "QuicksilverIntents",
             dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
             path: "Intents"
         ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "UI"],
             path: "Tests"
         ),
     ]
