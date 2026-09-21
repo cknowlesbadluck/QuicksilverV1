@@ -39,9 +39,12 @@ struct QuicksilverPresenceView: View {
 
     private var presenceTitle: String {
         switch personaID.lowercased() {
-        case "forge": return "Forge is awake"
-        case "eternal": return "Eternal observes"
-        default: return "Quicksilver"
+        case "forge":
+            return "The core forges"
+        case "eternal":
+            return "The core observes"
+        default:
+            return visualState == .sleeping ? "The core rests" : "The core is awake"
         }
     }
 }
