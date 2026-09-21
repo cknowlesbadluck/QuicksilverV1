@@ -1,5 +1,4 @@
-// swiftlint:disable function_body_length
-// swiftlint:disable function_body_length\nimport SwiftUI
+import SwiftUI
 import Core
 
 struct SettingsView: View {
@@ -7,44 +6,52 @@ struct SettingsView: View {
     @State private var viewModel: SettingsViewModel?
     
     var body: some View {
-        Group {
+        Form {
             if let vm = viewModel {
-                content(vm)
-            } else {
+                IntelligenceSettingsSection(viewModel: vm)
+                CredentialSettingsSection(viewModel: vm)
+                AspectSettingsSection(viewModel: vm)
+                StatusSettingsSection(viewModel: vm)
+            }
+        }
+        .overlay {
+            if viewModel == nil {
                 ProgressView()
-                    .onAppear { viewModel = SettingsViewModel(container: container) }
             }
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-    }
-    
-    @ViewBuilder
-    private func content(_ vm: SettingsViewModel) -> some View {
-        Form {
-            intelligenceSection(vm)
-            credentialsSection(vm)
-            personasSection(vm)
-            statusSection(vm)
+        .onAppear {
+            if viewModel == nil {
+                viewModel = SettingsViewModel(container: container)
+            }
         }
-        .onAppear { vm.refresh() }
     }
+}
+
+private struct IntelligenceSettingsSection: View {
+    let viewModel: SettingsViewModel
     
-    @ViewBuilder
-    private func intelligenceSection(_ vm: SettingsViewModel) -> some View {
+    var body: some View {
         Section {
             Toggle("AI Service", isOn: Binding(
-                get: { vm.aiEnabled },
-                set: { vm.setAIEnabled($0) }
+                get: { viewModel.aiEnabled },
+                set: { viewModel.setAIEnabled($0) }
             ))
-            LabeledContent("Primary", value: vm.providerName)
-            if let fallback = vm.fallbackProviderName {
+            LabeledContent("Primary", value: viewModel.providerName)
+            if let fallback = viewModel.fallbackProviderName {
                 LabeledContent("Fallback", value: fallback)
             }
-            LabeledContent("Grok", value: vm.hasGrokKey ? "Configured" : "Not configured")
-            LabeledContent("Gemini", value: vm.hasGeminiKey ? "Configured" : "Not configured")
+            LabeledContent(
+                "Grok",
+                value: viewModel.hasGrokKey ? "Configured" : "Not configured"
+            )
+            LabeledContent(
+                "Gemini",
+                value: viewModel.hasGeminiKey ? "Configured" : "Not configured"
+            )
             LabeledContent("Routing", value: "Automatic")
-            LabeledContent("Billing", value: "Free tier only")
+            LabeledContent("Billing", value: "Account free tier")
         } header: {
             Text("Intelligence")
         } footer: {
@@ -54,66 +61,78 @@ struct SettingsView: View {
             )
         }
     }
+}
+
+private struct CredentialSettingsSection: View {
+    let viewModel: SettingsViewModel
     
-    @ViewBuilder
-    private func credentialsSection(_ vm: SettingsViewModel) -> some View {
+    var body: some View {
         Section("API Keys") {
-            grokCredentials(vm)
+            GrokCredentialFields(viewModel: viewModel)
             Divider()
-            geminiCredentials(vm)
+            GeminiCredentialFields(viewModel: viewModel)
         }
     }
+}
+
+private struct GrokCredentialFields: View {
+    let viewModel: SettingsViewModel
     
-    @ViewBuilder
-    private func grokCredentials(_ vm: SettingsViewModel) -> some View {
+    var body: some View {
         SecureField("Grok / xAI API key", text: Binding(
-            get: { vm.grokKeyDraft },
-            set: { vm.grokKeyDraft = $0 }
+            get: { viewModel.grokKeyDraft },
+            set: { viewModel.grokKeyDraft = $0 }
         ))
         .textContentType(.password)
         .autocorrectionDisabled()
         
         Button("Save Grok Key") {
-            vm.saveGrokKey()
+            viewModel.saveGrokKey()
         }
-        .disabled(vm.grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .disabled(viewModel.grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         
-        if vm.hasGrokKey {
+        if viewModel.hasGrokKey {
             Button("Remove Grok Key", role: .destructive) {
-                vm.clearGrokKey()
+                viewModel.clearGrokKey()
             }
         }
     }
+}
+
+private struct GeminiCredentialFields: View {
+    let viewModel: SettingsViewModel
     
-    @ViewBuilder
-    private func geminiCredentials(_ vm: SettingsViewModel) -> some View {
+    var body: some View {
         SecureField("Gemini / Google API key", text: Binding(
-            get: { vm.geminiKeyDraft },
-            set: { vm.geminiKeyDraft = $0 }
+            get: { viewModel.geminiKeyDraft },
+            set: { viewModel.geminiKeyDraft = $0 }
         ))
         .textContentType(.password)
         .autocorrectionDisabled()
         
         Button("Save Gemini Key") {
-            vm.saveGeminiKey()
+            viewModel.saveGeminiKey()
         }
-        .disabled(vm.geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        .disabled(viewModel.geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         
-        if vm.hasGeminiKey {
+        if viewModel.hasGeminiKey {
             Button("Remove Gemini Key", role: .destructive) {
-                vm.clearGeminiKey()
+                viewModel.clearGeminiKey()
             }
         }
     }
+}
+
+private struct AspectSettingsSection: View {
+    let viewModel: SettingsViewModel
     
-    @ViewBuilder
-    private func personasSection(_ vm: SettingsViewModel) -> some View {
+    var body: some View {
         Section {
             Toggle("Persona Autonomy", isOn: Binding(
-                get: { vm.personaAutonomyEnabled },
-                set: { vm.setPersonaAutonomy($0) }
+                get: { viewModel.personaAutonomyEnabled },
+                set: { viewModel.setPersonaAutonomy($0) }
             ))
-            if let reason = vm.lastSwitchReason {
+            if let reason = viewModel.lastSwitchReason {
                 LabeledContent("Last switch", value: reason)
             }
         } header: {
@@ -125,17 +144,18 @@ struct SettingsView: View {
             )
         }
     }
+}
+
+private struct StatusSettingsSection: View {
+    let viewModel: SettingsViewModel
     
-    @ViewBuilder
-    private func statusSection(_ vm: SettingsViewModel) -> some View {
-        if let message = vm.statusMessage {
+    var body: some View {
+        if let message = viewModel.statusMessage {
             Section {
                 Text(message)
                     .font(.caption)
-                    .foregroundStyle(vm.statusIsError ? .red : .secondary)
+                    .foregroundStyle(viewModel.statusIsError ? .red : .secondary)
             }
         }
     }
 }
-// swiftlint:enable function_body_length\n
-// swiftlint:enable function_body_length
