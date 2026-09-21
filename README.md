@@ -35,6 +35,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 - **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
 - **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
 - **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
+- **Hygiene (2026-09-19)** — Logger privacy defaulted to `.private`, primary validation device updated to iPhone 16e, AppConfiguration version aligned.
 
 ## Surfaces
 
@@ -65,34 +66,7 @@ open Quicksilver.xcodeproj
 
 Requires Xcode with an iOS SDK. CI currently uses the iOS 18 SDK; the resulting binary runs on iOS 27.
 
-## Installation
-
-Recommended ways to install opencode tooling for local development and mobile workflows:
-
-- Direct installer (fast, but security risk — runs a remote script):
-
-```bash
-curl -fsSL https://opencode.ai/install | bash
-```
-
-- npx installer (requires Node.js / npm):
-
-```bash
-npx opencode-mobile install
-```
-
-You can run the included helper scripts in this repository:
-
-```bash
-bash scripts/install-opencode.sh       # direct pipe installer (requested)
-bash scripts/install-opencode-npx.sh   # npx installer (safer if you have Node)
-```
-
-Security note: piping remote scripts into a shell executes code from the network; review before running in sensitive environments.
-
-This repository also includes editor and Codespaces recommendations to make working with Swift easier (.vscode/extensions.json and .devcontainer/devcontainer.json).
-
-## On-device (iPhone 14 / iOS 27) — SideStore path
+## On-device (iPhone 16e / iOS 27) — SideStore path
 
 Full instructions and first-run checklist: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**  
 Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**

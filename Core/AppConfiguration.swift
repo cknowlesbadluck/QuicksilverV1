@@ -9,7 +9,7 @@ public struct AppConfiguration: Sendable {
     public let version: String
     public let build: String
     /// Minimum OS the binary is *built* against (CI / Xcode 16 floor).
-    /// The primary validation device runs iOS 27; a lower deployment target is intentional
+    /// The primary validation device runs a newer OS; a lower deployment target is intentional
     /// so SideStore IPAs can still be produced on current GitHub runners.
     public let minimumOSVersion: String
     /// Primary device target the project is designed and validated for.
@@ -19,8 +19,8 @@ public struct AppConfiguration: Sendable {
 
     public init(
         appName: String = "Quicksilver",
-        version: String = "0.1.0",
-        build: String = "6",
+        version: String = "0.2.0",
+        build: String = "7",
         minimumOSVersion: String = "18.0",
         primaryDeviceOSVersion: String = "27.0",
         privacyPolicyURL: URL? = nil,
