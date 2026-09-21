@@ -25,68 +25,80 @@ struct AskView: View {
         let bubble = PersonaTheme.assistantBubbleStyle(for: personaID)
 
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Text("Provider: \(vm.providerName)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(container.activeConfiguration.displayName)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(accent)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                        ForEach(vm.turns) { turn in
-                            turnBubble(turn, accent: accent, assistantOpacity: bubble.opacity, assistantWeight: bubble.weight)
-                                .id(turn.id)
-                        }
-
-                        if let error = vm.errorMessage {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundStyle(.red)
-                        }
-                    }
-                    .padding()
-                }
-                .onChange(of: vm.turns.count) { _, _ in
-                    if let last = vm.turns.last?.id {
-                        withAnimation {
-                            proxy.scrollTo(last, anchor: .bottom)
-                        }
-                    }
-                }
-            }
-
+            conversationScrollView(vm, accent: accent, bubble: bubble)
             Divider()
-
-            HStack(alignment: .bottom, spacing: 12) {
-                TextField("Ask \(container.activeConfiguration.displayName)…", text: Binding(
-                    get: { vm.draft },
-                    set: { vm.draft = $0 }
-                ), axis: .vertical)
-                .lineLimit(1...4)
-                .textFieldStyle(.roundedBorder)
-
-                Button {
-                    Task { await vm.submit() }
-                } label: {
-                    if vm.isProcessing {
-                        ProgressView()
-                    } else {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(accent)
-                    }
-                }
-                .disabled(vm.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isProcessing)
-            }
-            .padding()
+            inputBar(vm, accent: accent)
         }
         .task { await vm.loadHistory() }
+    }
+
+    @ViewBuilder
+    private func conversationScrollView(
+        _ vm: AskViewModel,
+        accent: Color,
+        bubble: (opacity: Double, weight: Font.Weight)
+    ) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Text("Provider: \(vm.providerName)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(container.activeConfiguration.displayName)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(accent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    ForEach(vm.turns) { turn in
+                        turnBubble(turn, accent: accent, assistantOpacity: bubble.opacity, assistantWeight: bubble.weight)
+                            .id(turn.id)
+                    }
+
+                    if let error = vm.errorMessage {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                }
+                .padding()
+            }
+            .onChange(of: vm.turns.count) { _, _ in
+                if let last = vm.turns.last?.id {
+                    withAnimation {
+                        proxy.scrollTo(last, anchor: .bottom)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func inputBar(_ vm: AskViewModel, accent: Color) -> some View {
+        HStack(alignment: .bottom, spacing: 12) {
+            TextField("Ask \(container.activeConfiguration.displayName)…", text: Binding(
+                get: { vm.draft },
+                set: { vm.draft = $0 }
+            ), axis: .vertical)
+            .lineLimit(1...4)
+            .textFieldStyle(.roundedBorder)
+
+            Button {
+                Task { await vm.submit() }
+            } label: {
+                if vm.isProcessing {
+                    ProgressView()
+                } else {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(accent)
+                }
+            }
+            .disabled(vm.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || vm.isProcessing)
+        }
+        .padding()
     }
 
     private func turnBubble(
