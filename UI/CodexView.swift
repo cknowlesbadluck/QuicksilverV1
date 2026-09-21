@@ -44,7 +44,7 @@ struct CodexView: View {
             }
 
             Section {
-                Toggle("Autonomous Persona Shifts", isOn: Binding(
+                Toggle("Autonomous Aspect Shifts", isOn: Binding(
                     get: { vm.personaAutonomyEnabled },
                     set: { vm.setPersonaAutonomy($0) }
                 ))
@@ -54,26 +54,16 @@ struct CodexView: View {
             } header: {
                 Text("Identity")
             } footer: {
-                Text("When enabled, Mercury may shift between Quicksilver, Forge, and Eternal according to task, pressure, and time. Manual shifts always take precedence.")
+                Text("Aspect surfacing is contextual and automatic. Provider selection remains independent of Quicksilver, Forge, and Eternal.")
             }
 
             Section {
-                SecureField("Bind xAI key", text: Binding(
-                    get: { vm.apiKeyDraft },
-                    set: { vm.apiKeyDraft = $0 }
-                ))
-                .textContentType(.password)
-                .autocorrectionDisabled()
-
-                Button("Bind Key") {
-                    vm.saveAPIKey()
-                }
-                .disabled(vm.apiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-                if vm.hasStoredKey {
-                    Button("Unbind Key", role: .destructive) {
-                        vm.clearAPIKey()
-                    }
+                LabeledContent("Grok", value: vm.hasGrokKey ? "Bound — Keychain" : "Unbound")
+                LabeledContent("Gemini", value: vm.hasGeminiKey ? "Bound — Keychain" : "Unbound")
+                LabeledContent("Routing", value: "Grok primary / Gemini fallback")
+                Button("Remove all provider keys", role: .destructive) {
+                    container.aiService.clearAllAPIKeys()
+                    vm.refresh()
                 }
             } header: {
                 Text("Covenant")
