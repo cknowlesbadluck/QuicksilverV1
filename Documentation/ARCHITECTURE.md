@@ -90,9 +90,16 @@ Ambient particles, glyph rotation, reflective presence. Intensity derived from a
 - Every interaction must strengthen the illusion that the user has entered a place, not opened an app.
 - No “chamber” terminology — personas are the sole experiential lever.
 
+## Autonomy Policy
+
+Owner-authorized multi-step agent loops are permitted.
+
+- Once the owner authorizes autonomy or approves a body of work, the agent may open PRs, update Linear, continue across steps, and propose/execute subsequent vertical slices without requiring a fresh human gate for every micro-decision.
+- Residual stop conditions always apply: CI failure, architecture invariant violation, or clear drift from the authorized goal.
+- The owner retains the right to revoke autonomy or require a gate at any time. Final merge decisions remain under human control when the owner so chooses.
+
 ## Explicitly Deferred
 
-- Full autonomous agent loops
 - Complex multi-hop RAG
 - Cloud dependency for core function
 - Plugin marketplace

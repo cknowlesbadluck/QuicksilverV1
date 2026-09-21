@@ -31,11 +31,14 @@ struct ForgeView: View {
         let accent = PersonaTheme.accent(for: personaID)
         let radius = PersonaTheme.cardCornerRadius(for: personaID)
         let spacing = 16 * PersonaTheme.density(for: personaID)
+        // .thinking is elevated (see VisualState.isElevated). There is no .elevated case.
+        let visualState: VisualState = vm.isAwake ? .thinking : .idle
+        let backdropIntensity = vm.isAwake ? 1.0 : 0.55
 
         return ZStack {
             PersonaTheme.voidBlack.ignoresSafeArea()
-            AmbientLayer(personaID: "forge", visualState: vm.isAwake ? .elevated : .idle)
-            MercuryRealmBackdrop(personaID: "forge", intensity: vm.isAwake ? 1 : 0.55)
+            AmbientLayer(personaID: "forge", visualState: visualState)
+            MercuryRealmBackdrop(personaID: "forge", intensity: backdropIntensity)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: spacing) {

@@ -2,7 +2,7 @@
 
 Native iOS intelligence framework: modular architecture, adaptive personas, Nexus diagnostics, Memory, and AI.
 
-**Primary device target:** iPhone 14 / **iOS 27**  
+**Primary device target:** iPhone 16e / **iOS 27**  
 **Build floor (CI / SideStore IPA):** iOS 18.0 — intentional so current GitHub runners can still produce installable binaries that run on iOS 27.  
 **Current ship:** 0.2.0 (**build 7**)
 
@@ -34,13 +34,16 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 - **Slice A (persona experience)** — merged to `main` (PR #52). PersonaTheme accents, density, InsightPresenter tone, Memory policy visibility, Ask bubble styling.
 - **Slice C (richer automation / Siri surface)** — in review (PR #53). PersonaEntity-typed ForcePersona, SwitchToForge, OpenDiagnostics, expanded natural phrases, still ≤ 10 App Shortcuts.
 - **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
-- SideStore hardening remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md).
+- **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
+- **Hygiene (2026-09-19)** — Logger privacy defaulted to `.private`, primary validation device updated to iPhone 16e, AppConfiguration version aligned.
 
 ## Surfaces
 
 | Screen | Role |
 |--------|------|
-| **Home** | Persona switcher + accent, Nexus health, latest insight |
+| **Home / Sanctum** | Persona switcher + accent, Nexus health, latest insight |
+| **Forge** | Creation / engineering realm |
+| **Eternal** | Observation / continuity realm |
 | **Ask** | Persona-aware chat with Memory history |
 | **Memory** | Policy-filtered notes, delete / clear / export |
 | **Diagnostics** | Live insights + signals |
@@ -63,42 +66,16 @@ open Quicksilver.xcodeproj
 
 Requires Xcode with an iOS SDK. CI currently uses the iOS 18 SDK; the resulting binary runs on iOS 27.
 
-## Installation
+## On-device (iPhone 16e / iOS 27) — SideStore path
 
-Recommended ways to install opencode tooling for local development and mobile workflows:
-
-- Direct installer (fast, but security risk — runs a remote script):
-
-```bash
-curl -fsSL https://opencode.ai/install | bash
-```
-
-- npx installer (requires Node.js / npm):
-
-```bash
-npx opencode-mobile install
-```
-
-You can run the included helper scripts in this repository:
-
-```bash
-bash scripts/install-opencode.sh       # direct pipe installer (requested)
-bash scripts/install-opencode-npx.sh   # npx installer (safer if you have Node)
-```
-
-Security note: piping remote scripts into a shell executes code from the network; review before running in sensitive environments.
-
-This repository also includes editor and Codespaces recommendations to make working with Swift easier (.vscode/extensions.json and .devcontainer/devcontainer.json).
-
-## On-device (iPhone 14 / iOS 27) — SideStore path
-
-Full instructions: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**
+Full instructions and first-run checklist: **[Documentation/SIDESTORE.md](Documentation/SIDESTORE.md)**  
+Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**
 
 1. Trigger **Actions → Archive IPA → Run workflow** (Release).
 2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
 4. Settings → paste xAI key → enable AI Service.
-5. Validate Home → Diagnostics → Memory → Ask → persona switch (accent + tone).
+5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → persona switch.
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 
