@@ -96,7 +96,7 @@ final class MercuryBrain {
         case .deny(let reason):
             visualState = .warning
             refreshLivingStatus()
-            throw AppError.aiUnavailable(reason)
+            throw AppError.aiRequestFailed(reason)
         }
 
         let system = buildSystemPrompt(for: config, memory: relevantMemory)
