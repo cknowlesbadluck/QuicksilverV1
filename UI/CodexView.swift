@@ -36,7 +36,7 @@ struct CodexView: View {
                     set: { vm.setAIEnabled($0) }
                 ))
                 LabeledContent("Vessel", value: vm.providerName)
-                LabeledContent("Key bound", value: vm.hasStoredKey ? "Yes — Keychain" : "Unbound")
+                LabeledContent("Key bound", value: (vm.hasGrokKey || vm.hasGeminiKey) ? "Yes — Keychain" : "Unbound")
             } header: {
                 Text("Mind")
             } footer: {
