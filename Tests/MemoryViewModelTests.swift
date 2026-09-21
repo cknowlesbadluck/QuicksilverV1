@@ -1,12 +1,9 @@
 import XCTest
+#if canImport(Quicksilver)
 @testable import Core
 @testable import Memory
 @testable import Personas
-#if canImport(UI)
-@testable import UI
-#elseif canImport(Quicksilver)
 @testable import Quicksilver
-#endif
 
 @MainActor
 final class MemoryViewModelTests: XCTestCase {
@@ -151,3 +148,4 @@ private actor FailingDeleteMemoryStore: MemoryStore {
         case deleteFailed
     }
 }
+#endif

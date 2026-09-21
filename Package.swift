@@ -9,7 +9,7 @@ let package = Package(
     ],
     products: [
         .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]),
-        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
+        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"])
     ],
     dependencies: [
         // Official Sentry Cocoa SDK (compile-from-source product recommended)
@@ -31,19 +31,14 @@ let package = Package(
             exclude: ["PIPELINE.md"]
         ),
         .target(
-            name: "UI",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
-            path: "UI"
-        ),
-        .target(
             name: "QuicksilverIntents",
             dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
             path: "Intents"
         ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "UI"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
             path: "Tests"
-        ),
+        )
     ]
 )
