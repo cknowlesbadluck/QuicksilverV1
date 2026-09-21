@@ -51,4 +51,53 @@ final class MemoryStoreTests: XCTestCase {
         XCTAssertEqual(loaded.count, 1)
         XCTAssertEqual(loaded.first?.category, .preference)
     }
+
+    func testKeychainMemoryStoreSaveAndLoad() async throws {
+        let testKey = "test.keychain.memory.\(UUID().uuidString)"
+        defer { KeychainStore.delete(forKey: testKey) }
+
+        let store = KeychainMemoryStore(storageKey: testKey, legacyDefaults: nil)
+        let item = MemoryItem(key: "secret.preference", category: .preference, value: "secure-value", importance: 0.95)
+
+        try await store.save(item)
+        let loaded = try await store.loadAll()
+
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded.first?.key, "secret.preference")
+        XCTAssertEqual(loaded.first?.value, "secure-value")
+
+        try await store.delete(id: item.id)
+        let loadedAfterDelete = try await store.loadAll()
+        XCTAssertTrue(loadedAfterDelete.isEmpty)
+    }
+
+    func testKeychainMemoryStoreLegacyUserDefaultsMigration() async throws {
+        let testKey = "test.legacy.memory.\(UUID().uuidString)"
+        let suiteName = "test.suite.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+            KeychainStore.delete(forKey: testKey)
+        }
+
+        let legacyItem = MemoryItem(key: "legacy.key", category: .userFact, value: "legacy-sensitive-value")
+        let legacyData = try JSONEncoder().encode([legacyItem])
+        defaults.set(legacyData, forKey: testKey)
+
+        // Verify setup: defaults holds data, keychain is empty
+        XCTAssertNotNil(defaults.data(forKey: testKey))
+        XCTAssertNil(KeychainStore.data(forKey: testKey))
+
+        let store = KeychainMemoryStore(storageKey: testKey, legacyDefaults: defaults)
+        let loaded = try await store.loadAll()
+
+        // Verify migration: loaded items retrieved correctly
+        XCTAssertEqual(loaded.count, 1)
+        XCTAssertEqual(loaded.first?.key, "legacy.key")
+        XCTAssertEqual(loaded.first?.value, "legacy-sensitive-value")
+
+        // Verify post-migration posture: legacy data in defaults purged, now stored in Keychain
+        XCTAssertNil(defaults.data(forKey: testKey), "Legacy plain-text data should be removed from UserDefaults")
+        XCTAssertNotNil(KeychainStore.data(forKey: testKey), "Migrated data should now reside in Keychain")
+    }
 }

@@ -1,18 +1,17 @@
 import Foundation
 import Security
 
-/// Minimal Keychain helper for storing sensitive configuration (API keys).
+/// Minimal Keychain helper for storing sensitive data and configuration (API keys, user memory).
 /// Privacy-first: values never leave the device, never logged, never written to UserDefaults.
 ///
 /// Accessibility: `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`
 /// — Available after first device unlock, not backed up, device-only.
-/// Suitable for an API key that the app may need shortly after launch
-/// while still remaining unavailable when the device is locked.
-@MainActor
-public enum KeychainStore {
+/// Suitable for keys and memory items that the app needs shortly after launch
+/// while remaining unavailable when the device is locked.
+public enum KeychainStore: Sendable {
     private static let service = "com.quicksilver.keychain"
 
-    public static func string(forKey key: String) -> String? {
+    public static func data(forKey key: String) -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -24,15 +23,14 @@ public enum KeychainStore {
         var item: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &item)
         guard status == errSecSuccess,
-              let data = item as? Data,
-              let value = String(data: data, encoding: .utf8) else {
+              let data = item as? Data else {
             return nil
         }
-        return value
+        return data
     }
 
     @discardableResult
-    public static func set(_ value: String?, forKey key: String) -> Bool {
+    public static func set(_ data: Data?, forKey key: String) -> Bool {
         // Delete first so we can replace
         let deleteQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -41,7 +39,7 @@ public enum KeychainStore {
         ]
         SecItemDelete(deleteQuery as CFDictionary)
 
-        guard let value, let data = value.data(using: .utf8) else {
+        guard let data else {
             return true // deletion is success when clearing
         }
 
@@ -57,7 +55,18 @@ public enum KeychainStore {
         return status == errSecSuccess
     }
 
+    public static func string(forKey key: String) -> String? {
+        guard let data = data(forKey: key) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    @discardableResult
+    public static func set(_ value: String?, forKey key: String) -> Bool {
+        let data = value?.data(using: .utf8)
+        return set(data, forKey: key)
+    }
+
     public static func delete(forKey key: String) {
-        set(nil, forKey: key)
+        set(nil as Data?, forKey: key)
     }
 }
