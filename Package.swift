@@ -9,7 +9,7 @@ let package = Package(
     ],
     products: [
         .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]),
-        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
+        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"])
     ],
     dependencies: [
         // Official Sentry Cocoa SDK (compile-from-source product recommended)
@@ -36,18 +36,23 @@ let package = Package(
             path: "Intents"
         ),
         .target(
-            name: "UI",
+            name: "Quicksilver",
             dependencies: [
                 "Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents",
                 .product(name: "Sentry", package: "sentry-cocoa")
             ],
             path: ".",
-            sources: ["App/DependencyContainer.swift", "App/MercuryBrain.swift", "UI"]
+            sources: [
+                "App/DependencyContainer.swift",
+                "App/MercuryBrain.swift",
+                "UI/MemoryViewModel.swift",
+                "UI/PersonaTheme.swift"
+            ]
         ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "UI"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "Quicksilver"],
             path: "Tests"
-        ),
+        )
     ]
 )

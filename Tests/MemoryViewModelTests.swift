@@ -2,7 +2,7 @@ import XCTest
 @testable import Core
 @testable import Memory
 @testable import Personas
-@testable import UI
+@testable import Quicksilver
 
 @MainActor
 final class MemoryViewModelTests: XCTestCase {
