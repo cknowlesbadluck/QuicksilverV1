@@ -124,8 +124,9 @@ public final class NexusCoordinator {
                     self?.updatePersonaContext(personaID)
                 }
             }
+            // self is already strongly bound from the outer `guard let self`.
+            // Re-binding with `guard let self` is a compile error (non-Optional).
             await MainActor.run {
-                guard let self else { return }
                 // stop() may have already run while this subscribe was in flight
                 // (it checks personaSubscriptionID synchronously and only unsubscribes
                 // if it's already set). If that happened, unsubscribe this one now
