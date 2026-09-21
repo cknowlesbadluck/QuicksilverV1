@@ -89,17 +89,17 @@ final class MemoryScorerTests: XCTestCase {
         // Length 0 -> lengthFactor = 0.0 -> score = 0.70
         XCTAssertEqual(MemoryScorer.score(category: baseCategory, value: ""), 0.70, accuracy: 0.0001)
 
-        // Length 200 -> lengthFactor = 200/400 = 0.5 * 0.15 = 0.075 -> score = 0.775
+        // Length 30 -> lengthFactor = 30/400 = 0.075 -> score = 0.775
+        let text30 = String(repeating: "a", count: 30)
+        XCTAssertEqual(MemoryScorer.score(category: baseCategory, value: text30), 0.775, accuracy: 0.0001)
+
+        // Length 60 -> lengthFactor = min(60/400, 0.15) = 0.15 -> score = 0.85
+        let text60 = String(repeating: "a", count: 60)
+        XCTAssertEqual(MemoryScorer.score(category: baseCategory, value: text60), 0.85, accuracy: 0.0001)
+
+        // Length 200 -> lengthFactor capped at 0.15 -> score = 0.85
         let text200 = String(repeating: "a", count: 200)
-        XCTAssertEqual(MemoryScorer.score(category: baseCategory, value: text200), 0.775, accuracy: 0.0001)
-
-        // Length 400 -> lengthFactor = 0.15 -> score = 0.85
-        let text400 = String(repeating: "a", count: 400)
-        XCTAssertEqual(MemoryScorer.score(category: baseCategory, value: text400), 0.85, accuracy: 0.0001)
-
-        // Length 600 -> lengthFactor capped at 0.15 -> score = 0.85
-        let text600 = String(repeating: "a", count: 600)
-        XCTAssertEqual(MemoryScorer.score(category: baseCategory, value: text600), 0.85, accuracy: 0.0001)
+        XCTAssertEqual(MemoryScorer.score(category: baseCategory, value: text200), 0.85, accuracy: 0.0001)
     }
 
     func testScoreClampedToMaximumOne() {
