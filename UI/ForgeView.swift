@@ -30,8 +30,7 @@ struct ForgeView: View {
         let personaID = vm.activePersonaID
         let accent = PersonaTheme.accent(for: personaID)
         let radius = PersonaTheme.cardCornerRadius(for: personaID)
-        let spacing = 16 * PersonaTheme.density(for: personaID)
-        // .thinking is elevated (see VisualState.isElevated). There is no .elevated case.
+        let spacing = 18 * PersonaTheme.density(for: personaID)
         let visualState: VisualState = vm.isAwake ? .thinking : .idle
         let backdropIntensity = vm.isAwake ? 1.0 : 0.55
 
@@ -44,10 +43,10 @@ struct ForgeView: View {
                 VStack(alignment: .leading, spacing: spacing) {
                     realmHeader(vm, accent: accent, radius: radius)
                     if !vm.isAwake { awakenCard(vm, accent: accent, radius: radius) }
-                    signalsRow(vm, radius: radius)
+                    signalsRow(vm, accent: accent, radius: radius)
                     if let insight = vm.latestInsight { insightCard(insight, accent: accent, radius: radius) }
                     noteCapture(vm, accent: accent, radius: radius)
-                    if !vm.sessionNotes.isEmpty { notesList(vm, radius: radius) }
+                    if !vm.sessionNotes.isEmpty { notesList(vm, accent: accent, radius: radius) }
                     constructiveAsk(vm, accent: accent, radius: radius)
                     if let answer = lastAnswer { answerCard(answer, accent: accent, radius: radius) }
                     Spacer(minLength: 48)
@@ -57,6 +56,8 @@ struct ForgeView: View {
         }
         .navigationTitle("Forge")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(PersonaTheme.voidBlack, for: .navigationBar)
         .onAppear { vm.refresh(); vm.startLiveRefresh() }
         .onDisappear { vm.stopLiveRefresh() }
         .animation(PersonaTheme.spring(for: personaID), value: vm.isAwake)
@@ -67,13 +68,26 @@ struct ForgeView: View {
         HStack(spacing: 14) {
             MercuryDroplet(accent: accent, size: 42, active: vm.isAwake)
             VStack(alignment: .leading, spacing: 4) {
-                Text("THE FORGE").font(.caption.weight(.bold)).tracking(1.8).foregroundStyle(PersonaTheme.mercurySilver)
-                Text(vm.livingStatus).font(.subheadline).foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82)).lineLimit(2)
+                Text("THE FORGE")
+                    .font(.caption.weight(.bold))
+                    .tracking(2.0)
+                    .foregroundStyle(PersonaTheme.mercurySilver)
+                Text(vm.livingStatus)
+                    .font(.subheadline)
+                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.85))
+                    .lineLimit(2)
             }
             Spacer()
             Text(vm.isAwake ? "AWAKE" : "DORMANT")
-                .font(.caption2.weight(.bold))
+                .font(.system(size: 9, weight: .bold))
+                .tracking(1.0)
                 .foregroundStyle(vm.isAwake ? accent : .secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(vm.isAwake ? accent.opacity(0.18) : Color.secondary.opacity(0.1))
+                )
         }
         .padding(16)
         .background(.ultraThinMaterial.opacity(0.52), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
@@ -82,11 +96,24 @@ struct ForgeView: View {
 
     private func awakenCard(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Mercury is waiting to move.").font(.headline).foregroundStyle(PersonaTheme.mercurySilver)
-            Text("Awaken the constructive field: architecture, Swift, experiments.").font(.caption).foregroundStyle(.secondary)
+            Text("Mercury is waiting to move.")
+                .font(.headline)
+                .foregroundStyle(PersonaTheme.mercuryBright)
+            Text("Awaken the constructive field: architecture, Swift, experiments.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
             Button { Task { await vm.awakenForge() } } label: {
-                Text("Awaken Forge").font(.subheadline.weight(.semibold)).frame(maxWidth: .infinity).padding(.vertical, 12)
-                    .background(accent.opacity(0.18)).foregroundStyle(accent).clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
+                Text("Awaken Forge")
+                    .font(.subheadline.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(accent.opacity(0.22))
+                    .foregroundStyle(accent)
+                    .clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous)
+                            .strokeBorder(accent.opacity(0.45), lineWidth: 1)
+                    )
             }.buttonStyle(.plain)
         }
         .padding(16)
@@ -94,7 +121,7 @@ struct ForgeView: View {
         .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.28), lineWidth: 1))
     }
 
-    private func signalsRow(_ vm: ForgeViewModel, radius: CGFloat) -> some View {
+    private func signalsRow(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 8) {
             signalTile("Battery", vm.batteryLevelText, radius)
             signalTile("Network", vm.networkStatus, radius)
@@ -104,64 +131,162 @@ struct ForgeView: View {
     }
 
     private func signalTile(_ title: String, _ value: String, _ radius: CGFloat) -> some View {
-        VStack(spacing: 3) { Text(title.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary); Text(value).font(.caption.weight(.semibold)).foregroundStyle(PersonaTheme.mercurySilver).lineLimit(1) }
-            .frame(maxWidth: .infinity).padding(.vertical, 9)
-            .background(.ultraThinMaterial.opacity(0.3), in: RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous))
+        VStack(spacing: 3) {
+            Text(title.uppercased())
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PersonaTheme.mercurySilver)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 9)
+        .background(.ultraThinMaterial.opacity(0.35), in: RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous)
+                .strokeBorder(PersonaTheme.toxicGreen.opacity(0.18), lineWidth: 1)
+        )
     }
 
     private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("LATEST INSIGHT").font(.caption2.weight(.bold)).foregroundStyle(accent)
-            Text(insight.title).font(.subheadline.weight(.medium)).foregroundStyle(PersonaTheme.mercurySilver)
-            if !insight.body.isEmpty { Text(insight.body).font(.caption).foregroundStyle(.secondary) }
+            Text("LATEST INSIGHT")
+                .font(.caption2.weight(.bold))
+                .tracking(1.0)
+                .foregroundStyle(accent)
+            Text(insight.title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(PersonaTheme.mercuryBright)
+            if !insight.body.isEmpty {
+                Text(insight.body)
+                    .font(.caption)
+                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.8))
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(14)
-        .background(.ultraThinMaterial.opacity(0.4), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.24), lineWidth: 1))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(PersonaTheme.radioactiveStroke(for: "forge", intensity: 1.1), lineWidth: 1)
+        )
     }
 
     private func noteCapture(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("CAPTURE").font(.caption2.weight(.bold)).foregroundStyle(PersonaTheme.toxicGreen)
+            Text("CAPTURE NOTE")
+                .font(.caption2.weight(.bold))
+                .tracking(1.0)
+                .foregroundStyle(PersonaTheme.toxicGreen)
             HStack(spacing: 10) {
-                TextField("Architecture note, decision, experiment…", text: $noteDraft).textFieldStyle(.plain).padding(12)
-                    .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)).foregroundStyle(PersonaTheme.mercurySilver)
-                Button { let text = noteDraft; noteDraft = ""; Task { await vm.captureNote(text) } } label: { Image(systemName: "plus.circle.fill").font(.title2).foregroundStyle(accent) }.buttonStyle(.plain)
-                    .disabled(noteDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                TextField("Architecture note, decision, experiment…", text: $noteDraft)
+                    .font(.subheadline)
+                    .textFieldStyle(.plain)
+                    .padding(12)
+                    .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                            .strokeBorder(accent.opacity(0.3), lineWidth: 1)
+                    )
+                    .foregroundStyle(PersonaTheme.mercurySilver)
+                Button {
+                    let text = noteDraft
+                    noteDraft = ""
+                    Task { await vm.captureNote(text) }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(accent)
+                }
+                .buttonStyle(.plain)
+                .disabled(noteDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(noteDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1.0)
             }
         }
     }
 
-    private func notesList(_ vm: ForgeViewModel, radius: CGFloat) -> some View {
+    private func notesList(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("SESSION NOTES").font(.caption2.weight(.bold)).foregroundStyle(.secondary)
+            Text("SESSION NOTES")
+                .font(.caption2.weight(.bold))
+                .tracking(1.0)
+                .foregroundStyle(.secondary)
             ForEach(Array(vm.sessionNotes.enumerated()), id: \.offset) { _, note in
-                Text(note).font(.caption).foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9)).padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.ultraThinMaterial.opacity(0.25), in: RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous))
+                Text(note)
+                    .font(.subheadline)
+                    .foregroundStyle(PersonaTheme.mercuryBright)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.ultraThinMaterial.opacity(0.3), in: RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous)
+                            .strokeBorder(accent.opacity(0.2), lineWidth: 1)
+                    )
             }
         }
     }
 
     private func constructiveAsk(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ASK THE FORGE").font(.caption2.weight(.bold)).foregroundStyle(PersonaTheme.glowPurple)
-            TextField("Implement, refactor, debug, structure…", text: $askDraft, axis: .vertical).lineLimit(3...6).textFieldStyle(.plain).padding(12)
-                .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)).foregroundStyle(PersonaTheme.mercurySilver)
+            Text("CONSTRUCTIVE PROMPT")
+                .font(.caption2.weight(.bold))
+                .tracking(1.0)
+                .foregroundStyle(PersonaTheme.glowPurple)
+            TextField("Implement, refactor, debug, structure…", text: $askDraft, axis: .vertical)
+                .lineLimit(3...6)
+                .font(.subheadline)
+                .textFieldStyle(.plain)
+                .padding(12)
+                .background(.ultraThinMaterial.opacity(0.38), in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                        .strokeBorder(PersonaTheme.glowPurple.opacity(0.35), lineWidth: 1)
+                )
+                .foregroundStyle(PersonaTheme.mercurySilver)
             Button {
-                let query = askDraft; askDraft = ""; isAsking = true; lastAnswer = nil
-                Task { let answer = await vm.askForge(query); lastAnswer = answer; isAsking = false }
+                let query = askDraft
+                askDraft = ""
+                isAsking = true
+                lastAnswer = nil
+                Task {
+                    let answer = await vm.askForge(query)
+                    lastAnswer = answer
+                    isAsking = false
+                }
             } label: {
-                HStack { if isAsking { ProgressView().tint(PersonaTheme.voidBlack).scaleEffect(0.8) }; Text(isAsking ? "Forging…" : "Forge").font(.subheadline.weight(.semibold)) }
-                    .frame(maxWidth: .infinity).padding(.vertical, 12).background(accent).foregroundStyle(PersonaTheme.voidBlack).clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
-            }.buttonStyle(.plain).disabled(isAsking || askDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                HStack {
+                    if isAsking { ProgressView().tint(PersonaTheme.voidBlack).scaleEffect(0.8) }
+                    Text(isAsking ? "Forging…" : "Forge")
+                        .font(.subheadline.weight(.bold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(accent)
+                .foregroundStyle(PersonaTheme.voidBlack)
+                .clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
+                .shadow(color: accent.opacity(0.4), radius: 6)
+            }
+            .buttonStyle(.plain)
+            .disabled(isAsking || askDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity(isAsking || askDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1.0)
         }
     }
 
     private func answerCard(_ answer: String, accent: Color, radius: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 8) { Text("RESPONSE").font(.caption2.weight(.bold)).foregroundStyle(accent); Text(answer).font(.subheadline).foregroundStyle(PersonaTheme.mercurySilver) }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(14)
-            .background(.ultraThinMaterial.opacity(0.4), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.32), lineWidth: 1))
+        VStack(alignment: .leading, spacing: 8) {
+            Text("FORGE RESPONSE")
+                .font(.caption2.weight(.bold))
+                .tracking(1.0)
+                .foregroundStyle(accent)
+            Text(answer)
+                .font(.subheadline)
+                .foregroundStyle(PersonaTheme.mercuryBright)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(.ultraThinMaterial.opacity(0.45), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.35), lineWidth: 1))
     }
 }
 

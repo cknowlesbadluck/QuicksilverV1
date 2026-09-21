@@ -48,6 +48,8 @@ struct EternalView: View {
         }
         .navigationTitle("Eternal")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .toolbarBackground(PersonaTheme.voidBlack, for: .navigationBar)
         .onAppear {
             vm.refresh()
             vm.startLiveRefresh()
@@ -70,13 +72,13 @@ struct EternalView: View {
                 if !vm.isAwake {
                     awakenCard(vm, accent: accent, radius: radius)
                 }
-                signalsRow(vm, radius: radius)
+                signalsRow(vm, accent: accent, radius: radius)
                 if let insight = vm.latestInsight {
                     insightCard(insight, accent: accent, radius: radius)
                 }
                 observationCapture(vm, accent: accent, radius: radius)
                 if !vm.observations.isEmpty {
-                    observationsList(vm, radius: radius)
+                    observationsList(vm, accent: accent, radius: radius)
                 }
                 reflectiveAsk(vm, accent: accent, radius: radius)
                 if let answer = lastAnswer {
@@ -94,17 +96,24 @@ struct EternalView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("THE ETERNAL")
                     .font(.caption.weight(.bold))
-                    .tracking(1.8)
+                    .tracking(2.0)
                     .foregroundStyle(PersonaTheme.mercurySilver)
                 Text(vm.livingStatus)
                     .font(.subheadline)
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
+                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.85))
                     .lineLimit(2)
             }
             Spacer()
             Text(vm.isAwake ? "OBSERVING" : "QUIESCENT")
-                .font(.caption2.weight(.bold))
+                .font(.system(size: 9, weight: .bold))
+                .tracking(1.0)
                 .foregroundStyle(vm.isAwake ? accent : .secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(vm.isAwake ? accent.opacity(0.18) : Color.secondary.opacity(0.1))
+                )
         }
         .padding(16)
         .background(.ultraThinMaterial.opacity(0.52), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
@@ -118,7 +127,7 @@ struct EternalView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Mercury is listening.")
                 .font(.headline)
-                .foregroundStyle(PersonaTheme.mercurySilver)
+                .foregroundStyle(PersonaTheme.mercuryBright)
             Text("Awaken the observational field: patterns, continuity, diagnostics, memory.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -126,12 +135,16 @@ struct EternalView: View {
                 Task { await vm.awakenEternal() }
             } label: {
                 Text("Awaken Eternal")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.subheadline.weight(.bold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(accent.opacity(0.18))
+                    .background(accent.opacity(0.22))
                     .foregroundStyle(accent)
                     .clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous)
+                            .strokeBorder(accent.opacity(0.45), lineWidth: 1)
+                    )
             }
             .buttonStyle(.plain)
         }
@@ -143,7 +156,7 @@ struct EternalView: View {
         )
     }
 
-    private func signalsRow(_ vm: EternalViewModel, radius: CGFloat) -> some View {
+    private func signalsRow(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 8) {
             signalTile("Battery", vm.batteryLevelText, radius)
             signalTile("Network", vm.networkStatus, radius)
@@ -165,8 +178,12 @@ struct EternalView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
         .background(
-            .ultraThinMaterial.opacity(0.3),
+            .ultraThinMaterial.opacity(0.35),
             in: RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: max(8, radius - 4), style: .continuous)
+                .strokeBorder(PersonaTheme.glowPurple.opacity(0.18), lineWidth: 1)
         )
     }
 
@@ -174,37 +191,44 @@ struct EternalView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("LATEST INSIGHT")
                 .font(.caption2.weight(.bold))
+                .tracking(1.0)
                 .foregroundStyle(accent)
             Text(insight.title)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(PersonaTheme.mercurySilver)
+                .foregroundStyle(PersonaTheme.mercuryBright)
             if !insight.body.isEmpty {
                 Text(insight.body)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.8))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(.ultraThinMaterial.opacity(0.4), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(accent.opacity(0.24), lineWidth: 1)
+                .strokeBorder(PersonaTheme.radioactiveStroke(for: "eternal", intensity: 1.1), lineWidth: 1)
         )
     }
 
     private func observationCapture(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("OBSERVE")
+            Text("OBSERVE PATTERN")
                 .font(.caption2.weight(.bold))
+                .tracking(1.0)
                 .foregroundStyle(PersonaTheme.glowPurple)
             HStack(spacing: 10) {
                 TextField("Pattern, continuity note, long-horizon signal…", text: $observationDraft)
+                    .font(.subheadline)
                     .textFieldStyle(.plain)
                     .padding(12)
                     .background(
                         .ultraThinMaterial.opacity(0.38),
                         in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                            .strokeBorder(accent.opacity(0.3), lineWidth: 1)
                     )
                     .foregroundStyle(PersonaTheme.mercurySilver)
                 Button {
@@ -218,24 +242,30 @@ struct EternalView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(observationDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .opacity(observationDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1.0)
             }
         }
     }
 
-    private func observationsList(_ vm: EternalViewModel, radius: CGFloat) -> some View {
+    private func observationsList(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("SESSION OBSERVATIONS")
                 .font(.caption2.weight(.bold))
+                .tracking(1.0)
                 .foregroundStyle(.secondary)
             ForEach(Array(vm.observations.enumerated()), id: \.offset) { _, note in
                 Text(note)
-                    .font(.caption)
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9))
-                    .padding(10)
+                    .font(.subheadline)
+                    .foregroundStyle(PersonaTheme.mercuryBright)
+                    .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(
-                        .ultraThinMaterial.opacity(0.25),
+                        .ultraThinMaterial.opacity(0.3),
                         in: RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius * 0.5, style: .continuous)
+                            .strokeBorder(accent.opacity(0.2), lineWidth: 1)
                     )
             }
         }
@@ -243,16 +273,22 @@ struct EternalView: View {
 
     private func reflectiveAsk(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ASK THE ETERNAL")
+            Text("REFLECTIVE PROMPT")
                 .font(.caption2.weight(.bold))
+                .tracking(1.0)
                 .foregroundStyle(PersonaTheme.toxicGreen)
             TextField("Pattern, history, continuity, diagnose…", text: $askDraft, axis: .vertical)
                 .lineLimit(3...6)
+                .font(.subheadline)
                 .textFieldStyle(.plain)
                 .padding(12)
                 .background(
                     .ultraThinMaterial.opacity(0.38),
                     in: RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                        .strokeBorder(PersonaTheme.toxicGreen.opacity(0.35), lineWidth: 1)
                 )
                 .foregroundStyle(PersonaTheme.mercurySilver)
             Button {
@@ -273,34 +309,37 @@ struct EternalView: View {
                             .scaleEffect(0.8)
                     }
                     Text(isAsking ? "Observing…" : "Observe")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.bold))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(accent)
                 .foregroundStyle(PersonaTheme.voidBlack)
                 .clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
+                .shadow(color: accent.opacity(0.4), radius: 6)
             }
             .buttonStyle(.plain)
             .disabled(isAsking || askDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .opacity(isAsking || askDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.45 : 1.0)
         }
     }
 
     private func answerCard(_ answer: String, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("RESPONSE")
+            Text("ETERNAL RESPONSE")
                 .font(.caption2.weight(.bold))
+                .tracking(1.0)
                 .foregroundStyle(accent)
             Text(answer)
                 .font(.subheadline)
-                .foregroundStyle(PersonaTheme.mercurySilver)
+                .foregroundStyle(PersonaTheme.mercuryBright)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(.ultraThinMaterial.opacity(0.4), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .background(.ultraThinMaterial.opacity(0.45), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(accent.opacity(0.32), lineWidth: 1)
+                .strokeBorder(accent.opacity(0.35), lineWidth: 1)
         )
     }
 }

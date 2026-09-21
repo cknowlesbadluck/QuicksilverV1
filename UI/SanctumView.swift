@@ -68,9 +68,9 @@ struct SanctumView: View {
             )
 
             VStack(spacing: 0) {
-                presenceBar(vm, accent: accent, radius: radius)
+                presenceBar(vm, personaID: personaID, accent: accent, radius: radius)
                 sanctumScrollView(vm, personaID: personaID, accent: accent, radius: radius)
-                ritualBar(accent: accent)
+                ritualBar(personaID: personaID, accent: accent)
             }
         }
         .onAppear { vm.startLiveRefresh() }
@@ -107,10 +107,10 @@ private extension SanctumView {
 
                 personaIndicators(vm, accent: accent, radius: radius)
 
-                environmentalSignals(vm, radius: radius)
+                environmentalSignals(vm, personaID: personaID, accent: accent, radius: radius)
 
                 if let insight = vm.latestInsight {
-                    insightCard(insight, accent: accent, radius: radius)
+                    insightCard(insight, personaID: personaID, accent: accent, radius: radius)
                 }
 
                 Spacer(minLength: 64)
@@ -119,6 +119,7 @@ private extension SanctumView {
             .padding(.top, 8)
         }
     }
+
     // MARK: - Glyph mapping
 
     private func glyphStates(for vm: SanctumViewModel) -> [(GlyphKind, GlyphVisualState)] {
@@ -149,32 +150,45 @@ private extension SanctumView {
         }
     }
 
-    private func presenceBar(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
-        HStack {
+    private func presenceBar(_ vm: SanctumViewModel, personaID: String, accent: Color, radius: CGFloat) -> some View {
+        HStack(spacing: 10) {
             Circle()
                 .fill(accent)
                 .frame(width: 8, height: 8)
-                .shadow(color: accent.opacity(0.8), radius: 4)
+                .shadow(color: accent.opacity(0.85), radius: 5)
 
             Text(vm.activePersonaID.capitalized)
-                .font(.caption.weight(.semibold))
+                .font(.caption.weight(.bold))
+                .tracking(0.6)
                 .foregroundStyle(PersonaTheme.mercurySilver)
 
             Spacer()
 
             Text(vm.visualState.rawValue.uppercased())
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.5))
-                .padding(.trailing, 6)
+                .font(.system(size: 9, weight: .bold))
+                .tracking(0.8)
+                .foregroundStyle(accent.opacity(0.8))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule()
+                        .fill(accent.opacity(0.12))
+                )
 
             Text(vm.livingStatus)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.65))
                 .lineLimit(1)
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.35))
+        .padding(.vertical, 11)
+        .background(.ultraThinMaterial.opacity(0.45))
+        .overlay(
+            Rectangle()
+                .fill(accent.opacity(0.20))
+                .frame(height: 1),
+            alignment: .bottom
+        )
     }
 
     private func personaIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
@@ -208,15 +222,16 @@ private extension SanctumView {
             Circle()
                 .fill(isAwake ? accent : accent.opacity(0.25))
                 .frame(width: 6, height: 6)
+                .shadow(color: isAwake ? accent.opacity(0.6) : .clear, radius: 3)
             Text(name)
                 .font(.caption2.weight(isAwake ? .semibold : .regular))
                 .foregroundStyle(isAwake ? PersonaTheme.mercurySilver : .secondary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
         .background(
             RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(isAwake ? 0.55 : 0.25))
+                .fill(.ultraThinMaterial.opacity(isAwake ? 0.55 : 0.22))
         )
         .overlay(
             RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
@@ -224,39 +239,47 @@ private extension SanctumView {
         )
     }
 
-    private func environmentalSignals(_ vm: SanctumViewModel, radius: CGFloat) -> some View {
+    private func environmentalSignals(_ vm: SanctumViewModel, personaID: String, accent: Color, radius: CGFloat) -> some View {
         HStack(spacing: 10) {
-            signalPill(title: "Battery", value: vm.batteryLevelText)
-            signalPill(title: "Network", value: vm.networkStatus)
-            signalPill(title: "Thermal", value: vm.thermalState)
-            signalPill(title: "Health", value: "\(vm.overallHealthScore)")
+            signalPill(title: "Battery", value: vm.batteryLevelText, accent: accent, radius: radius)
+            signalPill(title: "Network", value: vm.networkStatus, accent: accent, radius: radius)
+            signalPill(title: "Thermal", value: vm.thermalState, accent: accent, radius: radius)
+            signalPill(title: "Health", value: "\(vm.overallHealthScore)", accent: PersonaTheme.healthColor(vm.overallHealthScore), radius: radius)
         }
     }
 
-    private func signalPill(title: String, value: String) -> some View {
-        VStack(spacing: 2) {
+    private func signalPill(title: String, value: String, accent: Color, radius: CGFloat) -> some View {
+        VStack(spacing: 3) {
             Text(title.uppercased())
                 .font(.system(size: 9, weight: .medium))
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.caption.weight(.medium))
+                .font(.caption.weight(.semibold))
                 .foregroundStyle(PersonaTheme.mercurySilver)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.35))
+            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                .fill(.ultraThinMaterial.opacity(0.38))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
+                .strokeBorder(PersonaTheme.borderColor(for: "quicksilver").opacity(0.20), lineWidth: 1)
         )
     }
 
-    private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
+    private func insightCard(_ insight: Insight, personaID: String, accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Insight")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(accent)
+            HStack {
+                Text("INSIGHT")
+                    .font(.caption2.weight(.bold))
+                    .tracking(1.0)
+                    .foregroundStyle(accent)
+                Spacer()
+            }
             Text(insight.title)
-                .font(.subheadline)
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(PersonaTheme.mercurySilver)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -267,44 +290,44 @@ private extension SanctumView {
         )
         .overlay(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
+                .strokeBorder(PersonaTheme.radioactiveStroke(for: personaID, intensity: 1.2), lineWidth: 1)
         )
     }
 
-    private func ritualBar(accent: Color) -> some View {
+    private func ritualBar(personaID: String, accent: Color) -> some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(accent.opacity(0.2))
+                .fill(accent.opacity(0.22))
                 .frame(height: 1)
 
             HStack {
-                ritualButton(systemImage: "bubble.left.and.bubble.right", label: "Invoke") {
+                ritualButton(systemImage: "bubble.left.and.bubble.right", label: "Invoke", accent: accent) {
                     showAsk = true
                 }
                 Spacer()
-                ritualButton(systemImage: "brain.head.profile", label: "Memory") {
+                ritualButton(systemImage: "brain.head.profile", label: "Memory", accent: accent) {
                     showMemory = true
                 }
                 Spacer()
-                ritualButton(systemImage: "scroll", label: "Codex") {
+                ritualButton(systemImage: "scroll", label: "Codex", accent: accent) {
                     showCodex = true
                 }
             }
-            .padding(.horizontal, 28)
+            .padding(.horizontal, 32)
             .padding(.vertical, 14)
-            .background(.ultraThinMaterial.opacity(0.5))
+            .background(.ultraThinMaterial.opacity(0.55))
         }
     }
 
-    private func ritualButton(systemImage: String, label: String, action: @escaping () -> Void) -> some View {
+    private func ritualButton(systemImage: String, label: String, accent: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 Image(systemName: systemImage)
                     .font(.title3)
                 Text(label)
-                    .font(.caption2)
+                    .font(.caption2.weight(.medium))
             }
-            .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.9))
+            .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.92))
         }
         .buttonStyle(.plain)
     }
