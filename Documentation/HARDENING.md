@@ -1,12 +1,12 @@
 # Quicksilver Hardening Report & Roadmap
 
-**Last updated:** 2026-08-16 (Fixed Sentry module link: `SentrySPM` only exposes the internal ObjC target, not the importable `Sentry` module — now links the `Sentry` product)
+**Last updated:** 2026-09-19 (Full hygiene pass: Logger privacy default `.private`, primary validation device → iPhone 16e, AppConfiguration version aligned to 0.2.0 build 7)
 
 ## Device / OS policy
 
 | Layer | Value | Reason |
 |-------|-------|--------|
-| Primary validation device | iPhone 14 / **iOS 27** | User device |
+| Primary validation device | **iPhone 16e** / **iOS 27** | Owner device (updated 2026-09-19) |
 | `IPHONEOS_DEPLOYMENT_TARGET` | **18.0** | CI runners (Xcode 16) only ship iOS 18 SDK |
 | `AppConfiguration.minimumOSVersion` | 18.0 | Matches build floor |
 | `AppConfiguration.primaryDeviceOSVersion` | 27.0 | Honest about where we test |
@@ -19,7 +19,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 |-------|-------|
 | Version | **0.2.0 (build 7)** |
 | Branch | `main` |
-| Sentry | Fully integrated — official `getsentry/sentry-cocoa` 9.25.0 via the **`Sentry`** product (`SentrySPM` was wrong — it only maps to the internal `SentryObjCInternal` target and doesn't expose `import Sentry`), DSN + refined privacy-conscious options, automatic dSYM upload on Archive when `SENTRY_AUTH_TOKEN` is set |
+| Sentry | Fully integrated — official `getsentry/sentry-cocoa` 9.25.0 via the **`Sentry`** product, DSN + refined privacy-conscious options, automatic dSYM upload on Archive when `SENTRY_AUTH_TOKEN` is set |
 | Path | Actions → Archive IPA → Quicksilver-unsigned-IPA |
 
 ## Completed Hardening + Recent Work
@@ -27,7 +27,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 ### P0 — Correctness & Safety
 - BatteryMonitor / NetworkMonitor / StorageMonitor / DeviceMetricsMonitor: main-queue delivery, token-based observers, explicit lifecycle
 - GrokAIProvider: Task cancellation, 45 s timeout, no secret leakage in errors
-- LoggerService: redaction helper for API keys / long tokens
+- **LoggerService + QuicksilverLogger**: default privacy `.private`; improved `redact` covers token/secret/Bearer; explicit `isPrivate` opt-out only when intentional
 - **PrivacyInfo.xcprivacy** present and embedded
 - DependencyContainer: structured persona switch with error logging
 
@@ -36,7 +36,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - PromptManager loads external prompts with embedded fallback
 - MemoryManager: `clearAll()` + `exportJSON()`
 - InsightEngine: personaID is an optional traceability tag only; generation is persona-agnostic
-- AppConfiguration documents both build floor (18) and primary device (27)
+- AppConfiguration documents both build floor (18) and primary device (27); version/build aligned to shipped 0.2.0 (7)
 
 ### P2 — Experience
 - **PersonaTheme**: accent colors, density, card radius, bubble style per persona
@@ -44,12 +44,12 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - **ForgeView** + **EternalView** present on main as functional realms
 - Sanctum as primary place with RealmGateway transitions
 
-### CI / SideStore / Observability (2026-08-10)
+### CI / SideStore / Observability
 - CI upgraded: `maxim-lobanov/setup-xcode`, strict SwiftLint job, improved SPM + DerivedData caching
 - Archive IPA: unsigned SideStore path + optional signed path + **automatic Sentry dSYM upload**
 - Structure job enforces modular layout + Core contracts + PrivacyInfo
 - Version / build banner + persona prompt verification in Archive
-- **Sentry dependency corrected**: removed broken `sentry-swift` reference; now uses official `sentry-cocoa`. project.yml links the **`Sentry`** product (not `SentrySPM` — that product's target list is `["SentryObjCInternal"]` only and doesn't provide the `Sentry` module `import Sentry` needs)
+- Sentry dependency corrected to official product
 
 ### Architecture invariants preserved
 - Sense → Think → Express
@@ -69,11 +69,11 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 ### Milestone 4 — AI Integration → Largely done
 ### Milestone 5 — Polished UI / Personality → Slice A landed + Forge/Eternal realms on main
 ### Milestone 6 — SideStore production hardening → Done (plus Sentry)
-### Living Realms v1 → In progress (GitHub #57 + Linear CHR-10 / CHR-11 / CHR-12)
+### Living Realms v1 → In progress (GitHub #57)
 
 Remaining focus:
 - Finish functional depth of Forge + Eternal (actions, visualization, quality)
-- Accessibility / Dynamic Type / Reduce Motion pass (CHR-12)
+- Accessibility / Dynamic Type / Reduce Motion pass
 - Branch hygiene (many historical forge/sprint branches still present)
 - First formal GitHub Release once quality gate is satisfied
 
@@ -83,19 +83,18 @@ Remaining focus:
 
 Keep:
 - `main`
-- `sprint/living-realms-v1` (active product work)
+- active living-realms / hygiene branches only while open
 
 Safe to close / delete after confirming no unique unmerged value:
 - Older `forge/p1-*` branches
 - `day-one-foundation`, `core-intelligence-layer*`, `stabilization-pass`, `audit-fixes-and-sidestore-deployment`
 - Stale Dependabot branches once their PRs are merged or closed
-- `feature/release-workflow` (reconcile any useful bits then retire)
 
 The existing `prune-branches.yml` will automatically delete *merged* remote branches.
 
 ---
 
-## Device Validation Checklist (iPhone 14 / iOS 27)
+## Device Validation Checklist (iPhone 16e / iOS 27)
 
 1. Trigger **Actions → Archive IPA → Run workflow** (Release)
 2. Download **Quicksilver-unsigned-IPA** artifact
@@ -109,5 +108,6 @@ The existing `prune-branches.yml` will automatically delete *merged* remote bran
 10. Background 5–10 min → no excessive drain
 11. Force-quit + relaunch → state intact
 12. Confirm PrivacyInfo.xcprivacy present inside the installed app
+13. Confirm no sensitive data (keys, tokens, memory contents) appears in Console / sysdiagnose under default logging
 
-No private APIs. Keychain for secrets only. Sentry active when configured.
+No private APIs. Keychain for secrets only. Sentry active when configured. Logger defaults to private.

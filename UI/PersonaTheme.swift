@@ -8,20 +8,17 @@ enum PersonaTheme {
 
     // MARK: - Core Palette (Radioactive Mercury Identity)
 
-    /// Near-absolute void — primary background.
-    static let voidBlack = Color(red: 0.020, green: 0.020, blue: 0.039)   // #05050A
+    static let voidBlack = Color(red: 0.020, green: 0.020, blue: 0.039)
+    static let glowPurple = Color(red: 0.545, green: 0.239, blue: 1.000)
+    static let toxicGreen = Color(red: 0.220, green: 0.949, blue: 0.353)
+    static let hazardGreen = Color(red: 0.086, green: 0.639, blue: 0.290)
+    static let mercurySilver = Color(red: 0.784, green: 0.800, blue: 0.831)
 
-    /// High-energy purple glow — primary accent / pulse.
-    static let glowPurple = Color(red: 0.545, green: 0.239, blue: 1.000)  // #8B3DFF
-
-    /// Toxic / radioactive green — success, health, live signals.
-    static let toxicGreen = Color(red: 0.220, green: 0.949, blue: 0.353)  // #38F25A
-
-    /// Hazard / secondary green — warnings, secondary emphasis.
-    static let hazardGreen = Color(red: 0.086, green: 0.639, blue: 0.290) // #16A34A
-
-    /// Cool metallic silver — text, structure, mercury sheen.
-    static let mercurySilver = Color(red: 0.784, green: 0.800, blue: 0.831) // #C8CCD4
+    // Controlled-chaos material language.
+    static let chaosBlack = Color(red: 0.006, green: 0.008, blue: 0.012)
+    static let mercuryBright = Color(red: 0.940, green: 0.965, blue: 1.000)
+    static let mercuryShadow = Color(red: 0.180, green: 0.205, blue: 0.235)
+    static let mercuryBlue = Color(red: 0.380, green: 0.560, blue: 0.720)
 
     // Legacy aliases so existing call-sites compile while migrating.
     static let cosmicBlack = voidBlack
@@ -30,18 +27,28 @@ enum PersonaTheme {
     static let subtleGold = hazardGreen
     static let liquidMetal = mercurySilver.opacity(0.72)
 
-    // MARK: - Persona Accents (still used for identity shifts)
+    // MARK: - Controlled Chaos Geometry
+
+    /// One shared visual grammar: irregular enough to feel alive, bounded enough to feel intentional.
+    static let chaosSeedCount = 13
+    static let chaosFieldOpacity = 0.18
+    static let chaosTraceOpacity = 0.26
+    static let chaosTraceLineWidth: CGFloat = 0.7
+    static let chaosCoreRadius: CGFloat = 1.0
+    static let chaosCoreBloom: CGFloat = 2.25
+    static let chaosOrbitalRadius: CGFloat = 0.72
+    static let chaosParticleRadius: CGFloat = 0.022
+    static let chaosSurfaceOpacity = 0.72
+    static let chaosGlassOpacity = 0.10
+
+    // MARK: - Persona Accents
 
     static func accent(for personaID: String) -> Color {
         switch personaID.lowercased() {
-        case "forge":
-            return toxicGreen
-        case "eternal":
-            return glowPurple
-        case "quicksilver":
-            return mercurySilver
-        default:
-            return toxicGreen
+        case "forge": return toxicGreen
+        case "eternal": return glowPurple
+        case "quicksilver": return mercurySilver
+        default: return toxicGreen
         }
     }
 
@@ -53,7 +60,6 @@ enum PersonaTheme {
         }
     }
 
-    /// Ambient particle / sheen intensity derived from persona (0...1).
     static func ambientIntensity(for personaID: String) -> Double {
         switch personaID.lowercased() {
         case "forge": return 0.82
@@ -92,25 +98,19 @@ enum PersonaTheme {
 
     static func assistantBubbleStyle(for personaID: String) -> (opacity: Double, weight: Font.Weight) {
         switch personaID.lowercased() {
-        case "forge":
-            return (0.12, .medium)
-        case "eternal":
-            return (0.09, .regular)
-        default:
-            return (0.13, .regular)
+        case "forge": return (0.12, .medium)
+        case "eternal": return (0.09, .regular)
+        default: return (0.13, .regular)
         }
     }
 
-    // MARK: - Motion Curves (meaningful animation)
+    // MARK: - Motion Curves
 
     static func spring(for personaID: String) -> Animation {
         switch personaID.lowercased() {
-        case "forge":
-            return .spring(response: 0.30, dampingFraction: 0.84)
-        case "eternal":
-            return .spring(response: 0.55, dampingFraction: 0.78)
-        default:
-            return .spring(response: 0.40, dampingFraction: 0.76)
+        case "forge": return .spring(response: 0.30, dampingFraction: 0.84)
+        case "eternal": return .spring(response: 0.55, dampingFraction: 0.78)
+        default: return .spring(response: 0.40, dampingFraction: 0.76)
         }
     }
 
@@ -119,9 +119,7 @@ enum PersonaTheme {
 
     // MARK: - Materials & Borders
 
-    static func cardBackground(for personaID: String) -> some ShapeStyle {
-        .ultraThinMaterial
-    }
+    static func cardBackground(for personaID: String) -> some ShapeStyle { .ultraThinMaterial }
 
     static func borderColor(for personaID: String) -> Color {
         accent(for: personaID).opacity(0.40)
