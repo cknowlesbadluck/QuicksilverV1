@@ -51,13 +51,13 @@ private struct IntelligenceSettingsSection: View {
                 value: viewModel.hasGeminiKey ? "Configured" : "Not configured"
             )
             LabeledContent("Routing", value: "Automatic")
-            LabeledContent("Billing", value: "Account free tier")
+            LabeledContent("Billing", value: "Account controlled")
         } header: {
             Text("Intelligence")
         } footer: {
             Text(
                 "Grok is Quicksilver's conversational default. Gemini is the automatic fallback. "
-                + "Keys remain on this device in the Keychain."
+                + "Keys remain on this device in the Keychain. Provider pricing and quotas are controlled by the account."
             )
         }
     }
