@@ -10,7 +10,7 @@ struct GrokAIProvider: AIProvider {
     private let model: String
     private let session: URLSession
 
-    init(apiKey: String, model: String = "grok-3", baseURL: URL? = nil, session: URLSession = .shared) throws {
+    init(apiKey: String, model: String = "grok-4.6", baseURL: URL? = nil, session: URLSession = .shared) throws {
         guard !apiKey.isEmpty else { throw AppError.apiKeyMissing }
 
         let resolved: URL
