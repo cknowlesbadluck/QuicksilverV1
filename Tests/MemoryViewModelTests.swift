@@ -9,7 +9,7 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testLoadInitialStateAndLoadingLifecycle() async {
         let store = InMemoryMemoryStore()
-        let container = DependencyContainer(memoryStore: store)
+        let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
 
         XCTAssertFalse(viewModel.isLoading)
@@ -28,7 +28,7 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testLoadItemsMatchingQueryAndSorting() async {
         let store = InMemoryMemoryStore()
-        let container = DependencyContainer(memoryStore: store)
+        let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
 
         let now = Date()
@@ -77,7 +77,7 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testLoadWithPersonaScopingPolicy() async throws {
         let store = InMemoryMemoryStore()
-        let container = DependencyContainer(memoryStore: store)
+        let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
 
         await container.memoryManager.set(
@@ -110,7 +110,7 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testAddQuickNoteTriggersLoadAndUpdatesItems() async {
         let store = InMemoryMemoryStore()
-        let container = DependencyContainer(memoryStore: store)
+        let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
 
         await viewModel.addQuickNote("   ") // Whitespace should be ignored
@@ -123,7 +123,7 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testDeleteMemoryItemTriggersLoadAndStatusMessage() async {
         let store = InMemoryMemoryStore()
-        let container = DependencyContainer(memoryStore: store)
+        let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
 
         await viewModel.addQuickNote("Temp Note to Delete")
@@ -141,7 +141,7 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testClearAllMemoriesTriggersLoadAndStatusMessage() async {
         let store = InMemoryMemoryStore()
-        let container = DependencyContainer(memoryStore: store)
+        let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
 
         await viewModel.addQuickNote("Note 1")
@@ -155,7 +155,7 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testPrepareExportSetsJSONAndStatusMessage() async {
         let store = InMemoryMemoryStore()
-        let container = DependencyContainer(memoryStore: store)
+        let container = DependencyContainer(memoryStore: store, startNexus: false)
         let viewModel = MemoryViewModel(container: container)
 
         await viewModel.addQuickNote("Note for export")

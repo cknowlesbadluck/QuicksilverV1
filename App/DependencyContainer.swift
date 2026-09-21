@@ -28,7 +28,8 @@ final class DependencyContainer {
     init(
         environment: AppEnvironment = .current,
         configuration: AppConfiguration = .shared,
-        memoryStore: MemoryStore? = nil
+        memoryStore: MemoryStore? = nil,
+        startNexus: Bool = true
     ) {
         self.environment = environment
         self.configuration = configuration
@@ -79,7 +80,9 @@ final class DependencyContainer {
         )
 
         nexus.updatePersonaContext(personaManager.activeConfiguration.id)
-        nexus.start()
+        if startNexus {
+            nexus.start()
+        }
 
         // SideStore first-run: warm memory so Ask / Intents / Home don't wait
         // for MemoryView to open. Failures are logged inside MemoryManager.
