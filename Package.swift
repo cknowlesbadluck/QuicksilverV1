@@ -8,7 +8,7 @@ let package = Package(
         .macOS(.v15)
     ],
     products: [
-        .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]),
+        .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "UI"]),
         .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
     ],
     dependencies: [
@@ -35,9 +35,14 @@ let package = Package(
             dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
             path: "Intents"
         ),
+        .target(
+            name: "UI",
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"],
+            path: "UI"
+        ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "UI"],
             path: "Tests"
         ),
     ]

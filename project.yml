@@ -106,6 +106,23 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGNING_ALLOWED: NO
 
+  UI:
+    type: framework
+    platform: iOS
+    sources:
+      - path: UI
+    dependencies:
+      - target: Core
+      - target: Memory
+      - target: Personas
+      - target: ServicesAI
+      - target: Nexus
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.ui
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+
   # ---- App ----
 
   Quicksilver:
@@ -113,7 +130,6 @@ targets:
     platform: iOS
     sources:
       - path: App
-      - path: UI
       - path: Models
         optional: true
     resources:
@@ -126,6 +142,7 @@ targets:
       - target: ServicesAI
       - target: Nexus
       - target: QuicksilverIntents
+      - target: UI
       - package: Sentry
         product: Sentry
     settings:
@@ -161,6 +178,7 @@ targets:
       - target: ServicesAI
       - target: Nexus
       - target: QuicksilverIntents
+      - target: UI
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
@@ -175,6 +193,7 @@ schemes:
         ServicesAI: all
         Nexus: all
         QuicksilverIntents: all
+        UI: all
         Quicksilver: all
         QuicksilverTests: [test]
     test:

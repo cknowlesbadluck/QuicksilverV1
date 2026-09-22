@@ -1,5 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
 import UIKit
+#endif
 import Core
 import Personas
 import Nexus
@@ -70,9 +72,11 @@ struct ContentView: View {
         .onDisappear {
             vm.stopLiveRefresh()
         }
+        #if canImport(UIKit)
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
             vm.refresh()
         }
+        #endif
         .animation(PersonaTheme.spring(for: personaID), value: personaID)
     }
 
