@@ -44,20 +44,6 @@ struct CodexView: View {
             }
 
             Section {
-                Toggle("Autonomous Aspect Shifts", isOn: Binding(
-                    get: { vm.personaAutonomyEnabled },
-                    set: { vm.setPersonaAutonomy($0) }
-                ))
-                if let reason = vm.lastSwitchReason {
-                    LabeledContent("Last shift", value: reason)
-                }
-            } header: {
-                Text("Identity")
-            } footer: {
-                Text("Aspect surfacing is contextual and automatic. Provider selection remains independent of Quicksilver, Forge, and Eternal.")
-            }
-
-            Section {
                 LabeledContent("Grok", value: vm.hasGrokKey ? "Bound — Keychain" : "Unbound")
                 LabeledContent("Gemini", value: vm.hasGeminiKey ? "Bound — Keychain" : "Unbound")
                 LabeledContent("Routing", value: "Grok primary / Gemini fallback")
