@@ -2,9 +2,11 @@ import SwiftUI
 import Core
 import Nexus
 
+/// Diagnostics — the only first-class surface for explicit aspect override.
 struct DiagnosticsView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: DiagnosticsViewModel?
+    @State private var isSwitching = false
 
     var body: some View {
         Group {
@@ -27,9 +29,10 @@ struct DiagnosticsView: View {
 
     @ViewBuilder
     private func content(_ vm: DiagnosticsViewModel) -> some View {
-        let personaID = container.activeConfiguration.id
+        let personaID = container.brain.activeAspect.rawValue
 
         List {
+            aspectOverrideSection
             statusSection(vm)
             insightsSection(vm, personaID: personaID)
             signalsSection(vm)
@@ -37,6 +40,50 @@ struct DiagnosticsView: View {
         .onAppear {
             vm.refresh()
             vm.startLiveRefresh()
+        }
+    }
+
+    @ViewBuilder
+    private var aspectOverrideSection: some View {
+        Section {
+            HStack {
+                Text("Active")
+                Spacer()
+                Text(container.brain.activeAspect.diagnosticLabel)
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Text("Visual")
+                Spacer()
+                Text(container.brain.visualState.rawValue)
+                    .foregroundStyle(.secondary)
+            }
+
+            ForEach(Aspect.allCases) { aspect in
+                Button {
+                    guard !isSwitching else { return }
+                    isSwitching = true
+                    Task {
+                        try? await container.brain.switchAspect(to: aspect)
+                        isSwitching = false
+                        viewModel?.refresh()
+                    }
+                } label: {
+                    HStack {
+                        Text(aspect.diagnosticLabel)
+                        Spacer()
+                        if container.brain.activeAspect == aspect {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(PersonaTheme.accent(for: aspect.rawValue))
+                        }
+                    }
+                }
+                .disabled(isSwitching || container.brain.activeAspect == aspect)
+            }
+        } header: {
+            Text("Aspect override")
+        } footer: {
+            Text("Brain selects aspect from intent. This is the only explicit override surface.")
         }
     }
 

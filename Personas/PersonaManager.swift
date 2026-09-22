@@ -2,13 +2,11 @@ import Foundation
 import Observation
 import Core
 
-/// Owns persona lifecycle and switching.
-/// Conforms to Core.PersonaEngine so other modules depend only on the contract.
+/// Owns persona configuration storage and explicit switches.
+/// Aspect selection belongs to MercuryBrain. This manager is a projection target.
 ///
-/// EventBus subscription is app-lifetime by design: both PersonaManager and EventBus
-/// live for the process duration (wired from DependencyContainer). Unsubscribe is
-/// intentionally omitted; if this manager is ever scoped shorter, call
-/// `eventBus.unsubscribe(subscriptionID)` in a teardown path.
+/// Autonomous PersonaDecisionPolicy is disabled by default (`personaAutonomy` flag).
+/// When enabled for experiments, it may still react to environment — prefer leaving it off.
 @MainActor
 @Observable
 public final class PersonaManager: PersonaEngine {
@@ -74,26 +72,32 @@ public final class PersonaManager: PersonaEngine {
         MemoryPolicy.policy(for: activePersonaID)
     }
 
-    /// Most recent switch reason, if any (e.g. "explicit override", "autonomous (battery pressure)").
     public var lastSwitchReason: String? {
         state.lastSwitchReason
     }
 
     public func switchTo(id: String) async throws {
+        try await switchTo(id: id, reason: "explicit override")
+    }
+
+    /// Preferred entry for Brain aspect projection and diagnostics.
+    public func switchTo(id: String, reason: String) async throws {
         guard let config = available.first(where: { $0.id == id }) else {
             throw AppError.personaUnavailable(id)
         }
-        try await performSwitch(to: config, reason: "explicit override")
+        try await performSwitch(to: config, reason: reason)
     }
 
     public func switchTo(_ config: PersonaConfiguration) async throws {
-        try await switchTo(id: config.id)
+        try await switchTo(id: config.id, reason: "explicit override")
     }
 
     public func recordInteraction() {
         state.recordInteraction()
     }
 
+    /// Stores context for optional experimental autonomy only.
+    /// Does not select aspect when personaAutonomy is off (default).
     public func updateTaskContext(
         description: String? = nil,
         kind: TaskKind? = nil,
@@ -128,7 +132,7 @@ public final class PersonaManager: PersonaEngine {
     }
 
     private var isAutonomyEnabled: Bool {
-        featureFlags?.isEnabled("personaAutonomy") ?? true
+        featureFlags?.isEnabled("personaAutonomy") ?? false
     }
 
     private func evaluateAutonomy(reason: String) {

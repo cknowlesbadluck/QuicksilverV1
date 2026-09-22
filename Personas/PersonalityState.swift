@@ -1,7 +1,8 @@
 import Foundation
+import Core
 
 /// Runtime behavioral dimensions that shape Mercury's expression.
-/// These are not static traits — they fluctuate with context, interaction, and persona bias.
+/// These are not static traits — they fluctuate with context, interaction, and aspect bias.
 /// Personality is a system, not just prompt text.
 ///
 /// Phase II posture: intellectually formidable, truth over agreement,
@@ -22,7 +23,7 @@ public struct PersonalityState: Sendable, Equatable {
 
     public init() {}
 
-    // MARK: - Persona Bias
+    // MARK: - Persona / Aspect Bias
 
     public mutating func applyPersonaBias(personaID: String) {
         switch personaID.lowercased() {
@@ -61,6 +62,25 @@ public struct PersonalityState: Sendable, Equatable {
         }
     }
 
+    /// Aspect-native adjustment (preferred path).
+    public mutating func adjustForAspect(_ aspect: Aspect) {
+        switch aspect {
+        case .forge:
+            increase(.focus, by: 0.10)
+            increase(.skepticism, by: 0.07)
+            decrease(.mischief, by: 0.08)
+            decrease(.humor, by: 0.05)
+        case .eternal:
+            increase(.patience, by: 0.08)
+            increase(.loyalty, by: 0.04)
+            decrease(.mischief, by: 0.06)
+        case .quicksilver:
+            increase(.curiosity, by: 0.06)
+            increase(.initiative, by: 0.04)
+            increase(.humor, by: 0.03)
+        }
+    }
+
     // MARK: - Dynamic Adjustment
 
     public mutating func increase(_ dimension: Dimension, by amount: Double = 0.05) {
@@ -91,6 +111,7 @@ public struct PersonalityState: Sendable, Equatable {
         increase(.initiative, by: 0.02)
     }
 
+    /// Legacy path retained for callers that still supply QueryIntent/TaskKind.
     public mutating func adjustFor(intent: QueryIntent, kind: TaskKind) {
         switch intent {
         case .preciseTechnical:
@@ -137,8 +158,6 @@ public struct PersonalityState: Sendable, Equatable {
 
     // MARK: - Expression Helpers
 
-    /// Compact bias string injected into system prompts.
-    /// Phase II: sharper intellectual posture.
     public func promptBias() -> String {
         var parts: [String] = []
 
@@ -171,8 +190,6 @@ public struct PersonalityState: Sendable, Equatable {
     }
 
     public func colorResponse(_ text: String, personaID: String) -> String {
-        // Personality lives primarily in the model + bias injection.
-        // Keep post-processing minimal to avoid brittle string hacks.
         return text
     }
 

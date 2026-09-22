@@ -21,9 +21,11 @@ public final class FeatureFlags {
         }
     }
 
+    /// Defaults: Brain owns aspect selection. PersonaManager autonomy is off.
+    /// Explicit diagnostics override remains available via switchTo.
     private static let defaultFlags: [String: Bool] = [
         "personaSwitching": true,
-        "personaAutonomy": true,
+        "personaAutonomy": false,
         "memoryPersistence": true,
         "aiServiceEnabled": false,
         "nexusDetailedMetrics": false,
