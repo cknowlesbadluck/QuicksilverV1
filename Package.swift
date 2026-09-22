@@ -8,8 +8,8 @@ let package = Package(
         .macOS(.v15)
     ],
     products: [
-        .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "AppUI"]),
-        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
+        .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "App", "UI"]),
+        .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"])
     ],
     dependencies: [
         // Official Sentry Cocoa SDK (compile-from-source product recommended)
@@ -36,15 +36,20 @@ let package = Package(
             path: "Intents"
         ),
         .target(
-            name: "AppUI",
+            name: "App",
             dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
-            path: "UI_App_Combined",
-            sources: ["../App", "../UI"]
+            path: "App",
+            exclude: ["QuicksilverApp.swift"]
+        ),
+        .target(
+            name: "UI",
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "App"],
+            path: "UI"
         ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "AppUI"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "App", "UI"],
             path: "Tests"
-        ),
+        )
     ]
 )

@@ -1,7 +1,8 @@
 import XCTest
 @testable import Core
 @testable import Personas
-@testable import AppUI
+@testable import App
+@testable import UI
 
 @MainActor
 final class HomeViewModelTests: XCTestCase {
