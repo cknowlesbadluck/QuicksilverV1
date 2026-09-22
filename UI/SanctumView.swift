@@ -10,6 +10,7 @@ struct SanctumView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: SanctumViewModel?
     @State private var destination: SpatialDestination?
+    @State private var showAsk = false
 
     var body: some View {
         Group {
@@ -19,7 +20,7 @@ struct SanctumView: View {
                     activeAspect: viewModel.activeAspect,
                     livingStatus: viewModel.livingStatus,
                     onDestination: { destination = $0 },
-                    onInvoke: { destination = nil }
+                    onInvoke: { showAsk = true }
                 )
             } else {
                 PersonaTheme.voidBlack
@@ -35,6 +36,10 @@ struct SanctumView: View {
         }
         .onDisappear {
             viewModel?.stopLiveRefresh()
+        }
+        .sheet(isPresented: $showAsk) {
+            NavigationStack { AskView() }
+                .preferredColorScheme(.dark)
         }
         .fullScreenCover(item: $destination) { destination in
             destinationView(destination)
