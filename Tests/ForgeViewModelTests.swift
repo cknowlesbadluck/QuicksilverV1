@@ -2,7 +2,6 @@ import XCTest
 @testable import Core
 @testable import Personas
 @testable import Nexus
-@testable import Quicksilver
 
 @MainActor
 final class ForgeViewModelTests: XCTestCase {
@@ -35,7 +34,6 @@ final class ForgeViewModelTests: XCTestCase {
         viewModel.startLiveRefresh(interval: .milliseconds(50))
         try await Task.sleep(for: .milliseconds(120))
         viewModel.stopLiveRefresh()
-        // Ensure no crash or memory leak on stop
         XCTAssertNotNil(viewModel)
     }
 
@@ -48,15 +46,14 @@ final class ForgeViewModelTests: XCTestCase {
     }
 
     func testCaptureNoteTrimmingAndCapping() async {
-        await viewModel.captureNote("
- ")
+        await viewModel.captureNote("   \n ")
         XCTAssertTrue(viewModel.sessionNotes.isEmpty)
 
         await viewModel.captureNote("First Note")
         XCTAssertEqual(viewModel.sessionNotes, ["First Note"])
 
-        for i in 2...15 {
-            await viewModel.captureNote("Note \(i)")
+        for index in 2...15 {
+            await viewModel.captureNote("Note \(index)")
         }
 
         XCTAssertEqual(viewModel.sessionNotes.count, 12)
