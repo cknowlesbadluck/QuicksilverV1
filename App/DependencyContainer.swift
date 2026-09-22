@@ -43,8 +43,8 @@ final class DependencyContainer {
             memoryStore = swiftDataStore
             logger.info("Memory backend: SwiftData", category: logger.memory)
         } else {
-            memoryStore = UserDefaultsMemoryStore()
-            logger.info("Memory backend: UserDefaults (SwiftData unavailable)", category: logger.memory)
+            memoryStore = KeychainMemoryStore()
+            logger.info("Memory backend: Keychain (SwiftData unavailable)", category: logger.memory)
         }
         self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
 
