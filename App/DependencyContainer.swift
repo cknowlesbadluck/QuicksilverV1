@@ -25,6 +25,10 @@ final class DependencyContainer {
     /// for complex reasoning instead of reaching into individual services.
     let brain: MercuryBrain
 
+    /// Owned bootstrap / warm tasks (cancellable if container is ever torn down).
+    private var memoryWarmTask: Task<Void, Never>?
+    private var switchTask: Task<Void, Never>?
+
     init(environment: AppEnvironment = .current, configuration: AppConfiguration = .shared) {
         self.environment = environment
         self.configuration = configuration
@@ -52,7 +56,6 @@ final class DependencyContainer {
 
         self.nexus = NexusCoordinator(logger: logger, eventBus: eventBus)
 
-        // Mercury Brain sits above the individual services
         self.brain = MercuryBrain(
             personaManager: personaManager,
             memoryManager: memoryManager,
@@ -71,12 +74,13 @@ final class DependencyContainer {
             logger: logger
         )
 
+        // Structured startup: subscribe before nexus starts publishing.
+        personaManager.bootstrap()
+
         nexus.updatePersonaContext(personaManager.activeConfiguration.id)
         nexus.start()
 
-        // SideStore first-run: warm memory so Ask / Intents / Home don't wait
-        // for MemoryView to open. Failures are logged inside MemoryManager.
-        Task { await memoryManager.load() }
+        memoryWarmTask = Task { await memoryManager.load() }
 
         logger.info("DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)", category: logger.general)
     }
@@ -86,7 +90,8 @@ final class DependencyContainer {
     }
 
     func switchPersona(to id: String) {
-        Task { @MainActor in
+        switchTask?.cancel()
+        switchTask = Task {
             do {
                 try await brain.switchPersona(to: id)
             } catch {
