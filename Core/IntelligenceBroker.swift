@@ -48,11 +48,8 @@ public struct IntelligenceBroker: Sendable {
             return .degrade(tighter, reason: "context exceeds budget; output clamped")
         }
 
-        // Background plans never allow external calls.
-        if !plan.allowExternalCalls && request.intent.kind == .inquire {
-            return .deny(reason: "external calls disabled for this plan")
-        }
-
+        // allowExternalCalls governs tools/capabilities, not whether a conversational turn may execute.
+        // Provider access is enforced by AIService.
         // Elevated aspect prefers elevated budget when caller sent interactive default.
         if request.aspect == .forge && plan.priority == .normal {
             return .allow(.elevated)
