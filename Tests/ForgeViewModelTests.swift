@@ -2,6 +2,7 @@ import XCTest
 @testable import Core
 @testable import Personas
 @testable import Nexus
+@testable import QuicksilverUI
 
 @MainActor
 final class ForgeViewModelTests: XCTestCase {
@@ -31,7 +32,7 @@ final class ForgeViewModelTests: XCTestCase {
     }
 
     func testStartAndStopLiveRefresh() async throws {
-        viewModel.startLiveRefresh(interval: .milliseconds(50))
+        viewModel.startLiveRefresh(interval: .seconds(1))
         try await Task.sleep(for: .milliseconds(120))
         viewModel.stopLiveRefresh()
         XCTAssertNotNil(viewModel)

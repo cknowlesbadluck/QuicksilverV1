@@ -10,6 +10,7 @@ let package = Package(
     products: [
         .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]),
         .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"]),
+        .library(name: "QuicksilverUI", targets: ["QuicksilverUI"]),
     ],
     dependencies: [
         // Official Sentry Cocoa SDK (compile-from-source product recommended)
@@ -35,9 +36,20 @@ let package = Package(
             dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI"],
             path: "Intents"
         ),
+        .target(
+            name: "QuicksilverUI",
+            dependencies: ["Core", "Personas", "Nexus", "Memory", "ServicesAI", "QuicksilverIntents"],
+            path: ".",
+            sources: [
+                "App/CapabilitySurface.swift",
+                "App/DependencyContainer.swift",
+                "App/MercuryBrain.swift",
+                "UI"
+            ]
+        ),
         .testTarget(
             name: "QuicksilverCoreTests",
-            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
+            dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents", "QuicksilverUI"],
             path: "Tests"
         ),
     ]
