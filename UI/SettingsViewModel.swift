@@ -13,7 +13,7 @@ final class SettingsViewModel {
     private(set) var providerName: String = ""
     private(set) var fallbackProviderName: String?
     private(set) var aiEnabled: Bool = false
-    private(set) var personaAutonomyEnabled: Bool = true
+    private(set) var personaAutonomyEnabled: Bool = false
     private(set) var lastSwitchReason: String?
     private(set) var statusMessage: String?
     private(set) var statusIsError: Bool = false
@@ -31,7 +31,7 @@ final class SettingsViewModel {
         providerName = container.aiService.currentProviderName
         fallbackProviderName = container.aiService.fallbackProviderName
         aiEnabled = container.featureFlags.isEnabled("aiServiceEnabled")
-        personaAutonomyEnabled = container.featureFlags.isEnabled("personaAutonomy")
+        personaAutonomyEnabled = false
         lastSwitchReason = container.personaManager.lastSwitchReason
     }
     
@@ -103,10 +103,10 @@ final class SettingsViewModel {
         statusIsError = false
     }
     
+    /// Compatibility shim for older callers. Aspect autonomy is Brain-owned and cannot be toggled here.
     func setPersonaAutonomy(_ enabled: Bool) {
-        container.featureFlags.set("personaAutonomy", enabled: enabled)
-        refresh()
-        statusMessage = enabled ? "Persona autonomy enabled." : "Persona autonomy disabled."
+        personaAutonomyEnabled = false
+        statusMessage = "Aspect autonomy is Brain-owned and always active."
         statusIsError = false
     }
 }
