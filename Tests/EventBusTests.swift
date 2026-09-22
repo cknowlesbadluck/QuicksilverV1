@@ -138,4 +138,56 @@ final class EventBusTests: XCTestCase {
             }
         }
     }
+
+    // MARK: - Structured stream
+
+    func testEventsStreamReceivesInOrder() async {
+        let bus = EventBus()
+        let stream = await bus.events()
+
+        let consumer = Task {
+            var ids: [String] = []
+            for await event in stream {
+                if case .custom(let name, _) = event {
+                    ids.append(name)
+                }
+                if ids.count == 3 { break }
+            }
+            return ids
+        }
+
+        // Yield so the stream is registered before publish
+        await Task.yield()
+
+        await bus.publish(.custom(name: "a", payload: [:]))
+        await bus.publish(.custom(name: "b", payload: [:]))
+        await bus.publish(.custom(name: "c", payload: [:]))
+
+        let ids = await consumer.value
+        XCTAssertEqual(ids, ["a", "b", "c"])
+    }
+
+    func testEventsStreamCancelStopsDelivery() async {
+        let bus = EventBus()
+        let stream = await bus.events()
+
+        nonisolated(unsafe) var count = 0
+        let consumer = Task {
+            for await _ in stream {
+                count += 1
+            }
+        }
+
+        await Task.yield()
+        await bus.publish(.custom(name: "1", payload: [:]))
+        await Task.yield()
+        XCTAssertEqual(count, 1)
+
+        consumer.cancel()
+        await Task.yield()
+
+        await bus.publish(.custom(name: "2", payload: [:]))
+        await Task.yield()
+        XCTAssertEqual(count, 1, "Cancelled stream consumer must not increment")
+    }
 }
