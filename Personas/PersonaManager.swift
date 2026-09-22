@@ -5,10 +5,8 @@ import Core
 /// Owns persona lifecycle and switching.
 /// Conforms to Core.PersonaEngine so other modules depend only on the contract.
 ///
-/// EventBus subscription is app-lifetime by design: both PersonaManager and EventBus
-/// live for the process duration (wired from DependencyContainer). Unsubscribe is
-/// intentionally omitted; if this manager is ever scoped shorter, call
-/// `eventBus.unsubscribe(subscriptionID)` in a teardown path.
+/// Event delivery uses a single structured Task over `EventBus.events()`.
+/// Call `bootstrap()` after construction (DependencyContainer does this).
 @MainActor
 @Observable
 public final class PersonaManager: PersonaEngine {
@@ -31,7 +29,9 @@ public final class PersonaManager: PersonaEngine {
     private var latestQueryIntent: QueryIntent?
     private var latestMemoryHints: [String] = []
 
-    private var subscriptionID: UUID?
+    /// Owned event-consumption task. Cancelled in `teardown()`.
+    private var eventTask: Task<Void, Never>?
+    private var autonomyTask: Task<Void, Never>?
 
     public init(
         initial: PersonaConfiguration = .quicksilver,
@@ -47,15 +47,28 @@ public final class PersonaManager: PersonaEngine {
         self.logger = logger
         self.policy = policy
         self.featureFlags = featureFlags
+        // No Tasks in init — see bootstrap().
+    }
 
-        Task { @MainActor in
-            let id = await eventBus.subscribe { [weak self] event in
-                Task { @MainActor in
-                    self?.handle(event: event)
-                }
+    /// Start structured EventBus consumption. Safe to call once; subsequent calls are no-ops while active.
+    public func bootstrap() {
+        guard eventTask == nil else { return }
+        eventTask = Task { [weak self] in
+            guard let self else { return }
+            let stream = await eventBus.events()
+            for await event in stream {
+                if Task.isCancelled { break }
+                self.handle(event: event)
             }
-            self.subscriptionID = id
         }
+    }
+
+    /// Cancel event and autonomy work. Optional — process lifetime by default.
+    public func teardown() {
+        eventTask?.cancel()
+        eventTask = nil
+        autonomyTask?.cancel()
+        autonomyTask = nil
     }
 
     public var activePersonaID: String {
@@ -74,20 +87,23 @@ public final class PersonaManager: PersonaEngine {
         MemoryPolicy.policy(for: activePersonaID)
     }
 
-    /// Most recent switch reason, if any (e.g. "explicit override", "autonomous (battery pressure)").
     public var lastSwitchReason: String? {
         state.lastSwitchReason
     }
 
     public func switchTo(id: String) async throws {
+        try await switchTo(id: id, reason: "explicit override")
+    }
+
+    public func switchTo(id: String, reason: String) async throws {
         guard let config = available.first(where: { $0.id == id }) else {
             throw AppError.personaUnavailable(id)
         }
-        try await performSwitch(to: config, reason: "explicit override")
+        try await performSwitch(to: config, reason: reason)
     }
 
     public func switchTo(_ config: PersonaConfiguration) async throws {
-        try await switchTo(id: config.id)
+        try await switchTo(id: config.id, reason: "explicit override")
     }
 
     public func recordInteraction() {
@@ -127,8 +143,9 @@ public final class PersonaManager: PersonaEngine {
         }
     }
 
+    /// Autonomy is experimental; default off when featureFlags present with personaAutonomy false.
     private var isAutonomyEnabled: Bool {
-        featureFlags?.isEnabled("personaAutonomy") ?? true
+        featureFlags?.isEnabled("personaAutonomy") ?? false
     }
 
     private func evaluateAutonomy(reason: String) {
@@ -153,7 +170,8 @@ public final class PersonaManager: PersonaEngine {
             context: context
         ) else { return }
 
-        Task {
+        autonomyTask?.cancel()
+        autonomyTask = Task {
             try? await performSwitch(to: preferred, reason: "autonomous (\(reason))")
         }
     }
