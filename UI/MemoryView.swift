@@ -1,7 +1,5 @@
 import SwiftUI
-#if canImport(UIKit)
 import UIKit
-#endif
 import Core
 import Memory
 
@@ -49,11 +47,9 @@ struct MemoryView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        #if canImport(UIKit)
         .sheet(item: $sharePayload) { payload in
             ActivityView(activityItems: [payload.text])
         }
-        #endif
     }
 
     @ViewBuilder
@@ -140,7 +136,6 @@ private struct SharePayload: Identifiable {
     let text: String
 }
 
-#if canImport(UIKit)
 private struct ActivityView: UIViewControllerRepresentable {
     let activityItems: [Any]
 
@@ -150,4 +145,3 @@ private struct ActivityView: UIViewControllerRepresentable {
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
-#endif

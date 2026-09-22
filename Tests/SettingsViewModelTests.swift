@@ -1,7 +1,8 @@
 import XCTest
+#if canImport(Quicksilver)
+@testable import Quicksilver
 @testable import Core
 @testable import ServicesAI
-@testable import UI
 
 @MainActor
 final class SettingsViewModelTests: XCTestCase {
@@ -154,3 +155,4 @@ final class SettingsViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.hasGrokKey)
     }
 }
+#endif
