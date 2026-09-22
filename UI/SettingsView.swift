@@ -10,7 +10,6 @@ struct SettingsView: View {
             if let vm = viewModel {
                 IntelligenceSettingsSection(viewModel: vm)
                 CredentialSettingsSection(viewModel: vm)
-                AspectSettingsSection(viewModel: vm)
                 StatusSettingsSection(viewModel: vm)
             }
         }
