@@ -62,7 +62,9 @@ struct SanctumView: View {
         let radius = PersonaTheme.cardCornerRadius(for: accentID)
 
         return ZStack {
-            PersonaTheme.voidBlack.ignoresSafeArea()
+            // The Sanctum is an atmosphere first; instruments sit inside the field.
+            MercurySanctumBackdrop(accent: accent)
+                .ignoresSafeArea()
 
             AmbientLayer(
                 personaID: accentID,
@@ -107,7 +109,8 @@ private extension SanctumView {
                 }
                 .padding(.vertical, 4)
 
-                // Quiet chamber indicators — not a persona switcher.
+                // Quiet passage markers — these open places in Mercury rather than
+                // switching between assistants or products.
                 chamberIndicators(vm, accent: accent, radius: radius)
 
                 environmentalSignals(vm)
@@ -121,6 +124,7 @@ private extension SanctumView {
             .padding(.horizontal, 20)
             .padding(.top, 8)
         }
+        .scrollIndicators(.hidden)
     }
 
     // MARK: - Glyph mapping
@@ -157,11 +161,12 @@ private extension SanctumView {
         HStack(spacing: 10) {
             Circle()
                 .fill(accent)
-                .frame(width: 8, height: 8)
+                .frame(width: 7, height: 7)
                 .shadow(color: accent.opacity(0.8), radius: 4)
 
-            Text(vm.activeAspect.diagnosticLabel)
+            Text("SANCTUM")
                 .font(.caption.weight(.semibold))
+                .tracking(1.2)
                 .foregroundStyle(PersonaTheme.mercurySilver)
 
             Text("·")
@@ -180,93 +185,66 @@ private extension SanctumView {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 10)
-        .background(.ultraThinMaterial.opacity(0.35))
+        .background(.ultraThinMaterial.opacity(0.28))
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(accent.opacity(0.18))
+                .frame(height: 1)
+        }
     }
 
-    /// Chamber indicators. These open places; they do not switch "AI products".
+    /// Realm passages remain spatial and restrained: each is a place to enter,
+    /// not a tab or persona selector.
     private func chamberIndicators(_ vm: SanctumViewModel, accent: Color, radius: CGFloat) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             Button { showForge = true } label: {
-                chamberChip(
-                    name: "Workshop",
-                    subtitle: "Forge",
-                    isActive: vm.activeAspect == .forge,
+                MercuryRealmPill(
+                    title: "Workshop",
+                    subtitle: vm.activeAspect == .forge ? "Present · Forge" : "Enter · Forge",
                     accent: PersonaTheme.accent(for: "forge"),
-                    radius: radius
+                    active: vm.activeAspect == .forge
                 )
             }
             .buttonStyle(.plain)
 
             Button { showEternal = true } label: {
-                chamberChip(
-                    name: "Observatory",
-                    subtitle: "Eternal",
-                    isActive: vm.activeAspect == .eternal,
+                MercuryRealmPill(
+                    title: "Observatory",
+                    subtitle: vm.activeAspect == .eternal ? "Present · Eternal" : "Enter · Eternal",
                     accent: PersonaTheme.accent(for: "eternal"),
-                    radius: radius
+                    active: vm.activeAspect == .eternal
                 )
             }
             .buttonStyle(.plain)
         }
-    }
-
-    private func chamberChip(
-        name: String,
-        subtitle: String,
-        isActive: Bool,
-        accent: Color,
-        radius: CGFloat
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
-                Circle()
-                    .fill(isActive ? accent : accent.opacity(0.25))
-                    .frame(width: 6, height: 6)
-                Text(name)
-                    .font(.caption.weight(isActive ? .semibold : .regular))
-                    .foregroundStyle(isActive ? PersonaTheme.mercurySilver : .secondary)
-            }
-            Text(subtitle)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(isActive ? 0.55 : 0.22))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: radius * 0.6, style: .continuous)
-                .strokeBorder(accent.opacity(isActive ? 0.45 : 0.10), lineWidth: 1)
-        )
+        .animation(MotionTokens.realmTransition, value: vm.activeAspect)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Mercury realms")
     }
 
     private func environmentalSignals(_ vm: SanctumViewModel) -> some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 16) {
             signalPill(title: "Battery", value: vm.batteryLevelText)
             signalPill(title: "Network", value: vm.networkStatus)
             signalPill(title: "Thermal", value: vm.thermalState)
             signalPill(title: "Health", value: "\(vm.overallHealthScore)")
         }
+        .padding(.horizontal, 4)
+        .opacity(0.78)
     }
 
     private func signalPill(title: String, value: String) -> some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 3) {
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .medium))
+                .font(.system(size: 8, weight: .medium))
+                .tracking(0.6)
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.caption.weight(.medium))
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(PersonaTheme.mercurySilver)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.28))
-        )
     }
 
     private func insightCard(_ insight: Insight, accent: Color, radius: CGFloat) -> some View {
@@ -282,7 +260,7 @@ private extension SanctumView {
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(.ultraThinMaterial.opacity(0.45))
+                .fill(.ultraThinMaterial.opacity(0.34))
         )
         .overlay(
             RoundedRectangle(cornerRadius: radius, style: .continuous)
@@ -311,7 +289,7 @@ private extension SanctumView {
             }
             .padding(.horizontal, 28)
             .padding(.vertical, 14)
-            .background(.ultraThinMaterial.opacity(0.5))
+            .background(.ultraThinMaterial.opacity(0.42))
         }
     }
 
