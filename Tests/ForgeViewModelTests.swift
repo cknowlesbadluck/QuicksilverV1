@@ -45,3 +45,4 @@ final class ForgeViewModelTests: XCTestCase {
     }
 }
 #endif
+// Trigger CI
