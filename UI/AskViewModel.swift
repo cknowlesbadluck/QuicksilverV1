@@ -64,29 +64,36 @@ final class AskViewModel {
         let policy = container.personaManager.activeMemoryPolicy
         let personaID = config.id
 
-        let userTurn = ChatTurn(id: UUID(), role: .user, text: text, createdAt: Date())
-        turns.append(userTurn)
-        draft = ""
-
-        await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
+        await appendUserTurn(text: text, personaID: personaID, writeHint: policy.writeImportanceHint)
 
         do {
-            // All conversation now routes through Mercury Brain
-            let responseText = try await container.brain.ask(text)
-
-            let assistantTurn = ChatTurn(
-                id: UUID(),
-                role: .assistant,
-                text: responseText,
-                createdAt: Date()
-            )
-            turns.append(assistantTurn)
-            await persistTurn(assistantTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
+            try await fetchAndAppendAssistantResponse(for: text, personaID: personaID, writeHint: policy.writeImportanceHint)
         } catch {
             errorMessage = error.localizedDescription
         }
 
         isProcessing = false
+    }
+
+    private func appendUserTurn(text: String, personaID: String, writeHint: Double?) async {
+        let userTurn = ChatTurn(id: UUID(), role: .user, text: text, createdAt: Date())
+        turns.append(userTurn)
+        draft = ""
+        await persistTurn(userTurn, personaID: personaID, writeHint: writeHint)
+    }
+
+    private func fetchAndAppendAssistantResponse(for text: String, personaID: String, writeHint: Double?) async throws {
+        // All conversation now routes through Mercury Brain
+        let responseText = try await container.brain.ask(text)
+
+        let assistantTurn = ChatTurn(
+            id: UUID(),
+            role: .assistant,
+            text: responseText,
+            createdAt: Date()
+        )
+        turns.append(assistantTurn)
+        await persistTurn(assistantTurn, personaID: personaID, writeHint: writeHint)
     }
 
     private func persistTurn(_ turn: ChatTurn, personaID: String, writeHint: Double?) async {
