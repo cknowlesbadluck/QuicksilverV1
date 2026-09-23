@@ -64,8 +64,8 @@ final class ForgeViewModelTests: XCTestCase {
         let container = DependencyContainer()
         let viewModel = ForgeViewModel(container: container)
 
-        for i in 1...15 {
-            await viewModel.captureNote("Note \(i)")
+        for index in 1...15 {
+            await viewModel.captureNote("Note \(index)")
         }
 
         XCTAssertEqual(viewModel.sessionNotes.count, 12)
