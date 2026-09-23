@@ -2,6 +2,9 @@ import XCTest
 @testable import Core
 @testable import Personas
 @testable import Nexus
+@testable import Memory
+@testable import ServicesAI
+@testable import QuicksilverIntents
 
 #if canImport(Quicksilver)
 @testable import Quicksilver
