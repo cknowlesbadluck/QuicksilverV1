@@ -253,7 +253,17 @@ final class IntegrationPlaneClientTests: XCTestCase {
 
     func testServerSentEventsResponse() async throws {
         await MainActor.run { MockURLProtocol.requestHandler = { _ in
-            self.createResponse(statusCode: 200, json: """{ "jsonrpc": "2.0", "id": 1, "result": { "protocolVersion": "2025-06-18" } }""", isSSE: true)
+            self.createResponse(
+                statusCode: 200,
+                json: """
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "result": { "protocolVersion": "2025-06-18" }
+                }
+                """,
+                isSSE: true
+            )
         }
         }
 
@@ -271,13 +281,14 @@ final class IntegrationPlaneClientTests: XCTestCase {
                     httpVersion: nil,
                     headerFields: ["Mcp-Session-Id": "sess-1234"]
                 )!
-                return (response, Data("""
+                let jsonString = """
                 {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "result": { "protocolVersion": "2025-06-18" }
                 }
-                """.utf8))
+                """
+                return (response, Data(jsonString.utf8))
             } else {
                 XCTAssertEqual(request.value(forHTTPHeaderField: "Mcp-Session-Id"), "sess-1234")
                 return self.createResponse(statusCode: 200, json: """
