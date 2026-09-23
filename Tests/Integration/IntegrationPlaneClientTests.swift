@@ -60,11 +60,23 @@ final class IntegrationPlaneClientTests: XCTestCase {
         super.tearDown()
     }
 
+
+    private func createResponse(statusCode: Int, json: String? = nil, isSSE: Bool = false) -> (HTTPURLResponse, Data) {
+        let response = HTTPURLResponse(url: endpoint, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
+        if let json = json {
+            if isSSE {
+                let eventString = "event: message\ndata: " + json + "\n\n"
+                return (response, eventString.data(using: .utf8)!)
+            }
+            return (response, json.data(using: .utf8)!)
+        }
+        return (response, Data())
+    }
+
     func testInitializeSuccess() async throws {
-        await MainActor.run { MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let jsonString = """
-            {
+
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """            {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "result": {
@@ -73,18 +85,15 @@ final class IntegrationPlaneClientTests: XCTestCase {
                     "serverInfo": { "name": "TestServer", "version": "1.0.0" }
                 }
             }
-            """
-            return (response, jsonString.data(using: .utf8)!)
-        } }
+            """)
+        }
+        }
 
         try await client.initialize()
     }
 
     func testInitializeFailureInvalidResponse() async {
-        await MainActor.run { MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
-            return (response, Data())
-        } }
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in self.createResponse(statusCode: 500) } }
 
         do {
             try await client.initialize()
@@ -97,10 +106,8 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testInitializeFailureRemoteError() async {
-        await MainActor.run { MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let jsonString = """
-            {
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """            {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "error": {
@@ -108,9 +115,9 @@ final class IntegrationPlaneClientTests: XCTestCase {
                     "message": "Invalid Request"
                 }
             }
-            """
-            return (response, jsonString.data(using: .utf8)!)
-        } }
+            """)
+        }
+        }
 
         do {
             try await client.initialize()
@@ -123,10 +130,8 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testListToolsSuccess() async throws {
-        await MainActor.run { MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let jsonString = """
-            {
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """            {
                 "jsonrpc": "2.0",
                 "id": 2,
                 "result": {
@@ -136,9 +141,9 @@ final class IntegrationPlaneClientTests: XCTestCase {
                     ]
                 }
             }
-            """
-            return (response, jsonString.data(using: .utf8)!)
-        } }
+            """)
+        }
+        }
 
         let tools = try await client.listTools()
         XCTAssertEqual(tools.count, 2)
@@ -147,19 +152,17 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testListToolsMalformedResult() async {
-        await MainActor.run { MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let jsonString = """
-            {
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """            {
                 "jsonrpc": "2.0",
                 "id": 2,
                 "result": {
                     "something_else": []
                 }
             }
-            """
-            return (response, jsonString.data(using: .utf8)!)
-        } }
+            """)
+        }
+        }
 
         do {
             _ = try await client.listTools()
@@ -172,10 +175,8 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testCallToolSuccess() async throws {
-        await MainActor.run { MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let jsonString = """
-            {
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """            {
                 "jsonrpc": "2.0",
                 "id": 3,
                 "result": {
@@ -185,9 +186,9 @@ final class IntegrationPlaneClientTests: XCTestCase {
                     }]
                 }
             }
-            """
-            return (response, jsonString.data(using: .utf8)!)
-        } }
+            """)
+        }
+        }
 
         let result = try await client.callTool(name: "testTool", arguments: ["param": .string("value")])
         guard case let .object(obj) = result,
@@ -203,10 +204,8 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testCallToolFailureRemoteError() async {
-         await MainActor.run { MockURLProtocol.requestHandler = { request in
-             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-             let jsonString = """
-             {
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """             {
                  "jsonrpc": "2.0",
                  "id": 3,
                  "error": {
@@ -214,52 +213,45 @@ final class IntegrationPlaneClientTests: XCTestCase {
                      "message": "Invalid params"
                  }
              }
-             """
-             return (response, jsonString.data(using: .utf8)!)
-         }
+             """)
+        }
+        }
 
-         do {
-             _ = try await client.callTool(name: "testTool")
-             XCTFail("Should throw an error")
-         } catch IntegrationPlaneClient.ClientError.remoteError(let msg) {
+        do {
+            _ = try await client.callTool(name: "testTool")
+            XCTFail("Should throw an error")
+        } catch IntegrationPlaneClient.ClientError.remoteError(let msg) {
              XCTAssertEqual(msg, "Invalid params")
-         } catch {
-             XCTFail("Unexpected error: \(error)")
-         }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 
     func testCallToolFailureMalformedResult() async {
-         await MainActor.run { MockURLProtocol.requestHandler = { request in
-             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-             let jsonString = """
-             {
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """             {
                  "jsonrpc": "2.0",
                  "id": 3
              }
-             """
-             return (response, jsonString.data(using: .utf8)!)
-         }
+             """)
+        }
+        }
 
-         do {
-             _ = try await client.callTool(name: "testTool")
-             XCTFail("Should throw an error")
-         } catch IntegrationPlaneClient.ClientError.malformedToolResult {
+        do {
+            _ = try await client.callTool(name: "testTool")
+            XCTFail("Should throw an error")
+        } catch IntegrationPlaneClient.ClientError.malformedToolResult {
              // Expected
-         } catch {
-             XCTFail("Unexpected error: \(error)")
-         }
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
     }
 
     func testServerSentEventsResponse() async throws {
-        await MainActor.run { MockURLProtocol.requestHandler = { request in
-            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-            let eventString = """
-            event: message
-            data: { "jsonrpc": "2.0", "id": 1, "result": { "protocolVersion": "2025-06-18" } }
-
-            """
-            return (response, eventString.data(using: .utf8)!)
-        } }
+        await MainActor.run { MockURLProtocol.requestHandler = { _ in
+            self.createResponse(statusCode: 200, json: """{ "jsonrpc": "2.0", "id": 1, "result": { "protocolVersion": "2025-06-18" } }""", isSSE: true)
+        }
+        }
 
         try await client.initialize()
     }
@@ -269,35 +261,25 @@ final class IntegrationPlaneClientTests: XCTestCase {
         await MainActor.run { MockURLProtocol.requestHandler = { request in
             callCount += 1
             if callCount == 1 {
-                 // First call sets the header
-                let response = HTTPURLResponse(
-                    url: request.url!,
-                    statusCode: 200,
-                    httpVersion: nil,
-                    headerFields: ["Mcp-Session-Id": "sess-1234"]
-                )!
-                let jsonString = """
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Mcp-Session-Id": "sess-1234"])!
+                return (response, """
                 {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "result": { "protocolVersion": "2025-06-18" }
                 }
-                """
-                return (response, jsonString.data(using: .utf8)!)
+                """.data(using: .utf8)!)
             } else {
-                // Second call should send the header
                 XCTAssertEqual(request.value(forHTTPHeaderField: "Mcp-Session-Id"), "sess-1234")
-
-                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
-                let jsonString = """
+                return self.createResponse(statusCode: 200, json: """
                 {
                     "jsonrpc": "2.0",
                     "id": 2,
                     "result": { "tools": [] }
                 }
-                """
-                return (response, jsonString.data(using: .utf8)!)
+                """)
             }
+        }
         }
 
         try await client.initialize()
