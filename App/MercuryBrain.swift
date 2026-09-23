@@ -83,55 +83,6 @@ final class MercuryBrain {
         return try await executeAICompletion(query: query, systemPrompt: system, config: config, maxTokens: maxTokens)
     }
 
-    private func evaluatePlan(for intent: Intent, config: PersonaConfiguration, memory: [MemoryItem], query: String) throws -> ResourcePlan {
-        let estimatedTokens = estimateContextTokens(systemHint: config.systemPrompt, memory: memory, query: query)
-
-        let plan = broker.defaultPlan(for: intent)
-        let decision = broker.evaluate(
-            IntelligenceBroker.TurnRequest(
-                intent: intent,
-                aspect: activeAspect,
-                plan: plan,
-                estimatedContextTokens: estimatedTokens
-            )
-        )
-
-        switch decision {
-        case .allow(let p):
-            return p
-        case .degrade(let p, let reason):
-            logger.info("Broker degrade: \(reason)", category: logger.general)
-            return p
-        case .deny(let reason):
-            visualState = .warning
-            refreshLivingStatus()
-            throw AppError.aiRequestFailed(reason)
-        }
-    }
-
-    private func executeAICompletion(query: String, systemPrompt: String, config: PersonaConfiguration, maxTokens: Int) async throws -> String {
-        do {
-            let response = try await aiService.complete(
-                prompt: query,
-                systemPrompt: systemPrompt,
-                temperature: config.preferredTemperature,
-                maxTokens: maxTokens
-            )
-
-            visualState = .speaking
-            let colored = personality.colorResponse(response.content, personaID: config.id)
-
-            visualState = .success
-            refreshLivingStatus()
-            stabilizeVisualStateAfterSuccess()
-            return colored
-        } catch {
-            visualState = .warning
-            refreshLivingStatus()
-            throw error
-        }
-    }
-
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
     func switchPersona(to id: String) async throws {
         let aspect = mapPersonaToAspect(id)
@@ -376,5 +327,70 @@ Core stance:
         prompt += "\nActive aspect: \(activeAspect.diagnosticLabel)."
 
         return prompt
+    }
+}
+
+
+// MARK: - Extracted AI logic
+
+extension MercuryBrain {
+
+    private func evaluatePlan(
+        for intent: Intent,
+        config: PersonaConfiguration,
+        memory: [MemoryItem],
+        query: String
+    ) throws -> ResourcePlan {
+        let estimatedTokens = estimateContextTokens(systemHint: config.systemPrompt, memory: memory, query: query)
+
+        let plan = broker.defaultPlan(for: intent)
+        let decision = broker.evaluate(
+            IntelligenceBroker.TurnRequest(
+                intent: intent,
+                aspect: activeAspect,
+                plan: plan,
+                estimatedContextTokens: estimatedTokens
+            )
+        )
+
+        switch decision {
+        case .allow(let allowedPlan):
+            return allowedPlan
+        case .degrade(let degradedPlan, let reason):
+            logger.info("Broker degrade: \(reason)", category: logger.general)
+            return degradedPlan
+        case .deny(let reason):
+            visualState = .warning
+            refreshLivingStatus()
+            throw AppError.aiRequestFailed(reason)
+        }
+    }
+
+    private func executeAICompletion(
+        query: String,
+        systemPrompt: String,
+        config: PersonaConfiguration,
+        maxTokens: Int
+    ) async throws -> String {
+        do {
+            let response = try await aiService.complete(
+                prompt: query,
+                systemPrompt: systemPrompt,
+                temperature: config.preferredTemperature,
+                maxTokens: maxTokens
+            )
+
+            visualState = .speaking
+            let colored = personality.colorResponse(response.content, personaID: config.id)
+
+            visualState = .success
+            refreshLivingStatus()
+            stabilizeVisualStateAfterSuccess()
+            return colored
+        } catch {
+            visualState = .warning
+            refreshLivingStatus()
+            throw error
+        }
     }
 }
