@@ -74,7 +74,17 @@ final class MercuryBrain {
         personality.adjustForAspect(activeAspect)
 
         let relevantMemory = retrieveRelevantMemory()
-        let estimatedTokens = estimateContextTokens(systemHint: config.systemPrompt, memory: relevantMemory, query: query)
+
+        let effectivePlan = try evaluatePlan(for: intent, config: config, memory: relevantMemory, query: query)
+
+        let system = buildSystemPrompt(for: config, memory: relevantMemory)
+        let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
+
+        return try await executeAICompletion(query: query, systemPrompt: system, config: config, maxTokens: maxTokens)
+    }
+
+    private func evaluatePlan(for intent: Intent, config: PersonaConfiguration, memory: [MemoryItem], query: String) throws -> ResourcePlan {
+        let estimatedTokens = estimateContextTokens(systemHint: config.systemPrompt, memory: memory, query: query)
 
         let plan = broker.defaultPlan(for: intent)
         let decision = broker.evaluate(
@@ -86,26 +96,24 @@ final class MercuryBrain {
             )
         )
 
-        let effectivePlan: ResourcePlan
         switch decision {
         case .allow(let p):
-            effectivePlan = p
+            return p
         case .degrade(let p, let reason):
             logger.info("Broker degrade: \(reason)", category: logger.general)
-            effectivePlan = p
+            return p
         case .deny(let reason):
             visualState = .warning
             refreshLivingStatus()
             throw AppError.aiRequestFailed(reason)
         }
+    }
 
-        let system = buildSystemPrompt(for: config, memory: relevantMemory)
-        let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
-
+    private func executeAICompletion(query: String, systemPrompt: String, config: PersonaConfiguration, maxTokens: Int) async throws -> String {
         do {
             let response = try await aiService.complete(
                 prompt: query,
-                systemPrompt: system,
+                systemPrompt: systemPrompt,
                 temperature: config.preferredTemperature,
                 maxTokens: maxTokens
             )
