@@ -19,7 +19,7 @@ permissions:
 jobs:
   structure:
     name: Structure & Contracts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout
         uses: actions/checkout@v7
