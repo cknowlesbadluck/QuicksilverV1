@@ -24,7 +24,9 @@ struct PromptBuilder: Sendable {
 
         if let context = assembledContext?.trimmingCharacters(in: .whitespacesAndNewlines),
            !context.isEmpty {
-            system += "\n\n## Active Context\n" + context
+            // Sanitize context by removing any closing tags to prevent escaping the block
+            let sanitizedContext = context.replacingOccurrences(of: "</context>", with: "")
+            system += "\n\n## Active Context\n<context>\n" + sanitizedContext + "\n</context>"
         }
 
         return Result(

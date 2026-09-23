@@ -17,6 +17,8 @@ final class PromptBuilderTests: XCTestCase {
         XCTAssertTrue(result.systemPrompt.contains("You are Forge."))
         XCTAssertTrue(result.systemPrompt.contains("Active Context"))
         XCTAssertTrue(result.systemPrompt.contains("Active persona: Forge"))
+        XCTAssertTrue(result.systemPrompt.contains("<context>"))
+        XCTAssertTrue(result.systemPrompt.contains("</context>"))
         XCTAssertEqual(result.userPrompt, "Status?")
         XCTAssertEqual(result.temperature, 0.3, accuracy: 0.001)
         XCTAssertEqual(result.maxTokens, 512)
@@ -32,6 +34,8 @@ final class PromptBuilderTests: XCTestCase {
             assembledContext: nil
         )
         XCTAssertFalse(result.systemPrompt.contains("Active Context"))
+        XCTAssertFalse(result.systemPrompt.contains("<context>"))
+        XCTAssertFalse(result.systemPrompt.contains("</context>"))
     }
 }
 
