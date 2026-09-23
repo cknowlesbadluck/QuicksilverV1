@@ -7,8 +7,7 @@ import XCTest
 @testable import Nexus
 #endif
 
-// swiftlint:disable:next static_over_final_class
-final class MockURLProtocol: URLProtocol, @unchecked Sendable {
+class MockURLProtocol: URLProtocol, @unchecked Sendable {
     @MainActor static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
 
     override class func canInit(with request: URLRequest) -> Bool {
@@ -62,13 +61,18 @@ final class IntegrationPlaneClientTests: XCTestCase {
 
 
     private func createResponse(statusCode: Int, json: String? = nil, isSSE: Bool = false) -> (HTTPURLResponse, Data) {
-        let response = HTTPURLResponse(url: endpoint, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
+        let response = HTTPURLResponse(
+            url: endpoint,
+            statusCode: statusCode,
+            httpVersion: nil,
+            headerFields: nil
+        )!
         if let json = json {
             if isSSE {
                 let eventString = "event: message\ndata: " + json + "\n\n"
-                return (response, eventString.data(using: .utf8)!)
+                return (response, Data(eventString.utf8))
             }
-            return (response, json.data(using: .utf8)!)
+            return (response, Data(json.utf8))
         }
         return (response, Data())
     }
@@ -261,14 +265,19 @@ final class IntegrationPlaneClientTests: XCTestCase {
         await MainActor.run { MockURLProtocol.requestHandler = { request in
             callCount += 1
             if callCount == 1 {
-                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: ["Mcp-Session-Id": "sess-1234"])!
-                return (response, """
+                let response = HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: ["Mcp-Session-Id": "sess-1234"]
+                )!
+                return (response, Data("""
                 {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "result": { "protocolVersion": "2025-06-18" }
                 }
-                """.data(using: .utf8)!)
+                """.utf8))
             } else {
                 XCTAssertEqual(request.value(forHTTPHeaderField: "Mcp-Session-Id"), "sess-1234")
                 return self.createResponse(statusCode: 200, json: """
