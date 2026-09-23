@@ -76,52 +76,12 @@ final class MercuryBrain {
         let relevantMemory = retrieveRelevantMemory()
         let estimatedTokens = estimateContextTokens(systemHint: config.systemPrompt, memory: relevantMemory, query: query)
 
-        let plan = broker.defaultPlan(for: intent)
-        let decision = broker.evaluate(
-            IntelligenceBroker.TurnRequest(
-                intent: intent,
-                aspect: activeAspect,
-                plan: plan,
-                estimatedContextTokens: estimatedTokens
-            )
-        )
-
-        let effectivePlan: ResourcePlan
-        switch decision {
-        case .allow(let p):
-            effectivePlan = p
-        case .degrade(let p, let reason):
-            logger.info("Broker degrade: \(reason)", category: logger.general)
-            effectivePlan = p
-        case .deny(let reason):
-            visualState = .warning
-            refreshLivingStatus()
-            throw AppError.aiRequestFailed(reason)
-        }
+        let effectivePlan = try evaluateBrokerDecision(intent: intent, tokens: estimatedTokens)
 
         let system = buildSystemPrompt(for: config, memory: relevantMemory)
         let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
 
-        do {
-            let response = try await aiService.complete(
-                prompt: query,
-                systemPrompt: system,
-                temperature: config.preferredTemperature,
-                maxTokens: maxTokens
-            )
-
-            visualState = .speaking
-            let colored = personality.colorResponse(response.content, personaID: config.id)
-
-            visualState = .success
-            refreshLivingStatus()
-            stabilizeVisualStateAfterSuccess()
-            return colored
-        } catch {
-            visualState = .warning
-            refreshLivingStatus()
-            throw error
-        }
+        return try await completeAsk(query: query, system: system, config: config, maxTokens: maxTokens)
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
@@ -143,28 +103,10 @@ final class MercuryBrain {
         let truncated = String(content.prefix(500))
         let policy = personaManager.activeMemoryPolicy
 
-        let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
-        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
-        await applyAspect(turnAspect, reason: "remember")
-
-        personaManager.updateTaskContext(
-            description: "Capture memory: \(String(truncated.prefix(80)))",
-            memoryHints: [String(truncated.prefix(120))]
-        )
-
-        await memoryManager.set(
-            key: "note.brain.\(UUID().uuidString.prefix(8))",
-            value: truncated,
-            category: .temporary,
-            metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
-            importanceBoost: policy.writeImportanceHint,
-            personaScope: nil
-        )
-
-        personality.noteInsight()
-        visualState = .processing
-        refreshLivingStatus()
-        stabilizeVisualStateAfterSuccess()
+        await applyAspectForRemember(content: content)
+        updateTaskContextForRemember(truncated: truncated)
+        await storeMemoryItem(truncated: truncated, policy: policy)
+        completeRememberInteraction()
     }
 
     /// Ranked memory snapshot for capability reads and diagnostics.
@@ -206,6 +148,12 @@ final class MercuryBrain {
             throw AppError.unsupportedFeature(capability.name)
         }
     }
+
+}
+
+// MARK: - Core Operations
+
+extension MercuryBrain {
 
     func refreshLivingStatus() {
         let state = nexus.state
@@ -290,7 +238,162 @@ final class MercuryBrain {
         }
     }
 
-    // MARK: - Visual baseline
+
+
+    private func applyAspectForRemember(content: String) async {
+        let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
+        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
+        await applyAspect(turnAspect, reason: "remember")
+    }
+
+    private func updateTaskContextForRemember(truncated: String) {
+        personaManager.updateTaskContext(
+            description: "Capture memory: \(String(truncated.prefix(80)))",
+            memoryHints: [String(truncated.prefix(120))]
+        )
+    }
+
+    private func storeMemoryItem(truncated: String, policy: MemoryPolicy) async {
+        await memoryManager.set(
+            key: "note.brain.\(UUID().uuidString.prefix(8))",
+            value: truncated,
+            category: .temporary,
+            metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
+            importanceBoost: policy.writeImportanceHint,
+            personaScope: nil
+        )
+    }
+
+    private func completeRememberInteraction() {
+        personality.noteInsight()
+        visualState = .processing
+        refreshLivingStatus()
+        stabilizeVisualStateAfterSuccess()
+    }
+
+    private func evaluateBrokerDecision(intent: Intent, tokens: Int) throws -> ResourcePlan {
+        let plan = broker.defaultPlan(for: intent)
+        let decision = broker.evaluate(
+            IntelligenceBroker.TurnRequest(
+                intent: intent,
+                aspect: activeAspect,
+                plan: plan,
+                estimatedContextTokens: tokens
+            )
+        )
+
+        switch decision {
+        case .allow(let allowedPlan):
+            return allowedPlan
+        case .degrade(let degradedPlan, let reason):
+            logger.info("Broker degrade: \(reason)", category: logger.general)
+            return degradedPlan
+        case .deny(let reason):
+            visualState = .warning
+            refreshLivingStatus()
+            throw AppError.aiRequestFailed(reason)
+        }
+    }
+
+    private func completeAsk(query: String, system: String, config: PersonaConfiguration, maxTokens: Int) async throws -> String {
+        do {
+            let response = try await aiService.complete(
+                prompt: query,
+                systemPrompt: system,
+                temperature: config.preferredTemperature,
+                maxTokens: maxTokens
+            )
+
+            visualState = .speaking
+            let colored = personality.colorResponse(response.content, personaID: config.id)
+
+            visualState = .success
+            refreshLivingStatus()
+            stabilizeVisualStateAfterSuccess()
+            return colored
+        } catch {
+            visualState = .warning
+            refreshLivingStatus()
+            throw error
+        }
+    }
+}\n\n// MARK: - Helpers\n\nextension MercuryBrain {\n    private func applyAspectForRemember(content: String) async {
+        let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
+        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
+        await applyAspect(turnAspect, reason: "remember")
+    }
+
+    private func updateTaskContextForRemember(truncated: String) {
+        personaManager.updateTaskContext(
+            description: "Capture memory: \(String(truncated.prefix(80)))",
+            memoryHints: [String(truncated.prefix(120))]
+        )
+    }
+
+    private func storeMemoryItem(truncated: String, policy: MemoryPolicy) async {
+        await memoryManager.set(
+            key: "note.brain.\(UUID().uuidString.prefix(8))",
+            value: truncated,
+            category: .temporary,
+            metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
+            importanceBoost: policy.writeImportanceHint,
+            personaScope: nil
+        )
+    }
+
+    private func completeRememberInteraction() {
+        personality.noteInsight()
+        visualState = .processing
+        refreshLivingStatus()
+        stabilizeVisualStateAfterSuccess()
+    }
+
+    private func evaluateBrokerDecision(intent: Intent, tokens: Int) throws -> ResourcePlan {
+        let plan = broker.defaultPlan(for: intent)
+        let decision = broker.evaluate(
+            IntelligenceBroker.TurnRequest(
+                intent: intent,
+                aspect: activeAspect,
+                plan: plan,
+                estimatedContextTokens: tokens
+            )
+        )
+
+        switch decision {
+        case .allow(let allowedPlan):
+            return allowedPlan
+        case .degrade(let degradedPlan, let reason):
+            logger.info("Broker degrade: \(reason)", category: logger.general)
+            return degradedPlan
+        case .deny(let reason):
+            visualState = .warning
+            refreshLivingStatus()
+            throw AppError.aiRequestFailed(reason)
+        }
+    }
+
+    private func completeAsk(query: String, system: String, config: PersonaConfiguration, maxTokens: Int) async throws -> String {
+        do {
+            let response = try await aiService.complete(
+                prompt: query,
+                systemPrompt: system,
+                temperature: config.preferredTemperature,
+                maxTokens: maxTokens
+            )
+
+            visualState = .speaking
+            let colored = personality.colorResponse(response.content, personaID: config.id)
+
+            visualState = .success
+            refreshLivingStatus()
+            stabilizeVisualStateAfterSuccess()
+            return colored
+        } catch {
+            visualState = .warning
+            refreshLivingStatus()
+            throw error
+        }
+    }\n\n    // MARK: - Visual baseline
 
     private func environmentalBaseline() -> VisualState {
         let state = nexus.state
@@ -368,5 +471,4 @@ Core stance:
         prompt += "\nActive aspect: \(activeAspect.diagnosticLabel)."
 
         return prompt
-    }
-}
+    }\n}\n
