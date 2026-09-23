@@ -7,29 +7,32 @@ import XCTest
 @testable import Nexus
 #endif
 
+// swiftlint:disable:next static_over_final_class
 final class MockURLProtocol: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    @MainActor static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
 
-    override static func canInit(with request: URLRequest) -> Bool {
+    override class func canInit(with request: URLRequest) -> Bool {
         return true
     }
 
-    override static func canonicalRequest(for request: URLRequest) -> URLRequest {
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
         return request
     }
 
     override func startLoading() {
-        guard let handler = MockURLProtocol.requestHandler else {
-            fatalError("Handler is unavailable.")
-        }
+        Task {
+            guard let handler = await MainActor.run(body: { MockURLProtocol.requestHandler }) else {
+                fatalError("Handler is unavailable.")
+            }
 
-        do {
-            let (response, data) = try handler(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
+            do {
+                let (response, data) = try handler(self.request)
+                self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+                self.client?.urlProtocol(self, didLoad: data)
+                self.client?.urlProtocolDidFinishLoading(self)
+            } catch {
+                self.client?.urlProtocol(self, didFailWithError: error)
+            }
         }
     }
 
@@ -51,14 +54,14 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     override func tearDown() {
-        MockURLProtocol.requestHandler = nil
+        Task { @MainActor in MockURLProtocol.requestHandler = nil }
         session = nil
         client = nil
         super.tearDown()
     }
 
     func testInitializeSuccess() async throws {
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let jsonString = """
             {
@@ -72,16 +75,16 @@ final class IntegrationPlaneClientTests: XCTestCase {
             }
             """
             return (response, jsonString.data(using: .utf8)!)
-        }
+        } }
 
         try await client.initialize()
     }
 
     func testInitializeFailureInvalidResponse() async {
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 500, httpVersion: nil, headerFields: nil)!
             return (response, Data())
-        }
+        } }
 
         do {
             try await client.initialize()
@@ -94,7 +97,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testInitializeFailureRemoteError() async {
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let jsonString = """
             {
@@ -107,7 +110,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
             }
             """
             return (response, jsonString.data(using: .utf8)!)
-        }
+        } }
 
         do {
             try await client.initialize()
@@ -120,7 +123,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testListToolsSuccess() async throws {
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let jsonString = """
             {
@@ -135,7 +138,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
             }
             """
             return (response, jsonString.data(using: .utf8)!)
-        }
+        } }
 
         let tools = try await client.listTools()
         XCTAssertEqual(tools.count, 2)
@@ -144,7 +147,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testListToolsMalformedResult() async {
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let jsonString = """
             {
@@ -156,7 +159,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
             }
             """
             return (response, jsonString.data(using: .utf8)!)
-        }
+        } }
 
         do {
             _ = try await client.listTools()
@@ -169,7 +172,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testCallToolSuccess() async throws {
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let jsonString = """
             {
@@ -184,7 +187,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
             }
             """
             return (response, jsonString.data(using: .utf8)!)
-        }
+        } }
 
         let result = try await client.callTool(name: "testTool", arguments: ["param": .string("value")])
         guard case let .object(obj) = result,
@@ -200,7 +203,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testCallToolFailureRemoteError() async {
-         MockURLProtocol.requestHandler = { request in
+         await MainActor.run { MockURLProtocol.requestHandler = { request in
              let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
              let jsonString = """
              {
@@ -226,7 +229,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testCallToolFailureMalformedResult() async {
-         MockURLProtocol.requestHandler = { request in
+         await MainActor.run { MockURLProtocol.requestHandler = { request in
              let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
              let jsonString = """
              {
@@ -248,7 +251,7 @@ final class IntegrationPlaneClientTests: XCTestCase {
     }
 
     func testServerSentEventsResponse() async throws {
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
             let eventString = """
             event: message
@@ -256,14 +259,14 @@ final class IntegrationPlaneClientTests: XCTestCase {
 
             """
             return (response, eventString.data(using: .utf8)!)
-        }
+        } }
 
         try await client.initialize()
     }
 
     func testSessionIdIsPreserved() async throws {
         var callCount = 0
-        MockURLProtocol.requestHandler = { request in
+        await MainActor.run { MockURLProtocol.requestHandler = { request in
             callCount += 1
             if callCount == 1 {
                  // First call sets the header
