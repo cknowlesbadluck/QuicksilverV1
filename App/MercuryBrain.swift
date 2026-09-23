@@ -143,15 +143,26 @@ final class MercuryBrain {
         let truncated = String(content.prefix(500))
         let policy = personaManager.activeMemoryPolicy
 
+        await applyAspectForRemember(content: content)
+        updateTaskContextForRemember(truncated: truncated)
+        await storeMemoryItem(truncated: truncated, policy: policy)
+        completeRememberInteraction()
+    }
+
+    private func applyAspectForRemember(content: String) async {
         let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
         let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
         await applyAspect(turnAspect, reason: "remember")
+    }
 
+    private func updateTaskContextForRemember(truncated: String) {
         personaManager.updateTaskContext(
             description: "Capture memory: \(String(truncated.prefix(80)))",
             memoryHints: [String(truncated.prefix(120))]
         )
+    }
 
+    private func storeMemoryItem(truncated: String, policy: MemoryPolicy) async {
         await memoryManager.set(
             key: "note.brain.\(UUID().uuidString.prefix(8))",
             value: truncated,
@@ -160,7 +171,9 @@ final class MercuryBrain {
             importanceBoost: policy.writeImportanceHint,
             personaScope: nil
         )
+    }
 
+    private func completeRememberInteraction() {
         personality.noteInsight()
         visualState = .processing
         refreshLivingStatus()
