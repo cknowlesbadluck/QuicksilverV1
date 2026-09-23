@@ -3,8 +3,8 @@ import XCTest
 @testable import Core
 
 final class MockURLProtocol: URLProtocol {
-    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-    nonisolated(unsafe) static var errorHandler: ((URLRequest) throws -> Error)?
+    @MainActor static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    @MainActor static var errorHandler: ((URLRequest) throws -> Error)?
 
     override class func canInit(with request: URLRequest) -> Bool {
         return true
@@ -15,7 +15,8 @@ final class MockURLProtocol: URLProtocol {
     }
 
     override func startLoading() {
-        if let errorHandler = MockURLProtocol.errorHandler {
+        let localErrorHandler = MainActor.assumeIsolated { MockURLProtocol.errorHandler }
+        if let errorHandler = localErrorHandler {
             do {
                 let error = try errorHandler(request)
                 client?.urlProtocol(self, didFailWithError: error)
@@ -25,7 +26,8 @@ final class MockURLProtocol: URLProtocol {
             return
         }
 
-        guard let handler = MockURLProtocol.requestHandler else {
+        let localRequestHandler = MainActor.assumeIsolated { MockURLProtocol.requestHandler }
+        guard let handler = localRequestHandler else {
             fatalError("Handler is unavailable.")
         }
 
@@ -42,11 +44,14 @@ final class MockURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
+@MainActor
 final class GrokAPIModelsTests: XCTestCase {
 
     override func tearDown() {
-        MockURLProtocol.requestHandler = nil
-        MockURLProtocol.errorHandler = nil
+        MainActor.assumeIsolated {
+            MockURLProtocol.requestHandler = nil
+            MockURLProtocol.errorHandler = nil
+        }
         super.tearDown()
     }
 
@@ -89,7 +94,7 @@ final class GrokAPIModelsTests: XCTestCase {
         } catch AppError.networkUnavailable {
             // Expected
         } catch {
-            XCTFail("Expected AppError.networkUnavailable, but got unexpected error \(error)")
+            XCTFail("Expected AppError.networkUnavailable, but got unexpected error \\(error)")
         }
     }
 
@@ -112,7 +117,7 @@ final class GrokAPIModelsTests: XCTestCase {
         } catch AppError.aiRequestFailed(let msg) {
             XCTAssertTrue(msg.contains("HTTP 500"))
         } catch {
-            XCTFail("Expected AppError.aiRequestFailed, but got unexpected error \(error)")
+            XCTFail("Expected AppError.aiRequestFailed, but got unexpected error \\(error)")
         }
     }
 }
