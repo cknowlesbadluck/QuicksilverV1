@@ -166,6 +166,92 @@ final class MercuryBrain {
         }
     }
 
+
+    // MARK: - Visual baseline
+
+    private func environmentalBaseline() -> VisualState {
+        let state = nexus.state
+        let thermal = state.thermalState.lowercased()
+        if thermal.contains("serious") || thermal.contains("critical") {
+            return .critical
+        }
+        if state.overallHealthScore < 35 {
+            return .warning
+        }
+        if state.lowPowerMode {
+            return .sleeping
+        }
+        if state.overallHealthScore < 55 {
+            return .processing
+        }
+        return activeAspect.defaultVisualState
+    }
+
+    private func stabilizeVisualStateAfterSuccess() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            if visualState == .success || visualState == .processing {
+                visualState = environmentalBaseline()
+            }
+        }
+    }
+
+    // MARK: - Memory / budget helpers
+
+    private func retrieveRelevantMemory() -> [MemoryItem] {
+        retrieveSnapshot(limit: 5)
+    }
+
+    private func estimateContextTokens(systemHint: String, memory: [MemoryItem], query: String) -> Int {
+        let memoryChars = memory.reduce(0) { $0 + $1.value.count }
+        let totalChars = systemHint.count + memoryChars + query.count
+        return totalChars / 4
+    }
+
+    // MARK: - Prompt
+
+    private func buildSystemPrompt(for config: PersonaConfiguration, memory: [MemoryItem]) -> String {
+        var prompt = config.systemPrompt
+
+        let bias = personality.promptBias()
+        if !bias.isEmpty {
+            prompt += "\n\nBehavioral posture (internal): \(bias)"
+        }
+
+        prompt += """
+
+
+Core stance:
+- Truth is more important than agreement.
+- Challenge unsupported conclusions with precision.
+- Critique ideas, never the person.
+- Admit uncertainty when evidence is incomplete.
+- Prefer the smallest verifiable next step over speculation.
+- Dry, elegant wit is allowed; cruelty is not.
+- Everything ultimately serves the user's long-term success.
+"""
+
+        if !memory.isEmpty {
+            prompt += "\n\nRelevant memory (private, ranked by importance):\n"
+            for item in memory {
+                let snippet = String(item.value.prefix(180))
+                prompt += "- [\(item.category.rawValue)] \(snippet)\n"
+            }
+        }
+
+        let health = nexus.state.overallHealthScore
+        let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
+        prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
+        prompt += "\nActive aspect: \(activeAspect.diagnosticLabel)."
+
+        return prompt
+    }
+}
+
+
+// MARK: - Extracted AI logic
+
+extension MercuryBrain {
     func refreshLivingStatus() {
         let state = nexus.state
         let label = activeAspect.diagnosticLabel
@@ -248,93 +334,6 @@ final class MercuryBrain {
         default: return .quicksilver
         }
     }
-
-
-}
-
-
-// MARK: - Extracted AI logic
-    // MARK: - Visual baseline
-
-    private func environmentalBaseline() -> VisualState {
-        let state = nexus.state
-        let thermal = state.thermalState.lowercased()
-        if thermal.contains("serious") || thermal.contains("critical") {
-            return .critical
-        }
-        if state.overallHealthScore < 35 {
-            return .warning
-        }
-        if state.lowPowerMode {
-            return .sleeping
-        }
-        if state.overallHealthScore < 55 {
-            return .processing
-        }
-        return activeAspect.defaultVisualState
-    }
-
-    private func stabilizeVisualStateAfterSuccess() {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(600))
-            if visualState == .success || visualState == .processing {
-                visualState = environmentalBaseline()
-            }
-        }
-    }
-
-    // MARK: - Memory / budget helpers
-
-    private func retrieveRelevantMemory() -> [MemoryItem] {
-        retrieveSnapshot(limit: 5)
-    }
-
-    private func estimateContextTokens(systemHint: String, memory: [MemoryItem], query: String) -> Int {
-        let memoryChars = memory.reduce(0) { $0 + $1.value.count }
-        let totalChars = systemHint.count + memoryChars + query.count
-        return totalChars / 4
-    }
-
-    // MARK: - Prompt
-
-    private func buildSystemPrompt(for config: PersonaConfiguration, memory: [MemoryItem]) -> String {
-        var prompt = config.systemPrompt
-
-        let bias = personality.promptBias()
-        if !bias.isEmpty {
-            prompt += "\n\nBehavioral posture (internal): \(bias)"
-        }
-
-        prompt += """
-
-
-Core stance:
-- Truth is more important than agreement.
-- Challenge unsupported conclusions with precision.
-- Critique ideas, never the person.
-- Admit uncertainty when evidence is incomplete.
-- Prefer the smallest verifiable next step over speculation.
-- Dry, elegant wit is allowed; cruelty is not.
-- Everything ultimately serves the user's long-term success.
-"""
-
-        if !memory.isEmpty {
-            prompt += "\n\nRelevant memory (private, ranked by importance):\n"
-            for item in memory {
-                let snippet = String(item.value.prefix(180))
-                prompt += "- [\(item.category.rawValue)] \(snippet)\n"
-            }
-        }
-
-        let health = nexus.state.overallHealthScore
-        let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
-        prompt += "\nActive aspect: \(activeAspect.diagnosticLabel)."
-
-        return prompt
-    }
-
-extension MercuryBrain {
 
     private func evaluatePlan(
         for intent: Intent,
