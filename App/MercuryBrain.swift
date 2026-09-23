@@ -249,6 +249,11 @@ final class MercuryBrain {
         }
     }
 
+
+}
+
+
+// MARK: - Extracted AI logic
     // MARK: - Visual baseline
 
     private func environmentalBaseline() -> VisualState {
@@ -328,10 +333,6 @@ Core stance:
 
         return prompt
     }
-}
-
-
-// MARK: - Extracted AI logic
 
 extension MercuryBrain {
 
