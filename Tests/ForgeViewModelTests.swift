@@ -16,17 +16,28 @@ final class ForgeViewModelTests: XCTestCase {
         // Initial state
         XCTAssertEqual(viewModel.activeAspect, .quicksilver)
         XCTAssertFalse(viewModel.isAwake)
+        XCTAssertFalse(viewModel.isAwakening)
+
+        let task = Task {
+            await viewModel.awakenForge()
+        }
+
+        // Yield to allow task to start and set isAwakening to true
+        await Task.yield()
+
+        // As long as the task hasn't completed, it should be awakening or completed
+        let awakeningState = viewModel.isAwakening
+        let awakeState = viewModel.isAwake
+        XCTAssertTrue(awakeningState || awakeState)
 
         // Action
-        await viewModel.awakenForge()
+        await task.value
 
         // Verification
         XCTAssertEqual(viewModel.activePersonaID, "forge")
         XCTAssertEqual(viewModel.activeAspect, .forge)
         XCTAssertTrue(viewModel.isAwake)
-
-        // Verify living status is updated correctly.
-        // It shouldn't be the default string but something formatted by the brain
+        XCTAssertFalse(viewModel.isAwakening)
         XCTAssertNotEqual(viewModel.livingStatus, "Workshop is dormant.")
     }
 }

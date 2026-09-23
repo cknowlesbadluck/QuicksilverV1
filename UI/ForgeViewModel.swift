@@ -19,6 +19,8 @@ final class ForgeViewModel {
     private(set) var networkStatus: String = "—"
     private(set) var thermalState: String = "—"
     private(set) var isAwake: Bool = false
+    private(set) var isAwakening: Bool = false
+
 
     /// Lightweight session notes captured while in the Workshop (local UI state only).
     private(set) var sessionNotes: [String] = []
@@ -84,6 +86,9 @@ final class ForgeViewModel {
 
     /// Enter the Workshop chamber via Brain (never directly via PersonaManager).
     func awakenForge() async {
+        isAwakening = true
+        defer { isAwakening = false }
+
         do {
             try await container.brain.switchPersona(to: "forge")
             refresh()
