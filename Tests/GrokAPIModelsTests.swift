@@ -3,8 +3,8 @@ import XCTest
 @testable import Core
 
 final class MockURLProtocol: URLProtocol {
-    static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
-    static var errorHandler: ((URLRequest) throws -> Error)?
+    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var errorHandler: ((URLRequest) throws -> Error)?
 
     override class func canInit(with request: URLRequest) -> Bool {
         return true
@@ -57,7 +57,7 @@ final class GrokAPIModelsTests: XCTestCase {
           "choices": [{"message": {"role": "assistant", "content": "Forge ready."}, "finish_reason": "stop"}],
           "usage": {"prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 16}
         }
-        """.data(using: .utf8)!
+        """.data(using: .utf8) ?? Data()
 
         let decoded = try JSONDecoder().decode(GrokAPI.ChatResponse.self, from: json)
         XCTAssertEqual(decoded.choices.count, 1)
