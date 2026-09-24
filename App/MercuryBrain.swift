@@ -74,21 +74,22 @@ final class MercuryBrain {
         personality.adjustForAspect(activeAspect)
 
         let relevantMemory = retrieveRelevantMemory()
-        let estimatedTokens = estimateContextTokens(systemHint: config.systemPrompt, memory: relevantMemory, query: query)
+        let estimatedTokens = estimateContextTokens(
+            systemHint: config.systemPrompt,
+            memory: relevantMemory,
+            query: query
+        )
 
         let effectivePlan = try evaluateBrokerDecision(intent: intent, tokens: estimatedTokens)
-
         let system = buildSystemPrompt(for: config, memory: relevantMemory)
         let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
-
         return try await completeAsk(query: query, system: system, config: config, maxTokens: maxTokens)
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
     func switchPersona(to id: String) async throws {
-        let aspect = mapPersonaToAspect(id)
         visualState = .transitioning
-        await applyAspect(aspect, reason: "explicit switch", force: true)
+        await applyAspect(mapPersonaToAspect(id), reason: "explicit switch", force: true)
         visualState = environmentalBaseline()
     }
 
@@ -102,7 +103,6 @@ final class MercuryBrain {
     func remember(_ content: String) async {
         let truncated = String(content.prefix(500))
         let policy = personaManager.activeMemoryPolicy
-
         await applyAspectForRemember(content: content)
         updateTaskContextForRemember(truncated: truncated)
         await storeMemoryItem(truncated: truncated, policy: policy)
@@ -148,7 +148,6 @@ final class MercuryBrain {
             throw AppError.unsupportedFeature(capability.name)
         }
     }
-
 }
 
 // MARK: - Core Operations
@@ -184,8 +183,6 @@ extension MercuryBrain {
     func endListening() {
         visualState = environmentalBaseline()
     }
-
-    // MARK: - Aspect is source of truth
 
     private func applyAspect(_ aspect: Aspect, reason: String, force: Bool = false) async {
         if aspect == activeAspect {
@@ -237,13 +234,15 @@ extension MercuryBrain {
         default: return .quicksilver
         }
     }
+}
 
+// MARK: - Helpers
 
+extension MercuryBrain {
 
     private func applyAspectForRemember(content: String) async {
         let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
-        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
-        await applyAspect(turnAspect, reason: "remember")
+        await applyAspect(aspectPolicy.aspectForTurn(intent: intent), reason: "remember")
     }
 
     private func updateTaskContextForRemember(truncated: String) {
@@ -295,7 +294,12 @@ extension MercuryBrain {
         }
     }
 
-    private func completeAsk(query: String, system: String, config: PersonaConfiguration, maxTokens: Int) async throws -> String {
+    private func completeAsk(
+        query: String,
+        system: String,
+        config: PersonaConfiguration,
+        maxTokens: Int
+    ) async throws -> String {
         do {
             let response = try await aiService.complete(
                 prompt: query,
@@ -303,10 +307,8 @@ extension MercuryBrain {
                 temperature: config.preferredTemperature,
                 maxTokens: maxTokens
             )
-
             visualState = .speaking
             let colored = personality.colorResponse(response.content, personaID: config.id)
-
             visualState = .success
             refreshLivingStatus()
             stabilizeVisualStateAfterSuccess()
@@ -317,83 +319,6 @@ extension MercuryBrain {
             throw error
         }
     }
-}\n\n// MARK: - Helpers\n\nextension MercuryBrain {\n    private func applyAspectForRemember(content: String) async {
-        let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
-        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
-        await applyAspect(turnAspect, reason: "remember")
-    }
-
-    private func updateTaskContextForRemember(truncated: String) {
-        personaManager.updateTaskContext(
-            description: "Capture memory: \(String(truncated.prefix(80)))",
-            memoryHints: [String(truncated.prefix(120))]
-        )
-    }
-
-    private func storeMemoryItem(truncated: String, policy: MemoryPolicy) async {
-        await memoryManager.set(
-            key: "note.brain.\(UUID().uuidString.prefix(8))",
-            value: truncated,
-            category: .temporary,
-            metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
-            importanceBoost: policy.writeImportanceHint,
-            personaScope: nil
-        )
-    }
-
-    private func completeRememberInteraction() {
-        personality.noteInsight()
-        visualState = .processing
-        refreshLivingStatus()
-        stabilizeVisualStateAfterSuccess()
-    }
-
-    private func evaluateBrokerDecision(intent: Intent, tokens: Int) throws -> ResourcePlan {
-        let plan = broker.defaultPlan(for: intent)
-        let decision = broker.evaluate(
-            IntelligenceBroker.TurnRequest(
-                intent: intent,
-                aspect: activeAspect,
-                plan: plan,
-                estimatedContextTokens: tokens
-            )
-        )
-
-        switch decision {
-        case .allow(let allowedPlan):
-            return allowedPlan
-        case .degrade(let degradedPlan, let reason):
-            logger.info("Broker degrade: \(reason)", category: logger.general)
-            return degradedPlan
-        case .deny(let reason):
-            visualState = .warning
-            refreshLivingStatus()
-            throw AppError.aiRequestFailed(reason)
-        }
-    }
-
-    private func completeAsk(query: String, system: String, config: PersonaConfiguration, maxTokens: Int) async throws -> String {
-        do {
-            let response = try await aiService.complete(
-                prompt: query,
-                systemPrompt: system,
-                temperature: config.preferredTemperature,
-                maxTokens: maxTokens
-            )
-
-            visualState = .speaking
-            let colored = personality.colorResponse(response.content, personaID: config.id)
-
-            visualState = .success
-            refreshLivingStatus()
-            stabilizeVisualStateAfterSuccess()
-            return colored
-        } catch {
-            visualState = .warning
-            refreshLivingStatus()
-            throw error
-        }
-    }\n\n    // MARK: - Visual baseline
 
     private func environmentalBaseline() -> VisualState {
         let state = nexus.state
@@ -422,23 +347,17 @@ extension MercuryBrain {
         }
     }
 
-    // MARK: - Memory / budget helpers
-
     private func retrieveRelevantMemory() -> [MemoryItem] {
         retrieveSnapshot(limit: 5)
     }
 
     private func estimateContextTokens(systemHint: String, memory: [MemoryItem], query: String) -> Int {
         let memoryChars = memory.reduce(0) { $0 + $1.value.count }
-        let totalChars = systemHint.count + memoryChars + query.count
-        return totalChars / 4
+        return (systemHint.count + memoryChars + query.count) / 4
     }
-
-    // MARK: - Prompt
 
     private func buildSystemPrompt(for config: PersonaConfiguration, memory: [MemoryItem]) -> String {
         var prompt = config.systemPrompt
-
         let bias = personality.promptBias()
         if !bias.isEmpty {
             prompt += "\n\nBehavioral posture (internal): \(bias)"
@@ -460,8 +379,7 @@ Core stance:
         if !memory.isEmpty {
             prompt += "\n\nRelevant memory (private, ranked by importance):\n"
             for item in memory {
-                let snippet = String(item.value.prefix(180))
-                prompt += "- [\(item.category.rawValue)] \(snippet)\n"
+                prompt += "- [\(item.category.rawValue)] \(String(item.value.prefix(180)))\n"
             }
         }
 
@@ -469,6 +387,6 @@ Core stance:
         let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
         prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
         prompt += "\nActive aspect: \(activeAspect.diagnosticLabel)."
-
         return prompt
-    }\n}\n
+    }
+}
