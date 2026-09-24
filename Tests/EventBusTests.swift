@@ -138,4 +138,82 @@ final class EventBusTests: XCTestCase {
             }
         }
     }
+
+    func testAsyncStreamReceivesPublishedEvents() async {
+        let bus = EventBus()
+        let stream = await bus.events()
+
+        let expectation = XCTestExpectation(description: "Stream received battery event")
+        nonisolated(unsafe) var receivedLevel: Double?
+
+        let consumer = Task {
+            for await event in stream {
+                if case .batteryPressureChanged(let level, _) = event {
+                    receivedLevel = level
+                    expectation.fulfill()
+                    break
+                }
+            }
+        }
+
+        // Give the continuation a moment to register
+        try? await Task.sleep(for: .milliseconds(50))
+        await bus.publish(.batteryPressureChanged(level: 0.42, isLowPower: false))
+
+        await fulfillment(of: [expectation], timeout: 2.0)
+        XCTAssertEqual(receivedLevel, 0.42)
+        consumer.cancel()
+    }
+
+    func testAsyncStreamCancellationStopsDelivery() async {
+        let bus = EventBus()
+        let stream = await bus.events()
+
+        nonisolated(unsafe) var count = 0
+        let consumer = Task {
+            for await _ in stream {
+                count += 1
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(50))
+        await bus.publish(.thermalPressureChanged(state: "nominal"))
+        try? await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(count, 1)
+
+        consumer.cancel()
+        try? await Task.sleep(for: .milliseconds(50))
+
+        await bus.publish(.thermalPressureChanged(state: "fair"))
+        try? await Task.sleep(for: .milliseconds(50))
+        XCTAssertEqual(count, 1, "Cancelled stream must not receive further events")
+    }
+
+    func testCallbackAndStreamBothReceive() async {
+        let bus = EventBus()
+        let callbackExpectation = XCTestExpectation(description: "Callback received")
+        let streamExpectation = XCTestExpectation(description: "Stream received")
+
+        _ = await bus.subscribe { event in
+            if case .networkConditionChanged = event {
+                callbackExpectation.fulfill()
+            }
+        }
+
+        let stream = await bus.events()
+        let consumer = Task {
+            for await event in stream {
+                if case .networkConditionChanged = event {
+                    streamExpectation.fulfill()
+                    break
+                }
+            }
+        }
+
+        try? await Task.sleep(for: .milliseconds(50))
+        await bus.publish(.networkConditionChanged(isConnected: true, isConstrained: false))
+
+        await fulfillment(of: [callbackExpectation, streamExpectation], timeout: 2.0)
+        consumer.cancel()
+    }
 }

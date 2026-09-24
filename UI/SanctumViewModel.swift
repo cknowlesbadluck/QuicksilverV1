@@ -44,13 +44,20 @@ final class SanctumViewModel {
         visualState = container.brain.visualState
     }
 
+    /// Event-driven live refresh. Replaces the previous 2 s polling loop.
+    /// Subscribes to EventBus and refreshes only when a relevant signal arrives.
     func startLiveRefresh(interval: Duration = .seconds(2)) {
+        // `interval` retained for API compatibility; ignored.
+        _ = interval
         stopLiveRefresh()
         refreshTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
+            guard let self else { return }
+            let stream = await self.container.eventBus.events()
+            for await event in stream {
                 guard !Task.isCancelled else { break }
-                self?.refresh()
+                if Self.isRelevant(event) {
+                    self.refresh()
+                }
             }
         }
     }
@@ -63,5 +70,23 @@ final class SanctumViewModel {
     /// Accent source for the living place — prefer aspect over legacy persona ID.
     var presenceAccentID: String {
         activeAspect.rawValue
+    }
+
+    /// Events that affect displayed Sanctum state.
+    private static func isRelevant(_ event: EventBus.Event) -> Bool {
+        switch event {
+        case .personaDidChange,
+             .memoryDidUpdate,
+             .signalReceived,
+             .timeContextDidChange,
+             .batteryPressureChanged,
+             .thermalPressureChanged,
+             .networkConditionChanged,
+             .aiRequestCompleted,
+             .focusDidChange:
+            return true
+        case .featureFlagDidChange, .aiRequestStarted, .custom:
+            return false
+        }
     }
 }
