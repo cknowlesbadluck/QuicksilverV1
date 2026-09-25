@@ -6,7 +6,7 @@ Repo: `cknowlesbadluck/QuicksilverV1` @ `main` `43cdb47` (2026-09-25). Evidence 
 
 **Scope:** distribution is **SideStore only**, using the unsigned IPA from *Archive IPA* (README/AGENTS/SIDESTORE.md). Fastlane, Codemagic and the TestFlight step in `release.yml` stay **dormant, not deleted** (owner decision). Localization is out of scope for the single English-speaking owner (`developmentLanguage: en`; the repo has no string catalogs).
 
-### Owner decisions (2026-09-25)
+## Owner decisions (2026-09-25)
 1. **Integration Fabric** (`Nexus/Integration/*`) stays **dormant for v1**, with no tasks. Revisit after 1.0.
 2. **Ask** is redesigned before 1.0 into a non-chat "Invocation" surface (M5-T12, M5-T13).
 3. **Forge/Eternal:** today's depth is enough for v1.
@@ -309,7 +309,7 @@ Agents must not create the account, deploy or enable anything.
 | M5-T2 | Health score includes thermal and storage | Nexus/NexusCoordinator.swift | Weighted score. SPM tests: serious thermal or storage under 5% lowers the score. | S | — |
 | M5-T3 | Live VisualState propagation | UI/*ViewModel.swift, UI/SanctumView.swift | Views read `container.brain.visualState` through Observation, not snapshot copies. AppTests: during `ask`, the Sanctum-facing state is `.thinking`. | S | M2-T5 |
 | M5-T7 | Animation cadence policy | UI/MotionTokens.swift (`AnimationCadence`), UI/{QuicksilverCoreView,MercuryVisualSystem,AmbientLayer,ForgeView,ObservatoryVisuals}.swift | Every `TimelineView` takes the policy: paused when scenePhase is not active, when covered by a realm, or under Reduce Motion; 15 fps in Low Power Mode. AppTests unit-test the policy. `rg 'paused: false' UI` is empty. | M | M2-T1 |
-| M5-T8 | Tokenize literals in ForgeView and QuicksilverCoreView | UI/ForgeView.swift, UI/QuicksilverCoreView.swift, PersonaTheme/MotionTokens | **No** numeric literals for opacity, padding/spacing, frame, corner radius, blur, line width or duration remain; every visual and motion value comes from `PersonaTheme`/`MotionTokens` (AGENTS.md). Only structural `0`/`1` (e.g. `.opacity(0)` for hidden, `scaleEffect(1)`) are allowed. A CI-runnable `rg` check over these modifiers in the touched files returns nothing. Build + UI smoke pass. | M | M1-T11 |
+| M5-T8 | Tokenize literals in ForgeView and QuicksilverCoreView | UI/ForgeView.swift, UI/QuicksilverCoreView.swift, PersonaTheme/MotionTokens | **No** numeric literals for opacity, padding/spacing, frame, corner radius, blur, line width or duration remain; every visual and motion value comes from `PersonaTheme`/`MotionTokens` (AGENTS.md; they live in `DesignTokens/` once M3.5-T23 lands). Only structural `0`/`1` (e.g. `.opacity(0)` for hidden, `scaleEffect(1)`) are allowed. A CI-runnable `rg` check over these modifiers in the touched files returns nothing, and `rg 'Color\(red' --glob '*.swift'` matches only the token source (`UI/PersonaTheme.swift`, or `DesignTokens/` after M3.5-T23). Build + UI smoke pass. | M | M1-T11 |
 | M5-T9 | Tokenize literals in Eternal, Observatory, Sanctum and RuneGlyph | UI/{EternalView,ObservatoryPanels,ObservatoryVisuals,SpatialSanctum,RuneGlyph}.swift | Same criterion. | M | M1-T11 |
 | M5-T10 | Accessibility pass A: Sanctum, Forge, Eternal | the related UI files | Labels/hints on glyphs and gateways; decorative layers `accessibilityHidden`; fixed `.system(size:)` fonts replaced with Dynamic Type styles. XCUITest `performAccessibilityAudit()` on these screens passes. | M | M2-T11 |
 | M5-T12 | Ask → "Invocation" surface: layout | UI/AskView.swift → UI/InvocationView.swift, UI/AskViewModel.swift, PersonaTheme/MotionTokens | No bubbles, no chat list and no "Provider:" chrome. The Quicksilver core is the focal point: the current utterance and response render as an inscription around the presence, and earlier exchanges are reachable as "Echoes" (opening the Archive filtered to conversation). The input uses Writing Tools `.limited`. Tokens only (no literals). AppTests: VM keeps the full history while the view shows only the current exchange. UI smoke test updated. | M | M2-T11, M3-T10 |
@@ -366,7 +366,7 @@ All six earlier questions are answered (see *Owner decisions* at the top). One s
 | M0 In flight | 2 (1 done) |
 | M1 Ship-blocker + legacy cleanup | 13 (M1-T13 moved from old M3-T1) |
 | M2 Test & CI foundation | 11 |
-| M3 Mercury Gateway & free cloud intelligence | 22 (14 app, 8 gateway; reworked from 11) |
+| M3 Mercury Gateway & free cloud intelligence | 22 (15 app: T1–T14 + T22; 7 gateway: T15–T21; reworked from 11) |
 | M3.5 Apple Intelligence & App Intents | 23 (3 moved from M5; 5 added: on-device planning, action registry, summaries, voice, shared design tokens) |
 | M4 Memory, data & privacy | 12 (M4-T12 moved from M6-T3) |
 | M5 Experience completion | 10 (3 moved out, 2 Ask tasks added) |
