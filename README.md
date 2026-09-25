@@ -53,6 +53,8 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 
 [Documentation/ARCHITECTURE.md](Documentation/ARCHITECTURE.md)
 
+Production roadmap to 1.0 (living document): [docs/ROADMAP.md](docs/ROADMAP.md)
+
 Core owns contracts. Modules implement. UI only presents. Nexus stays persona-agnostic.
 
 ## Local Mac workflow (optional)
