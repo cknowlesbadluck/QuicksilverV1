@@ -88,37 +88,24 @@ enum BrainComposition {
         bias: String,
         memory: [MemoryItem],
         state: NexusState,
-        aspect: Aspect
+        aspect: Aspect,
+        owner: String = PromptComposer.defaultOwnerName,
+        destination: PromptComposer.Destination = .cloud,
+        plainMode: Bool = false
     ) -> String {
-        var prompt = base
-        if !bias.isEmpty {
-            prompt += "\n\nBehavioral posture (internal): \(bias)"
-        }
-
-        prompt += """
-
-
-Core stance:
-- Truth is more important than agreement.
-- Challenge unsupported conclusions with precision.
-- Critique ideas, never the person.
-- Admit uncertainty when evidence is incomplete.
-- Prefer the smallest verifiable next step over speculation.
-- Dry, elegant wit is allowed; cruelty is not.
-- Everything ultimately serves the user's long-term success.
-"""
-
-        if !memory.isEmpty {
-            prompt += "\n\nRelevant memory (private, ranked by importance):\n"
-            for item in memory {
-                prompt += "- [\(item.category.rawValue)] \(String(item.value.prefix(180)))\n"
-            }
-        }
-
         let health = state.overallHealthScore
         let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
-        prompt += "\nActive aspect: \(aspect.diagnosticLabel)."
-        return prompt
+        let device = "Device context (private): health \(health), battery \(battery)."
+        return PromptComposer.compose(
+            core: PromptManager.coreIdentity(),
+            aspect: base,
+            bias: bias,
+            memory: memory,
+            device: device,
+            aspectLabel: aspect.diagnosticLabel,
+            plainMode: plainMode,
+            owner: owner,
+            destination: destination
+        )
     }
 }
