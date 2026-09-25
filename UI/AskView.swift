@@ -2,6 +2,9 @@ import SwiftUI
 import Core
 
 struct AskView: View {
+    private static let unboundNoticeID = "ask.unboundNotice"
+    private static let errorMessageID = "ask.errorMessage"
+
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: AskViewModel?
 
@@ -62,12 +65,14 @@ struct AskView: View {
                             .font(.caption.weight(.medium))
                             .foregroundStyle(accent)
                             .accessibilityLabel(notice)
+                            .id(Self.unboundNoticeID)
                     }
 
                     if let error = vm.errorMessage {
                         Text(error)
                             .font(.caption)
                             .foregroundStyle(.red)
+                            .id(Self.errorMessageID)
                     }
                 }
                 .padding()
@@ -77,6 +82,18 @@ struct AskView: View {
                     withAnimation {
                         proxy.scrollTo(last, anchor: .bottom)
                     }
+                }
+            }
+            .onChange(of: vm.unboundNotice) { _, notice in
+                guard notice != nil else { return }
+                withAnimation {
+                    proxy.scrollTo(Self.unboundNoticeID, anchor: .bottom)
+                }
+            }
+            .onChange(of: vm.errorMessage) { _, error in
+                guard error != nil else { return }
+                withAnimation {
+                    proxy.scrollTo(Self.errorMessageID, anchor: .bottom)
                 }
             }
         }
