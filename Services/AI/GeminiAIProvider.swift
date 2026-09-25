@@ -28,22 +28,28 @@ struct GeminiAIProvider: AIProvider {
         return try decode(data: data, requestID: request.id)
     }
     
-    private func performRequest(_ request: AIRequest) async throws -> Data {
-        guard var components = URLComponents(
+    static let apiKeyHeaderField = "x-goog-api-key"
+
+    /// Builds the HTTP request. The API key travels only in the `x-goog-api-key` header,
+    /// never in the URL, so it cannot leak through URL logging or failed-request capture (M1-T13).
+    func makeURLRequest(_ request: AIRequest) throws -> URLRequest {
+        guard let url = URL(
             string: "https://generativelanguage.googleapis.com/v1beta/models/\(model):generateContent"
         ) else {
-            throw AppError.configurationMissing("Gemini base URL")
-        }
-        components.queryItems = [URLQueryItem(name: "key", value: apiKey)]
-        guard let url = components.url else {
             throw AppError.configurationMissing("Gemini endpoint")
         }
         
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.setValue(apiKey, forHTTPHeaderField: Self.apiKeyHeaderField)
         urlRequest.timeoutInterval = 45
         urlRequest.httpBody = try JSONEncoder().encode(makeBody(request))
+        return urlRequest
+    }
+    
+    private func performRequest(_ request: AIRequest) async throws -> Data {
+        let urlRequest = try makeURLRequest(request)
         
         let data: Data
         let response: URLResponse

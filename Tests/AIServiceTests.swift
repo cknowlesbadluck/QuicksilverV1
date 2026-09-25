@@ -24,6 +24,7 @@ final class AIServiceTests: XCTestCase {
         let bus = EventBus()
         let logger = LoggerService()
         let flags = FeatureFlags()
+        flags.set("aiServiceEnabled", enabled: true)
         let service = AIService(
             provider: MockAIProvider(),
             eventBus: bus,
@@ -35,7 +36,7 @@ final class AIServiceTests: XCTestCase {
         XCTAssertEqual(response.finishReason, .stop)
     }
     
-    func testDisabledFlagBlocksNonMockProvider() async {
+    func testDisabledFlagBlocksProvider() async {
         let bus = EventBus()
         let logger = LoggerService()
         let flags = FeatureFlags()
@@ -50,9 +51,9 @@ final class AIServiceTests: XCTestCase {
         
         do {
             _ = try await service.complete(prompt: "should fail")
-            XCTFail("Expected unsupportedFeature when AI is disabled for non-mock provider")
+            XCTFail("Expected intelligenceDisabled when AI is disabled")
         } catch let error as AppError {
-            if case .unsupportedFeature = error {
+            if case .intelligenceDisabled = error {
                 // expected
             } else {
                 XCTFail("Unexpected AppError: \(error)")
@@ -62,7 +63,7 @@ final class AIServiceTests: XCTestCase {
         }
     }
     
-    func testMockAllowedWhenFlagDisabled() async throws {
+    func testMockBlockedWhenFlagDisabled() async {
         let bus = EventBus()
         let logger = LoggerService()
         let flags = FeatureFlags()
@@ -74,8 +75,14 @@ final class AIServiceTests: XCTestCase {
             logger: logger,
             featureFlags: flags
         )
-        let response = try await service.complete(prompt: "mock still works")
-        XCTAssertFalse(response.content.isEmpty)
+        do {
+            let response = try await service.complete(prompt: "mock must not bypass the flag")
+            XCTFail("Disabled intelligence must not return text, got: \(response.content)")
+        } catch let error as AppError {
+            XCTAssertTrue(error.isIntelligenceUnbound, "Unexpected AppError: \(error)")
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
     }
     
     func testEmptyResponseIsRejected() async {
@@ -115,6 +122,7 @@ final class AIServiceTests: XCTestCase {
         let bus = EventBus()
         let logger = LoggerService()
         let flags = FeatureFlags()
+        flags.set("aiServiceEnabled", enabled: true)
         let service = AIService(
             provider: MockAIProvider(),
             eventBus: bus,

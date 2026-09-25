@@ -118,6 +118,9 @@ final class ForgeViewModel {
             refresh()
             return answer
         } catch {
+            if let notice = AppError.unboundNotice(for: error) {
+                return notice
+            }
             return "Workshop is silent: \(error.localizedDescription)"
         }
     }

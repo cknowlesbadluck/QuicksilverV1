@@ -262,7 +262,8 @@ extension MercuryBrain {
             stabilizeVisualStateAfterSuccess()
             return colored
         } catch {
-            visualState = .warning
+            // Unbound is a state, not a failure: settle to baseline and let the UI show the notice.
+            visualState = AppError.unboundNotice(for: error) == nil ? .warning : environmentalBaseline()
             refreshLivingStatus()
             throw error
         }
