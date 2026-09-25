@@ -50,7 +50,7 @@ final class MercuryBrain {
         self.eventBus = eventBus
         self.logger = logger
 
-        activeAspect = mapPersonaToAspect(personaManager.activePersonaID)
+        activeAspect = BrainComposition.aspect(forPersonaID: personaManager.activePersonaID)
         personality.applyPersonaBias(personaID: activeAspect.rawValue)
         refreshLivingStatus()
     }
@@ -74,7 +74,7 @@ final class MercuryBrain {
         personality.adjustForAspect(activeAspect)
 
         let relevantMemory = retrieveRelevantMemory()
-        let estimatedTokens = estimateContextTokens(
+        let estimatedTokens = BrainComposition.estimateContextTokens(
             systemHint: config.systemPrompt,
             memory: relevantMemory,
             query: query
@@ -89,7 +89,7 @@ final class MercuryBrain {
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
     func switchPersona(to id: String) async throws {
         visualState = .transitioning
-        await applyAspect(mapPersonaToAspect(id), reason: "explicit switch", force: true)
+        await applyAspect(BrainComposition.aspect(forPersonaID: id), reason: "explicit switch", force: true)
         visualState = environmentalBaseline()
     }
 
@@ -119,35 +119,6 @@ final class MercuryBrain {
         )
         return memoryManager.items(matching: memoryQuery)
     }
-
-    /// Structured capability invocations.
-    func invoke(_ capability: Capability, payload: String = "") async throws -> String {
-        switch capability.kind {
-        case .memoryWrite:
-            await remember(payload.isEmpty ? "(empty note)" : payload)
-            return "Remembered."
-        case .memoryRead:
-            let items = retrieveSnapshot(limit: 5)
-            if items.isEmpty { return "No matching memory." }
-            return items.map { item in
-                let snippet = String(item.value.prefix(140))
-                return "[\(item.category.rawValue)] \(snippet)"
-            }.joined(separator: "\n")
-        case .memoryCorrect:
-            await remember("Correction: \(payload)")
-            return "Correction recorded."
-        case .diagnose:
-            return try await ask(
-                payload.isEmpty
-                    ? "Diagnose current device health, thermal, and power. Be precise."
-                    : payload
-            )
-        case .express:
-            return try await ask(payload.isEmpty ? "Summarize current status." : payload)
-        case .plan, .invokeTool:
-            throw AppError.unsupportedFeature(capability.name)
-        }
-    }
 }
 
 // MARK: - Core Operations
@@ -155,20 +126,13 @@ final class MercuryBrain {
 extension MercuryBrain {
 
     func refreshLivingStatus() {
-        let state = nexus.state
-        let label = activeAspect.diagnosticLabel
-
-        if let insight = state.recentInsights.first {
-            primaryInsight = insight.title
-            livingStatus = "\(label): \(insight.title)"
-        } else if state.overallHealthScore < 50 {
-            livingStatus = "\(label) watches rising pressure. Health \(state.overallHealthScore)."
-            personality.increase(.skepticism, by: 0.04)
-        } else if state.lowPowerMode {
-            livingStatus = "\(label) notes low power. Conserving."
-            personality.increase(.patience, by: 0.03)
-        } else {
-            livingStatus = "\(label) is present. The Sanctum holds."
+        let reading = BrainComposition.livingReading(state: nexus.state, label: activeAspect.diagnosticLabel)
+        if let insightTitle = reading.insightTitle {
+            primaryInsight = insightTitle
+        }
+        livingStatus = reading.text
+        if let nudge = reading.nudge {
+            personality.increase(nudge.dimension, by: nudge.amount)
         }
 
         if visualState != .thinking && visualState != .speaking && visualState != .transitioning {
@@ -226,14 +190,6 @@ extension MercuryBrain {
             visualState = aspect.defaultVisualState
         }
     }
-
-    private func mapPersonaToAspect(_ personaID: String) -> Aspect {
-        switch personaID {
-        case "forge": return .forge
-        case "eternal": return .eternal
-        default: return .quicksilver
-        }
-    }
 }
 
 // MARK: - Helpers
@@ -271,15 +227,7 @@ extension MercuryBrain {
     }
 
     private func evaluateBrokerDecision(intent: Intent, tokens: Int) throws -> ResourcePlan {
-        let plan = broker.defaultPlan(for: intent)
-        let decision = broker.evaluate(
-            IntelligenceBroker.TurnRequest(
-                intent: intent,
-                aspect: activeAspect,
-                plan: plan,
-                estimatedContextTokens: tokens
-            )
-        )
+        let decision = BrainComposition.brokerDecision(broker, intent: intent, aspect: activeAspect, tokens: tokens)
 
         switch decision {
         case .allow(let allowedPlan):
@@ -321,21 +269,7 @@ extension MercuryBrain {
     }
 
     private func environmentalBaseline() -> VisualState {
-        let state = nexus.state
-        let thermal = state.thermalState.lowercased()
-        if thermal.contains("serious") || thermal.contains("critical") {
-            return .critical
-        }
-        if state.overallHealthScore < 35 {
-            return .warning
-        }
-        if state.lowPowerMode {
-            return .sleeping
-        }
-        if state.overallHealthScore < 55 {
-            return .processing
-        }
-        return activeAspect.defaultVisualState
+        BrainComposition.environmentalBaseline(state: nexus.state, aspect: activeAspect)
     }
 
     private func stabilizeVisualStateAfterSuccess() {
@@ -351,42 +285,13 @@ extension MercuryBrain {
         retrieveSnapshot(limit: 5)
     }
 
-    private func estimateContextTokens(systemHint: String, memory: [MemoryItem], query: String) -> Int {
-        let memoryChars = memory.reduce(0) { $0 + $1.value.count }
-        return (systemHint.count + memoryChars + query.count) / 4
-    }
-
     private func buildSystemPrompt(for config: PersonaConfiguration, memory: [MemoryItem]) -> String {
-        var prompt = config.systemPrompt
-        let bias = personality.promptBias()
-        if !bias.isEmpty {
-            prompt += "\n\nBehavioral posture (internal): \(bias)"
-        }
-
-        prompt += """
-
-
-Core stance:
-- Truth is more important than agreement.
-- Challenge unsupported conclusions with precision.
-- Critique ideas, never the person.
-- Admit uncertainty when evidence is incomplete.
-- Prefer the smallest verifiable next step over speculation.
-- Dry, elegant wit is allowed; cruelty is not.
-- Everything ultimately serves the user's long-term success.
-"""
-
-        if !memory.isEmpty {
-            prompt += "\n\nRelevant memory (private, ranked by importance):\n"
-            for item in memory {
-                prompt += "- [\(item.category.rawValue)] \(String(item.value.prefix(180)))\n"
-            }
-        }
-
-        let health = nexus.state.overallHealthScore
-        let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        prompt += "\n\nDevice context (private): health \(health), battery \(battery)."
-        prompt += "\nActive aspect: \(activeAspect.diagnosticLabel)."
-        return prompt
+        BrainComposition.systemPrompt(
+            base: config.systemPrompt,
+            bias: personality.promptBias(),
+            memory: memory,
+            state: nexus.state,
+            aspect: activeAspect
+        )
     }
 }
