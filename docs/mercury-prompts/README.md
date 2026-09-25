@@ -4,8 +4,8 @@
 
 | File | Replaces / new | Role | Words | Est. tokens (chars÷4 / cl100k / o200k) |
 |---|---|---|---|---|
-| `core.txt` | **new** | Shared identity block: controlled chaos, loyalty line, unbreakable rules. Put it before the aspect prompt (P-T1) | 285 | 416 / 383 / 381 |
-| `core-compact.txt` | **new (optional)** | Short core for Apple Foundation Models / small-context turns (P-T4); keeps the refusal rule | 113 | 159 / 154 / 152 |
+| `core.txt` | **new** | Shared identity block: controlled chaos, loyalty line, unbreakable rules. Put it before the aspect prompt (P-T1) | 284 | 418 / 384 / 382 |
+| `core-compact.txt` | **new (optional)** | Short core for Apple Foundation Models / small-context turns (P-T4); keeps the refusal rule | 112 | 159 / 151 / 150 |
 | `quicksilver.txt` | replaces `Resources/Personas/quicksilver.txt` | Open (default) aspect: witty, snarky, vain | 169 | 229 / 211 / 211 |
 | `forge.txt` | replaces `Resources/Personas/forge.txt` | Forge aspect: erratic brilliance that lands on a crisp answer | 168 | 256 / 234 / 231 |
 | `eternal.txt` | replaces `Resources/Personas/eternal.txt` | Eternal aspect: ancient, aloof, sparing; exact recall | 163 | 240 / 224 / 222 |
@@ -16,7 +16,7 @@ Budgets enforced by P-T3: aspect ≤ 260 · core ≤ 420 · compact ≤ 160 (cha
 
 | Path | Composition | ≈ tokens (chars÷4) |
 |---|---|---|
-| Cloud (Grok / Gemini) | core + aspect | 645–672 |
+| Cloud (Grok / Gemini) | core + aspect | 647–674 |
 | On-device (Foundation Models, 4,096-token window shared by prompt and reply) | core-compact + aspect | 388–415 (≤ 470 with at most 2 bias clauses, P-T4) |
 | Today, if only the aspect files are swapped (no composition yet) | aspect alone | 229–256 |
 

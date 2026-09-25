@@ -260,7 +260,7 @@ The palette stays fixed. The chaos lives only in *how* the colours are used.
 Open:    thinking(swirl+feint) ─▶ slyPause 400ms ─▶ speaking (smirkFlick) ─▶ success 600ms ─▶ baseline
 Forge:   thinking(jitter+sparks+surges, seeded) ─▶ snapToForm + resolve tap ─▶ slyPause 400ms ─▶ speaking ─▶ success ─▶ baseline
 Eternal: thinking(near-still) ─▶ eternalHold 900ms ─▶ speaking (slowReveal) ─▶ baseline (no success flash)
-Any:     distress/safety ─▶ steady (all chaos off) · error ─▶ warning (chaos off) · long idle ─▶ sleeping
+Any:     plain register (distress/safety/family/money…) ─▶ steady only: no snap, pause or success flash (all chaos off) · error ─▶ warning (chaos off) · long idle ─▶ sleeping
 ```
 Speaking dwell = clamp(chars / 40, 0.8…3.0 s) for open and Forge, and clamp(chars / 25, 1.2…4.0 s) for Eternal. The Brain is the only writer, and the sequence comes from the pure `Core/ExpressionChoreography.swift` (P-T7).
 
