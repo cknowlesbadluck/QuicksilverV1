@@ -52,7 +52,6 @@ jobs:
             App/DependencyContainer.swift \
             App/MercuryBrain.swift \
             Nexus/NexusCoordinator.swift \
-            UI/ContentView.swift \
             Documentation/ARCHITECTURE.md \
             PrivacyInfo.xcprivacy
           do
