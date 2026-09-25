@@ -47,7 +47,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 | **Ask** | Persona-aware chat with Memory history |
 | **Memory** | Policy-filtered notes, delete / clear / export |
 | **Diagnostics** | Live insights + signals |
-| **Codex** | Provider key status + automatic provider routing (key entry isn't in the shipping UI yet; see [roadmap](docs/ROADMAP.md) M1-T2) |
+| **Codex** | Bind/unbind provider keys (Gemini, optional Grok) + automatic provider routing; with no key bound, Mercury shows "Intelligence unbound" |
 
 ## Architecture
 
