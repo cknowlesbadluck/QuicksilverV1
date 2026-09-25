@@ -203,52 +203,13 @@ public struct QueryNexusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager,
-              let ai = IntentDependencies.shared.aiService else {
+        guard let ask = IntentDependencies.shared.askHandler else {
             throw AppError.nexusNotReady
         }
-
-        let lower = query.lowercased()
-        let intent: QueryIntent
-        let kind: TaskKind
-
-        if containsAny(lower, ["architect", "implement", "refactor", "debug", "error", "crash", "fix", "structure", "precision"]) {
-            intent = .preciseTechnical
-            kind = .building
-        } else if containsAny(lower, ["reflect", "remember", "history", "pattern", "long-term", "why did", "continuity"]) {
-            intent = .reflective
-            kind = .reflecting
-        } else if containsAny(lower, ["idea", "brainstorm", "what if", "explore", "creative", "option", "strategy"]) {
-            intent = .creative
-            kind = .exploring
-        } else if containsAny(lower, ["diagnose", "why is", "broken", "failing"]) {
-            intent = .diagnostic
-            kind = .debugging
-        } else {
-            intent = .strategic
-            kind = .exploring
-        }
-
-        manager.updateTaskContext(
-            description: query,
-            kind: kind,
-            queryIntent: intent
-        )
-
-        let config = manager.activeConfiguration
-        let response = try await ai.complete(
-            prompt: query,
-            systemPrompt: config.systemPrompt,
-            temperature: config.preferredTemperature,
-            maxTokens: config.maxTokensHint
-        )
-
-        return .result(value: "[\(config.displayName)] \(response.content)")
+        let answer = try await ask(query)
+        return .result(value: answer)
     }
 
-    private func containsAny(_ text: String, _ keywords: [String]) -> Bool {
-        keywords.contains { text.contains($0) }
-    }
 }
 
 // MARK: - App Shortcuts provider (≤ 10 hard limit)
