@@ -19,7 +19,16 @@ public struct Signal: Identifiable, Sendable, Equatable {
         case connectivity, power, capacity, performance, environment, diagnostic
     }
 
-    public init(id: UUID = UUID(), source: Source, category: Category, timestamp: Date = Date(), value: String, numericValue: Double? = nil, confidence: Double = 1.0, metadata: [String: String] = [:]) {
+    public init(
+        id: UUID = UUID(),
+        source: Source,
+        category: Category,
+        timestamp: Date = Date(),
+        value: String,
+        numericValue: Double? = nil,
+        confidence: Double = 1.0,
+        metadata: [String: String] = [:]
+    ) {
         self.id = id
         self.source = source
         self.category = category

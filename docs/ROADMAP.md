@@ -54,7 +54,7 @@ Other gaps:
 - **The Gemini key is sent as a URL query parameter.**
 - **App-layer code has no CI tests.** Nothing in App/ or UI/ is exercised in CI, because CI only runs `swift test` and a simulator *build*.
 - **A11y is thin, and performance has gaps.** Several 30 fps `TimelineView`s are never paused.
-- **Latent lint debt.** 23 strict-lint violations sit in files that later PRs must touch.
+- **Latent lint debt.** Cleared outside UI/ by M1-T1 (was 23–26 strict violations; full-repo `--strict` is clean outside Tests/ which stay excluded).
 - **Stale docs.** They claim an iOS 18 SDK, a persona switcher and an iPhone 14 target.
 - **No recent device build.** The last *Archive IPA* run was 2026-09-18 21:57 ET, before the aspect architecture and Sanctum work.
 - **Cloud AI is paid-only and keys live in the app.** Grok needs paid credits, the Gemini key sits in the URL, and there is no gateway, streaming, cancellation or fake provider. The owner's free-only decision (Owner decision 8) replaces this with the gateway architecture in M3.
@@ -87,7 +87,7 @@ Conventions: **S** is at most about 150 changed lines and **M** at most about 30
 | ID | Task | Files | Acceptance | Size | Deps |
 |---|---|---|---|---|---|
 | M0-T1 | Split `EternalView.swift` / `MercuryBrain.swift` under 400 lines | UI/EternalView, ObservatoryPanels/Visuals, App/MercuryBrain* | **Done: merged as #134** (EternalView 260, MercuryBrain 297 lines). Verify only. | — | — |
-| M0-T2 | Event-driven refresh for Forge/Eternal/Diagnostics | Core/EventDrivenRefresh.swift, UI/{Forge,Eternal,Diagnostics}ViewModel.swift, Tests/EventDrivenRefreshTests.swift | PR #135 is open and all 4 checks pass. `rg 'Task.sleep' UI/*ViewModel.swift` returns only HomeViewModel (removed in M1). **HUMAN GATE:** owner merges #135. | M | — |
+| M0-T2 | Event-driven refresh for Forge/Eternal/Diagnostics | Core/EventDrivenRefresh.swift, UI/{Forge,Eternal,Diagnostics}ViewModel.swift, Tests/EventDrivenRefreshTests.swift | ✅ Merged #135. `rg 'Task.sleep' UI/*ViewModel.swift` returns only HomeViewModel (removed in M1). | M | — |
 
 ### M1 — Ship-blocker + legacy persona/dashboard cleanup
 **Goal:** make AI configurable from the shipping UI and remove all legacy persona/dashboard code. **Exit:** keys can be bound in Codex; no mock text reaches the user; `rg -n 'ContentView|HomeViewModel|SettingsView\b|PersonaDecisionPolicy|TaskKind|QueryIntent|updateTaskContext|CapabilitySurface' --glob '*.swift'` returns nothing; full-repo strict lint is clean.

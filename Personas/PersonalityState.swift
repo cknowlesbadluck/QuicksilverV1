@@ -47,8 +47,6 @@ public struct PersonalityState: Sendable, Equatable {
             skepticism = 0.55
             patience = 0.95
             loyalty = 0.92
-        case "quicksilver":
-            fallthrough
         default:
             confidence = 0.74
             curiosity = 0.82
@@ -113,6 +111,11 @@ public struct PersonalityState: Sendable, Equatable {
 
     /// Legacy path retained for callers that still supply QueryIntent/TaskKind.
     public mutating func adjustFor(intent: QueryIntent, kind: TaskKind) {
+        adjustForIntent(intent)
+        adjustForTaskKind(kind)
+    }
+
+    private mutating func adjustForIntent(_ intent: QueryIntent) {
         switch intent {
         case .preciseTechnical:
             increase(.focus, by: 0.10)
@@ -137,7 +140,9 @@ public struct PersonalityState: Sendable, Equatable {
         case .unknown:
             break
         }
+    }
 
+    private mutating func adjustForTaskKind(_ kind: TaskKind) {
         switch kind {
         case .building:
             increase(.focus, by: 0.06)

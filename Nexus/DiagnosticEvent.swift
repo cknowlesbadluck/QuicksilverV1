@@ -13,7 +13,15 @@ public struct DiagnosticEvent: Identifiable, Sendable, Equatable {
         case info, notice, warning, critical
     }
 
-    public init(id: UUID = UUID(), signalID: UUID? = nil, title: String, detail: String, severity: Severity = .info, timestamp: Date = Date(), source: Signal.Source) {
+    public init(
+        id: UUID = UUID(),
+        signalID: UUID? = nil,
+        title: String,
+        detail: String,
+        severity: Severity = .info,
+        timestamp: Date = Date(),
+        source: Signal.Source
+    ) {
         self.id = id
         self.signalID = signalID
         self.title = title

@@ -46,7 +46,7 @@ struct GrokAIProvider: AIProvider {
         urlRequest.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         urlRequest.timeoutInterval = 45
         
-        var messages: [GrokAPI.ChatRequest.Message] = []
+        var messages: [GrokAPI.ChatMessage] = []
         if let system = request.systemPrompt, !system.isEmpty {
             messages.append(.init(role: "system", content: system))
         }
@@ -56,7 +56,7 @@ struct GrokAIProvider: AIProvider {
             model: model,
             messages: messages,
             temperature: request.temperature,
-            max_tokens: request.maxTokens,
+            maxTokens: request.maxTokens,
             stream: false
         )
         urlRequest.httpBody = try JSONEncoder().encode(body)
@@ -93,7 +93,7 @@ struct GrokAIProvider: AIProvider {
             throw AppError.aiRequestFailed("Grok response contained no choices")
         }
         let finishReason: AIResponse.FinishReason
-        switch first.finish_reason {
+        switch first.finishReason {
         case "length":
             finishReason = .length
         default:
@@ -102,8 +102,8 @@ struct GrokAIProvider: AIProvider {
         
         let usage = decoded.usage.map {
             AIResponse.Usage(
-                promptTokens: $0.prompt_tokens ?? 0,
-                completionTokens: $0.completion_tokens ?? 0
+                promptTokens: $0.promptTokens ?? 0,
+                completionTokens: $0.completionTokens ?? 0
             )
         }
         return AIResponse(
