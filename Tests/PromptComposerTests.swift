@@ -124,6 +124,30 @@ final class PromptComposerTests: XCTestCase {
         XCTAssertLessThan(plainRange.lowerBound, biasRange.lowerBound)
     }
 
+
+    func testComposedAspectsDoNotClaimSeparateBeings() throws {
+        let resources = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Resources/Personas", isDirectory: true)
+        for name in ["quicksilver", "forge", "eternal"] {
+            let url = resources.appendingPathComponent("\(name).txt")
+            let aspect = try String(contentsOf: url, encoding: .utf8)
+            let prompt = PromptComposer.compose(
+                core: PromptManager.embeddedCoreFallback,
+                aspect: aspect,
+                destination: .cloud
+            )
+            XCTAssertFalse(prompt.contains("You are Forge"), name)
+            XCTAssertFalse(prompt.contains("You are Eternal"), name)
+            XCTAssertFalse(prompt.contains("You are Quicksilver"), name)
+            XCTAssertFalse(prompt.contains("Think Loki"), name)
+            // Core opens with "You are Mercury:"; aspects open with "You are Mercury, in your …".
+            XCTAssertEqual(prompt.components(separatedBy: "You are Mercury:").count - 1, 1, name)
+            XCTAssertTrue(prompt.contains("You are Mercury, in your"), name)
+        }
+    }
+
     private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
