@@ -12,7 +12,7 @@ Native iOS intelligence platform. Primary target: iPhone 16e / iOS 27. CI floor:
 - Public Apple APIs only. SideStore-first. No private APIs.
 - **VisualState is owned by MercuryBrain.** UI only observes.
 - **PersonaTheme + MotionTokens** are the only visual/motion sources. No magic numbers in views.
-- Quicksilver is one persistent entity. Forge and Eternal are aspects, not selectable personas, products, or assistants.
+- Quicksilver is one persistent entity. Forge and Eternal are aspects, not separate personas, products, or assistants. An aspect may be pinned per thread as a mood of the one entity; Auto is the default.
 
 ## Autonomy Policy
 - Owner-authorized multi-step agent loops are permitted.

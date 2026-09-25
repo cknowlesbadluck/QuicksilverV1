@@ -83,7 +83,7 @@ No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7
 
 ## Entity and aspects
 
-Quicksilver is the single persistent entity. Forge and Eternal are autonomous aspects surfaced by context; they are not selectable personas or separate assistants.
+Quicksilver is the single persistent entity. Forge and Eternal are autonomous aspects surfaced by context; they are not separate personas or assistants. An aspect may be pinned per thread as a mood of the one entity; Auto is the default.
 
 Prompts: `Resources/Personas/*.txt` provide aspect-specific behavioral grounding.
 
