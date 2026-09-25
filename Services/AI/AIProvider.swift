@@ -2,7 +2,11 @@ import Foundation
 import Core
 
 // AIProvider protocol now lives in Core/Protocols/AIProvider.swift.
-// This file only provides the Mock implementation used by default.
+// This file only provides the Mock implementation.
+//
+// MockAIProvider is for unit tests and SwiftUI previews only. AIService never selects it:
+// with no bound key, requests throw `AppError.apiKeyMissing` (the "Intelligence unbound" state, M1-T3).
+// Production code must not inject it.
 
 public struct MockAIProvider: AIProvider {
     public let id = "mock"

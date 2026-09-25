@@ -8,7 +8,9 @@ public final class AIService {
     public private(set) var isProcessing = false
     public private(set) var lastResponse: AIResponse?
     
-    private var primaryProvider: AIProvider
+    /// `nil` means intelligence is unbound: no real provider has a key. Requests throw
+    /// `AppError.apiKeyMissing`; no mock text is ever substituted (M1-T3).
+    private var primaryProvider: AIProvider?
     private var secondaryProvider: AIProvider?
     private let eventBus: EventBus
     private let logger: LoggerService
@@ -19,21 +21,38 @@ public final class AIService {
     public static let grokAPIKeyKeychainAccount = "xai.apiKey"
     public static let geminiAPIKeyKeychainAccount = "google.gemini.apiKey"
     
-    public init(provider: AIProvider? = nil, eventBus: EventBus, logger: LoggerService, featureFlags: FeatureFlags) {
+    public convenience init(provider: AIProvider? = nil, eventBus: EventBus, logger: LoggerService, featureFlags: FeatureFlags) {
+        let configured: (primary: AIProvider?, secondary: AIProvider?)
+        if let provider {
+            configured = (provider, nil)
+        } else {
+            configured = Self.makeConfiguredProviders()
+        }
+        self.init(
+            primary: configured.primary,
+            secondary: configured.secondary,
+            eventBus: eventBus,
+            logger: logger,
+            featureFlags: featureFlags
+        )
+    }
+
+    /// Explicit routing (tests). `primary == nil` is the unbound state; the Keychain is not read.
+    init(
+        primary: AIProvider?,
+        secondary: AIProvider?,
+        eventBus: EventBus,
+        logger: LoggerService,
+        featureFlags: FeatureFlags
+    ) {
         self.eventBus = eventBus
         self.logger = logger
         self.featureFlags = featureFlags
-        if let provider {
-            self.primaryProvider = provider
-            self.secondaryProvider = nil
-        } else {
-            let configured = Self.makeConfiguredProviders()
-            self.primaryProvider = configured.primary
-            self.secondaryProvider = configured.secondary
-        }
+        self.primaryProvider = primary
+        self.secondaryProvider = secondary
     }
     
-    private static func makeConfiguredProviders() -> (primary: AIProvider, secondary: AIProvider?) {
+    private static func makeConfiguredProviders() -> (primary: AIProvider?, secondary: AIProvider?) {
         let grokKey = KeychainStore.string(forKey: grokAPIKeyKeychainAccount)
         let geminiKey = KeychainStore.string(forKey: geminiAPIKeyKeychainAccount)
         let grok = grokKey.flatMap { $0.isEmpty ? nil : GrokAIProvider.make(apiKey: $0) }
@@ -45,7 +64,7 @@ public final class AIService {
         if let gemini {
             return (gemini, nil)
         }
-        return (MockAIProvider(), nil)
+        return (nil, nil)
     }
     
     public func configureGrokAPIKey(_ key: String?) -> Bool {
@@ -81,7 +100,7 @@ public final class AIService {
         primaryProvider = configured.primary
         secondaryProvider = configured.secondary
         logger.info(
-            "AI routing rebuilt: primary=\(primaryProvider.displayName), "
+            "AI routing rebuilt: primary=\(currentProviderName), "
             + "fallback=\(secondaryProvider?.displayName ?? "none")",
             category: logger.ai
         )
@@ -93,8 +112,13 @@ public final class AIService {
         logger.info("AI provider switched to \(newProvider.displayName)", category: logger.ai)
     }
     
-    public var currentProviderID: String { primaryProvider.id }
-    public var currentProviderName: String { primaryProvider.displayName }
+    public static let unboundProviderID = "unbound"
+    public static let unboundProviderName = "Unbound"
+
+    /// True when a real provider is bound. False means Ask/Brain requests return the unbound state.
+    public var isBound: Bool { primaryProvider != nil }
+    public var currentProviderID: String { primaryProvider?.id ?? Self.unboundProviderID }
+    public var currentProviderName: String { primaryProvider?.displayName ?? Self.unboundProviderName }
     public var fallbackProviderName: String? { secondaryProvider?.displayName }
     public var hasGrokKey: Bool {
         !(KeychainStore.string(forKey: Self.grokAPIKeyKeychainAccount)?.isEmpty ?? true)
@@ -111,8 +135,9 @@ public final class AIService {
     public func clearAllAPIKeys() {
         KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
         KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
-        primaryProvider = MockAIProvider()
+        primaryProvider = nil
         secondaryProvider = nil
+        logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
     }
     
     public func complete(
@@ -158,8 +183,13 @@ public final class AIService {
         temperature: Double,
         maxTokens: Int
     ) async throws -> AIResponse {
-        guard featureFlags.isEnabled("aiServiceEnabled") || primaryProvider.id == "mock" else {
-            throw AppError.unsupportedFeature("AI service is currently disabled by feature flag")
+        guard let provider = primaryProvider else {
+            logger.info("AI request refused: intelligence unbound", category: logger.ai)
+            throw AppError.apiKeyMissing
+        }
+        guard featureFlags.isEnabled("aiServiceEnabled") else {
+            logger.info("AI request refused: intelligence disabled in the Codex", category: logger.ai)
+            throw AppError.intelligenceDisabled
         }
         
         let request = AIRequest(
@@ -174,7 +204,7 @@ public final class AIService {
         defer { isProcessing = false }
         
         do {
-            let raw = try await performProviderRequest(request)
+            let raw = try await performProviderRequest(request, primary: provider)
             switch ResponseValidator.validate(raw) {
             case .accept(let response):
                 lastResponse = response
@@ -191,9 +221,9 @@ public final class AIService {
         }
     }
     
-    private func performProviderRequest(_ request: AIRequest) async throws -> AIResponse {
+    private func performProviderRequest(_ request: AIRequest, primary: AIProvider) async throws -> AIResponse {
         do {
-            return try await primaryProvider.complete(request)
+            return try await primary.complete(request)
         } catch {
             guard let fallback = secondaryProvider, fallback.isAvailable else { throw error }
             logger.info(
