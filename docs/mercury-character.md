@@ -135,7 +135,7 @@ The aspect is chosen by `AspectPolicy` (Core) and applied by `MercuryBrain.apply
 
 | | **Open (Quicksilver)** · *liquid, snarky* | **Forge** · *molten, erratic* | **Eternal** · *cold, still, ancient* |
 |---|---|---|---|
-| Surfaces when | `inquire`, `express`, default | `create`, `diagnose`; low power or serious thermal state | `observe`, `retrieve`, `remember`; plenty of recent memory |
+| Surfaces when | `inquire`, `express`, default | `create`, `diagnose`; low power or serious thermal state (wired into turn selection by P-T18) | `observe`, `retrieve`, `remember`; plenty of recent memory |
 | Where | Sanctum, Ask | Workshop (`ForgeView`) | Observatory (`EternalView`) |
 | Chaos (surface) | Sarcasm, feints, vanity | Bursts, tangents, self-interruptions, leaps | Cryptic lines, long silences, distance |
 | Control (core) | The better idea, stated plainly | One crisp recommendation plus the smallest verifiable step | Exact recall with dates and quotes; durable advice |
