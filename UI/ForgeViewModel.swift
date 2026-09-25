@@ -29,15 +29,17 @@ final class ForgeViewModel {
     private let container: DependencyContainer
     private var refreshTask: Task<Void, Never>?
 
+    enum InstrumentSeverity: String {
+        case nominal, elevated, critical
+    }
+
     struct InstrumentReading: Identifiable, Equatable {
+        typealias Severity = InstrumentSeverity
+
         let id: String
         let label: String
         let value: String
         let severity: Severity
-
-        enum Severity: String {
-            case nominal, elevated, critical
-        }
     }
 
     init(container: DependencyContainer) {
@@ -66,15 +68,17 @@ final class ForgeViewModel {
         instruments = buildInstruments(from: state)
     }
 
+    /// Event-driven live refresh (replaces the previous polling loop).
+    /// Refreshes once after the EventBus stream is registered, then only on relevant events.
     func startLiveRefresh(interval: Duration = .seconds(3)) {
+        // `interval` retained for API compatibility; ignored.
+        _ = interval
         stopLiveRefresh()
-        refreshTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
-                guard !Task.isCancelled else { break }
-                self?.refresh()
-            }
-        }
+        refreshTask = EventDrivenRefresh.start(
+            eventBus: container.eventBus,
+            where: { event in ForgeViewModel.isRelevant(event) },
+            refresh: { [weak self] in self?.refresh() }
+        )
     }
 
     func stopLiveRefresh() {
@@ -138,10 +142,15 @@ final class ForgeViewModel {
 
         let batteryPct = state.batteryLevel.map { Int($0 * 100) } ?? -1
         let batterySeverity: InstrumentReading.Severity
-        if batteryPct < 0 { batterySeverity = .nominal }
-        else if batteryPct < 15 { batterySeverity = .critical }
-        else if batteryPct < 30 || state.lowPowerMode { batterySeverity = .elevated }
-        else { batterySeverity = .nominal }
+        if batteryPct < 0 {
+            batterySeverity = .nominal
+        } else if batteryPct < 15 {
+            batterySeverity = .critical
+        } else if batteryPct < 30 || state.lowPowerMode {
+            batterySeverity = .elevated
+        } else {
+            batterySeverity = .nominal
+        }
         list.append(InstrumentReading(
             id: "battery",
             label: "Power",
@@ -151,9 +160,13 @@ final class ForgeViewModel {
 
         let thermal = state.thermalState.lowercased()
         let thermalSeverity: InstrumentReading.Severity
-        if thermal.contains("critical") { thermalSeverity = .critical }
-        else if thermal.contains("serious") || thermal.contains("elevated") { thermalSeverity = .elevated }
-        else { thermalSeverity = .nominal }
+        if thermal.contains("critical") {
+            thermalSeverity = .critical
+        } else if thermal.contains("serious") || thermal.contains("elevated") {
+            thermalSeverity = .elevated
+        } else {
+            thermalSeverity = .nominal
+        }
         list.append(InstrumentReading(
             id: "thermal",
             label: "Thermal",
@@ -162,9 +175,13 @@ final class ForgeViewModel {
         ))
 
         let healthSeverity: InstrumentReading.Severity
-        if state.overallHealthScore < 35 { healthSeverity = .critical }
-        else if state.overallHealthScore < 55 { healthSeverity = .elevated }
-        else { healthSeverity = .nominal }
+        if state.overallHealthScore < 35 {
+            healthSeverity = .critical
+        } else if state.overallHealthScore < 55 {
+            healthSeverity = .elevated
+        } else {
+            healthSeverity = .nominal
+        }
         list.append(InstrumentReading(
             id: "health",
             label: "System",
@@ -180,5 +197,26 @@ final class ForgeViewModel {
         ))
 
         return list
+    }
+
+    /// Events that affect this chamber's displayed state.
+    /// `nonisolated` so the EventBus actor can evaluate it as a stream filter.
+    nonisolated private static func isRelevant(_ event: EventBus.Event) -> Bool {
+        switch event {
+        case .personaDidChange,
+             .aiRequestCompleted,
+             .signalReceived,
+             .batteryPressureChanged,
+             .thermalPressureChanged,
+             .networkConditionChanged:
+            return true
+        case .memoryDidUpdate,
+             .featureFlagDidChange,
+             .aiRequestStarted,
+             .focusDidChange,
+             .timeContextDidChange,
+             .custom:
+            return false
+        }
     }
 }

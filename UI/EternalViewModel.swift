@@ -62,15 +62,17 @@ final class EternalViewModel {
         constellation = buildConstellation(personaID: config.id)
     }
 
+    /// Event-driven live refresh (replaces the previous polling loop).
+    /// Refreshes once after the EventBus stream is registered, then only on relevant events.
     func startLiveRefresh(interval: Duration = .seconds(4)) {
+        // `interval` retained for API compatibility; ignored.
+        _ = interval
         stopLiveRefresh()
-        refreshTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
-                guard !Task.isCancelled else { break }
-                self?.refresh()
-            }
-        }
+        refreshTask = EventDrivenRefresh.start(
+            eventBus: container.eventBus,
+            where: { event in EternalViewModel.isRelevant(event) },
+            refresh: { [weak self] in self?.refresh() }
+        )
     }
 
     func stopLiveRefresh() {
@@ -137,6 +139,27 @@ final class EternalViewModel {
                 category: item.category.rawValue,
                 importance: item.importance
             )
+        }
+    }
+
+    /// Events that affect this chamber's displayed state.
+    /// `nonisolated` so the EventBus actor can evaluate it as a stream filter.
+    nonisolated private static func isRelevant(_ event: EventBus.Event) -> Bool {
+        switch event {
+        case .personaDidChange,
+             .memoryDidUpdate,
+             .aiRequestCompleted,
+             .signalReceived,
+             .batteryPressureChanged,
+             .thermalPressureChanged,
+             .networkConditionChanged:
+            return true
+        case .featureFlagDidChange,
+             .aiRequestStarted,
+             .focusDidChange,
+             .timeContextDidChange,
+             .custom:
+            return false
         }
     }
 }
