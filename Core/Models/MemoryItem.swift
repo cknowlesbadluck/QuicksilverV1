@@ -47,16 +47,16 @@ public struct MemoryItem: Identifiable, Codable, Sendable, Equatable {
     }
 
     public init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        id = try c.decode(UUID.self, forKey: .id)
-        key = try c.decode(String.self, forKey: .key)
-        category = try c.decode(Category.self, forKey: .category)
-        value = try c.decode(String.self, forKey: .value)
-        createdAt = try c.decode(Date.self, forKey: .createdAt)
-        updatedAt = try c.decode(Date.self, forKey: .updatedAt)
-        metadata = try c.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
-        let rawImportance = try c.decodeIfPresent(Double.self, forKey: .importance) ?? 0.5
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        key = try container.decode(String.self, forKey: .key)
+        category = try container.decode(Category.self, forKey: .category)
+        value = try container.decode(String.self, forKey: .value)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        metadata = try container.decodeIfPresent([String: String].self, forKey: .metadata) ?? [:]
+        let rawImportance = try container.decodeIfPresent(Double.self, forKey: .importance) ?? 0.5
         importance = min(max(rawImportance, 0), 1)
-        personaScope = try c.decodeIfPresent(String.self, forKey: .personaScope)
+        personaScope = try container.decodeIfPresent(String.self, forKey: .personaScope)
     }
 }

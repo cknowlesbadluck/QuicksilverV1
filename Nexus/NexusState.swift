@@ -6,10 +6,10 @@ public struct NexusState: Sendable, Equatable {
     public var networkStatus: String = "unknown"
     public var isNetworkExpensive: Bool = false
     public var isNetworkConstrained: Bool = false
-    public var batteryLevel: Double? = nil
+    public var batteryLevel: Double?
     public var batteryState: String = "unknown"
-    public var availableStorageGB: Double? = nil
-    public var totalStorageGB: Double? = nil
+    public var availableStorageGB: Double?
+    public var totalStorageGB: Double?
     public var thermalState: String = "unknown"
     public var lowPowerMode: Bool = false
     public var recentSignals: [Signal] = []

@@ -5,10 +5,15 @@ public struct SignalProcessor: Sendable {
 
     public func networkSignal(isConnected: Bool, isExpensive: Bool, isConstrained: Bool) -> Signal {
         let value: String
-        if !isConnected { value = "disconnected" }
-        else if isConstrained { value = "constrained" }
-        else if isExpensive { value = "expensive" }
-        else { value = "satisfied" }
+        if !isConnected {
+            value = "disconnected"
+        } else if isConstrained {
+            value = "constrained"
+        } else if isExpensive {
+            value = "expensive"
+        } else {
+            value = "satisfied"
+        }
 
         return Signal(
             source: .network,

@@ -26,34 +26,40 @@ public struct InsightEngine: Sendable {
 
         if signal.value == "disconnected" {
             return make(
-                title: "Network lost",
-                body: "The device is currently offline.",
-                severity: .warning,
+                InsightContent(
+                    title: "Network lost",
+                    body: "The device is currently offline.",
+                    severity: .warning,
+                    action: "Check Wi-Fi or cellular settings."
+                ),
                 signal: signal,
-                personaID: personaID,
-                action: "Check Wi-Fi or cellular settings."
+                personaID: personaID
             )
         }
 
         if recentNetwork.count >= 3 {
             return make(
-                title: "Network instability",
-                body: "Connection state changed \(recentNetwork.count) times in the last 10 minutes.",
-                severity: .notice,
+                InsightContent(
+                    title: "Network instability",
+                    body: "Connection state changed \(recentNetwork.count) times in the last 10 minutes.",
+                    severity: .notice,
+                    action: "Consider moving closer to the access point or toggling Airplane Mode."
+                ),
                 signal: signal,
-                personaID: personaID,
-                action: "Consider moving closer to the access point or toggling Airplane Mode."
+                personaID: personaID
             )
         }
 
         if signal.value == "constrained" || signal.value == "expensive" {
             return make(
-                title: "Constrained network",
-                body: "The current path is marked \(signal.value). Background data may be limited.",
-                severity: .notice,
+                InsightContent(
+                    title: "Constrained network",
+                    body: "The current path is marked \(signal.value). Background data may be limited.",
+                    severity: .notice,
+                    action: nil
+                ),
                 signal: signal,
-                personaID: personaID,
-                action: nil
+                personaID: personaID
             )
         }
 
@@ -66,24 +72,28 @@ public struct InsightEngine: Sendable {
 
         if level < 0.15 && signal.value != "charging" {
             return make(
-                title: "Low battery",
-                body: "Battery is at \(Int(level * 100))%.",
-                severity: .warning,
+                InsightContent(
+                    title: "Low battery",
+                    body: "Battery is at \(Int(level * 100))%.",
+                    severity: .warning,
+                    action: "Connect to power or enable Low Power Mode."
+                ),
                 signal: signal,
-                personaID: personaID,
-                action: "Connect to power or enable Low Power Mode."
+                personaID: personaID
             )
         }
 
         let previous = recent.first { $0.source == .battery && $0.id != signal.id }
         if let prevLevel = previous?.numericValue, prevLevel >= 0, prevLevel - level > 0.08 {
             return make(
-                title: "Elevated drain",
-                body: "Battery dropped faster than usual in the recent window.",
-                severity: .notice,
+                InsightContent(
+                    title: "Elevated drain",
+                    body: "Battery dropped faster than usual in the recent window.",
+                    severity: .notice,
+                    action: "Review recently used apps or background activity."
+                ),
                 signal: signal,
-                personaID: personaID,
-                action: "Review recently used apps or background activity."
+                personaID: personaID
             )
         }
 
@@ -94,24 +104,28 @@ public struct InsightEngine: Sendable {
         guard let available = signal.numericValue, available < 5.0 else { return nil }
 
         return make(
-            title: "Storage pressure",
-            body: String(format: "Only %.1f GB free.", available),
-            severity: available < 2.0 ? .warning : .notice,
+            InsightContent(
+                title: "Storage pressure",
+                body: String(format: "Only %.1f GB free.", available),
+                severity: available < 2.0 ? .warning : .notice,
+                action: "Offload unused apps or clear large downloads."
+            ),
             signal: signal,
-            personaID: personaID,
-            action: "Offload unused apps or clear large downloads."
-        )
+            personaID: personaID
+            )
     }
 
     private func deviceInsight(signal: Signal, personaID: String) -> Insight? {
         if signal.value.contains("serious") || signal.value.contains("critical") {
             return make(
-                title: "Thermal pressure",
-                body: "Device is under elevated thermal load (\(signal.value)).",
-                severity: .warning,
+                InsightContent(
+                    title: "Thermal pressure",
+                    body: "Device is under elevated thermal load (\(signal.value)).",
+                    severity: .warning,
+                    action: "Reduce workload or move to a cooler environment."
+                ),
                 signal: signal,
-                personaID: personaID,
-                action: "Reduce workload or move to a cooler environment."
+                personaID: personaID
             )
         }
         return nil
@@ -119,21 +133,21 @@ public struct InsightEngine: Sendable {
 
     // MARK: - Factory
 
-    private func make(
-        title: String,
-        body: String,
-        severity: DiagnosticEvent.Severity,
-        signal: Signal,
-        personaID: String,
-        action: String?
-    ) -> Insight {
+    private struct InsightContent {
+        let title: String
+        let body: String
+        let severity: DiagnosticEvent.Severity
+        let action: String?
+    }
+
+    private func make(_ content: InsightContent, signal: Signal, personaID: String) -> Insight {
         Insight(
-            title: title,
-            body: body,
-            severity: severity,
+            title: content.title,
+            body: content.body,
+            severity: content.severity,
             relatedSignalIDs: [signal.id],
             personaStyle: personaID,
-            suggestedAction: action
+            suggestedAction: content.action
         )
     }
 }

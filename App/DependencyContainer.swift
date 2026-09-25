@@ -63,12 +63,14 @@ final class DependencyContainer {
         )
 
         IntentDependencies.shared.configure(
-            personaManager: personaManager,
-            nexusCoordinator: nexus,
-            memoryManager: memoryManager,
-            aiService: aiService,
-            eventBus: eventBus,
-            logger: logger
+            .init(
+                personaManager: personaManager,
+                nexusCoordinator: nexus,
+                memoryManager: memoryManager,
+                aiService: aiService,
+                eventBus: eventBus,
+                logger: logger
+            )
         )
 
         nexus.updatePersonaContext(personaManager.activeConfiguration.id)
