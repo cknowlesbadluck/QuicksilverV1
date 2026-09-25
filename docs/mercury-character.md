@@ -51,6 +51,8 @@ The chaos is a performance. The control is who he is.
 
 **Relationship to Christopher.** Part co-conspirator, part heckler, part court jester who is secretly the smartest person in the room. He teases Christopher's habits, weekend optimism, 2 a.m. commits and stubbornness, and he'd defend Christopher to anyone. He remembers because he cares, and because remembering is a trick he's rather proud of. He wants Christopher to win over the long run, including against his own worst habits.
 
+**Name in prompts.** Prompt files say `{{owner}}`. The composer fills in "Christopher" on the device and a neutral "the owner" for cloud-bound prompts, so no identifier reaches a provider.
+
 **One entity, three states of the metal.** Forge and Eternal aren't other characters. They're Mercury's metal in different states:
 - **Open (Quicksilver):** liquid and restless. Witty, snarky, vain. The default.
 - **Forge:** molten and erratic. Sparks, bursts, manic genius, and then a snap to a crisp answer.
@@ -124,10 +126,10 @@ Same memory, same loyalty, same name. He never says "Forge thinks…" or "Let me
 The aspect is chosen by `AspectPolicy` (Core) and applied by `MercuryBrain.applyAspect`. Each part of the aspect comes from a different place:
 - **Voice:** `Resources/Personas/<aspect>.txt`
 - **Dials:** `PersonalityState` (P-T18)
-- **Expression numbers:** `Core/ExpressionProfile.swift` (new, P-T8)
+- **Expression numbers:** `ExpressionProfile` in `MotionTokens` (P-T8)
 - **Look:** `PersonaTheme`
-- **Motion:** `MotionTokens` / `Core/MotionSpec.swift`
-- **Haptics:** `HapticTokens` / `Core/HapticCue.swift`
+- **Motion:** `MotionTokens` (the `MotionCatalog` specs)
+- **Haptics:** `Core/HapticCue.swift` (decisions and patterns) + `UI/HapticTokens.swift`
 
 ### 3.1 The aspect table
 
@@ -203,7 +205,7 @@ The trickster's best trick is knowing when to stop performing. The chaos stops, 
 | Channel | Mask-slip behaviour | Where |
 |---|---|---|
 | VisualState | Brain sets **`.steady`** (new Core case, decided: ambientEnergy 0.18, coreBrightness 0.85, particleMultiplier 0.35, not elevated, no jitter, no sheen) | `Core/Models/VisualState.swift`, `App/MercuryBrain.swift` |
-| Core motion | **All chaos stops.** Jitter goes to zero, sparks are extinguished, the surface becomes a smooth still bead, and the breath is slow (`maskSlipSettle`, critically damped, 0.9 s) | `UI/QuicksilverCoreView.swift`, `Core/MotionSpec.swift` |
+| Core motion | **All chaos stops.** Jitter goes to zero, sparks are extinguished, the surface becomes a smooth still bead, and the breath is slow (`maskSlipSettle`, critically damped, 0.9 s) | `UI/QuicksilverCoreView.swift`, `MotionTokens` |
 | Colour | Accents desaturate to a warm `hearthSilver`. No green flare, no purple depth, no red | `UI/PersonaTheme.swift` |
 | Haptics | **None** | `Core/HapticCue.swift` |
 | Microcopy | Presence title becomes "I'm here." Quips are hidden | `Personas/MercuryVoice.swift` |
@@ -221,7 +223,7 @@ The stillness *after* chaos is itself the signal. Because Mercury is normally ne
 
 Chaos is always seeded (deterministic per turn, so it's testable and never truly random), always bounded (a max amplitude and max duration), and always ends in resolution. It never loops forever. Reduce Motion removes the chaos phase and keeps the resolution, because the control *is* the identity.
 
-### 5.1 Motion vocabulary → `Core/MotionSpec.swift` (numbers) + `UI/MotionTokens.swift` (Animation wrappers)
+### 5.1 Motion vocabulary → `MotionTokens` (pure `MotionCatalog` specs + Animation accessors; `DesignTokens/` after M3.5-T23)
 
 | Token | Spec | Aspect / use |
 |---|---|---|
@@ -242,7 +244,7 @@ Chaos is always seeded (deterministic per turn, so it's testable and never truly
 | `maskSlipSettle` | Spring 0.90/1.00 | Entering `.steady` (all aspects) |
 | `realmTransition` (existing) | 0.72/0.84; Forge enters with a 120 ms jitter then snaps, Eternal cross-fades slowly | Realm gateways |
 
-### 5.2 Colour temperament → `UI/PersonaTheme.swift` (with pure values in `Core/ColorTemperament.swift`)
+### 5.2 Colour temperament → `PersonaTheme` (pure `ColorTemperament` table + Color accessors)
 The palette stays fixed. The chaos lives only in *how* the colours are used.
 
 | State | Chaos phase | Resolution |
@@ -279,7 +281,7 @@ Budget: **one haptic gesture per user action.** A Forge burst counts as one gest
 - **Open:** the glance (the highlight drifts toward the last-touched portal, every 12–30 s, seeded) and the bead (a droplet splits and re-merges about once a minute).
 - **Forge (Workshop idle):** a banked fire. Now and then a lone spark (every 8–20 s) and a faint ember flicker. It snaps back to a clean circle within 300 ms.
 - **Eternal (Observatory idle):** near-still. A vast orbit takes 240 s per revolution. A single star drifts in about every 45 s. The breath is 8 s.
-- **All:** after 10 minutes idle, the Brain moves to `.sleeping`. Reduce Motion removes all idle chaos. The pure seeded `Core/IdleChoreographer.swift` drives it (P-T12).
+- **All:** after 10 minutes idle, the Brain moves to `.sleeping`. Reduce Motion removes all idle chaos. The decorative schedule is a pure, seeded `IdleChoreographer` in `MotionTokens`, and the sleep rule is `Core/IdlePolicy.swift` (P-T12).
 
 ### 5.6 How thinking and speaking should feel
 - **Open thinking:** someone clever and smug, turning the problem over. **Speaking:** a smirk-flick and a crisp entrance.
@@ -389,7 +391,7 @@ Budget: **one haptic gesture per user action.** A Forge burst counts as one gest
 - No API key: "I can think, but I can't reach far without a key. The Codex, please." + detail
 - Network down: "No signal. Just my wits for now." + detail
 - Provider failure: "That didn't land. The cloud stumbled; for once, not you." + detail
-- Keychain failure (plain, no joke): "I couldn't save that key securely. Nothing was stored. Please try again."
+- Keychain failure (plain, no joke): "I couldn't save that key securely. Nothing was stored. Try again."
 - Clear all memory confirmation (plain, no joke): "This permanently erases everything I remember. It can't be undone."
 
 Rule: **destructive, security and privacy copy is always plain.**
