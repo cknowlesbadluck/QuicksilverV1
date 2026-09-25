@@ -167,26 +167,60 @@ final class EventBusTests: XCTestCase {
 
     func testAsyncStreamCancellationStopsDelivery() async {
         let bus = EventBus()
+        // `events()` registers the stream before returning, so no settle delay is needed.
         let stream = await bus.events()
+        let firstReceived = XCTestExpectation(description: "Consumer received first event")
 
         nonisolated(unsafe) var count = 0
         let consumer = Task {
             for await _ in stream {
                 count += 1
+                firstReceived.fulfill()
             }
         }
 
-        try? await Task.sleep(for: .milliseconds(50))
         await bus.publish(.thermalPressureChanged(state: "nominal"))
-        try? await Task.sleep(for: .milliseconds(50))
+        await fulfillment(of: [firstReceived], timeout: 2.0)
         XCTAssertEqual(count, 1)
 
         consumer.cancel()
-        try? await Task.sleep(for: .milliseconds(50))
+        // Deterministic: wait until the consumer loop has actually exited.
+        await consumer.value
 
         await bus.publish(.thermalPressureChanged(state: "fair"))
-        try? await Task.sleep(for: .milliseconds(50))
         XCTAssertEqual(count, 1, "Cancelled stream must not receive further events")
+    }
+
+    func testFilteredStreamIsNotStarvedByIrrelevantEvents() async {
+        let bus = EventBus()
+        let stream = await bus.events(bufferingNewest: 1) { event in
+            if case .batteryPressureChanged = event { return true }
+            return false
+        }
+        let unfiltered = await bus.events(bufferingNewest: 64)
+
+        await bus.publish(.batteryPressureChanged(level: 0.3, isLowPower: false))
+        for index in 0..<40 {
+            await bus.publish(.custom(name: "noise", payload: ["index": "\(index)"]))
+        }
+
+        var firstFiltered: EventBus.Event?
+        for await event in stream {
+            firstFiltered = event
+            break
+        }
+        guard case .batteryPressureChanged(let level, _) = firstFiltered else {
+            return XCTFail("Filtered stream should retain the relevant event, got \(String(describing: firstFiltered))")
+        }
+        XCTAssertEqual(level, 0.3)
+
+        // Other stream subscribers still see every event.
+        var unfilteredCount = 0
+        for await _ in unfiltered {
+            unfilteredCount += 1
+            if unfilteredCount == 41 { break }
+        }
+        XCTAssertEqual(unfilteredCount, 41)
     }
 
     func testCallbackAndStreamBothReceive() async {

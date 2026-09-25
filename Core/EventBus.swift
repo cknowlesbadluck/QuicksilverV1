@@ -29,8 +29,14 @@ public actor EventBus {
         case night
     }
 
+    /// A stream subscriber plus its optional, per-stream filter.
+    private struct StreamSubscription: Sendable {
+        let continuation: AsyncStream<Event>.Continuation
+        let isIncluded: @Sendable (Event) -> Bool
+    }
+
     private var subscribers: [UUID: (Event) -> Void] = [:]
-    private var continuations: [UUID: AsyncStream<Event>.Continuation] = [:]
+    private var continuations: [UUID: StreamSubscription] = [:]
 
     public init() {}
 
@@ -42,8 +48,8 @@ public actor EventBus {
 
     public func unsubscribe(_ id: UUID) {
         subscribers.removeValue(forKey: id)
-        if let continuation = continuations.removeValue(forKey: id) {
-            continuation.finish()
+        if let subscription = continuations.removeValue(forKey: id) {
+            subscription.continuation.finish()
         }
     }
 
@@ -51,17 +57,27 @@ public actor EventBus {
         for handler in subscribers.values {
             handler(event)
         }
-        for continuation in continuations.values {
-            continuation.yield(event)
+        for subscription in continuations.values where subscription.isIncluded(event) {
+            subscription.continuation.yield(event)
         }
     }
 
     /// Structured concurrency surface. Each call creates an independent stream.
+    /// The stream is registered before this method returns, so events published
+    /// after the `await` completes are always delivered (subject to buffering).
     /// Cancellation of the consuming task finishes the underlying continuation.
-    public func events() -> AsyncStream<Event> {
+    ///
+    /// - Parameters:
+    ///   - bufferingNewest: Per-stream buffer size (newest events are kept).
+    ///   - isIncluded: Per-stream filter applied before buffering, so events this
+    ///     consumer ignores can never evict ones it needs. Other subscribers are unaffected.
+    public func events(
+        bufferingNewest limit: Int = 32,
+        where isIncluded: @escaping @Sendable (Event) -> Bool = { _ in true }
+    ) -> AsyncStream<Event> {
         let id = UUID()
-        let (stream, continuation) = AsyncStream<Event>.makeStream(bufferingPolicy: .bufferingNewest(32))
-        continuations[id] = continuation
+        let (stream, continuation) = AsyncStream<Event>.makeStream(bufferingPolicy: .bufferingNewest(max(1, limit)))
+        continuations[id] = StreamSubscription(continuation: continuation, isIncluded: isIncluded)
         continuation.onTermination = { [weak self] _ in
             Task { await self?.removeContinuation(id) }
         }
