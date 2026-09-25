@@ -6,8 +6,13 @@ struct QuicksilverApp: App {
     @State private var container = DependencyContainer()
 
     init() {
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil,
+              !ProcessInfo.processInfo.arguments.contains("-uitest"),
+              let dsn = Bundle.main.object(forInfoDictionaryKey: "SentryDSN") as? String,
+              !dsn.isEmpty else { return }
+
         SentrySDK.start { options in
-            options.dsn = "https://b2513ae812ea7432f18af51a5bbf30a7@o4511884245794816.ingest.us.sentry.io/4511884267225088"
+            options.dsn = dsn
 
             // Environment & release
             #if DEBUG
@@ -16,21 +21,17 @@ struct QuicksilverApp: App {
             options.environment = "production"
             #endif
 
-            // Prefer lower sample rates in production to control cost / volume
-            options.tracesSampleRate = 0.2
-            options.configureProfiling = { profiling in
-                profiling.lifecycle = .trace
-                profiling.sessionSampleRate = 0.1
-            }
-
-            // Useful diagnostics without being overly aggressive
-            options.enableMetrics = true
-            options.enableCaptureFailedRequests = true
-            options.attachScreenshot = false          // privacy-conscious default
+            // Only errors and hangs; never capture network payloads or performance data.
+            options.enableMetrics = false
+            options.enableCaptureFailedRequests = false
+            options.sendDefaultPii = false
+            options.attachScreenshot = false
             options.enableAppHangTracking = true
 
-            // Release name helps group events (matches MARKETING_VERSION when possible)
-            options.releaseName = "Quicksilver@0.2.0"
+            if let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String {
+                options.releaseName = "Quicksilver@\(version)"
+            }
+            options.dist = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
         }
     }
 
