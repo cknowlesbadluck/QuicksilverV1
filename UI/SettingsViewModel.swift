@@ -88,9 +88,9 @@ final class SettingsViewModel {
     func setAIEnabled(_ enabled: Bool) {
         container.featureFlags.set("aiServiceEnabled", enabled: enabled)
         if !enabled {
-            container.aiService.setProvider(MockAIProvider())
+            // No mock fallback: Ask/Brain now return the unbound state (M1-T3).
             refresh()
-            statusMessage = "AI Service disabled (Mock only)."
+            statusMessage = "Intelligence dormant. Mercury stays silent until you wake it."
             statusIsError = false
             return
         }

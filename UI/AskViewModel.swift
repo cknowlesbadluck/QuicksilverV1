@@ -24,6 +24,8 @@ final class AskViewModel {
     private(set) var isProcessing = false
     private(set) var turns: [ChatTurn] = []
     private(set) var errorMessage: String?
+    /// In-character "Intelligence unbound" notice (no key bound or intelligence switched off).
+    private(set) var unboundNotice: String?
     private(set) var providerName: String = ""
 
     private let container: DependencyContainer
@@ -58,6 +60,7 @@ final class AskViewModel {
 
         isProcessing = true
         errorMessage = nil
+        unboundNotice = nil
         providerName = container.aiService.currentProviderName
 
         let config = container.activeConfiguration
@@ -83,7 +86,11 @@ final class AskViewModel {
             turns.append(assistantTurn)
             await persistTurn(assistantTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
         } catch {
-            errorMessage = error.localizedDescription
+            if let notice = AppError.unboundNotice(for: error) {
+                unboundNotice = notice
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
 
         isProcessing = false

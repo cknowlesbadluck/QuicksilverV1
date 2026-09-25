@@ -112,6 +112,9 @@ final class EternalViewModel {
             refresh()
             return answer
         } catch {
+            if let notice = AppError.unboundNotice(for: error) {
+                return notice
+            }
             return "Observatory is silent: \(error.localizedDescription)"
         }
     }

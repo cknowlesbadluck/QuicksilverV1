@@ -57,6 +57,13 @@ struct AskView: View {
                             .id(turn.id)
                     }
 
+                    if let notice = vm.unboundNotice {
+                        Text(notice)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(accent)
+                            .accessibilityLabel(notice)
+                    }
+
                     if let error = vm.errorMessage {
                         Text(error)
                             .font(.caption)
