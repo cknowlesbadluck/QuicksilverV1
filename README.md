@@ -77,13 +77,13 @@ Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**
 2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
 4. Settings → configure Grok and/or Gemini keys → enable AI Service. Grok is primary when configured; Gemini is fallback. Provider availability and billing remain account-controlled.
-5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → persona switch.
+5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → aspect selection.
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 
 ## Entity and aspects
 
-Quicksilver is the single persistent entity. Forge and Eternal are autonomous aspects surfaced by context; they are not selectable personas or separate assistants.
+Quicksilver is the single persistent entity. Forge and Eternal are autonomous aspects surfaced by context; they are not separate personas or assistants. An aspect may be pinned per thread as a mood of the one entity; Auto is the default.
 
 Prompts: `Resources/Personas/*.txt` provide aspect-specific behavioral grounding.
 
