@@ -44,13 +44,29 @@ final class SanctumViewModel {
         visualState = container.brain.visualState
     }
 
+    /// Event-driven live refresh. Replaces the previous 2 s polling loop.
+    /// Subscribes to EventBus and refreshes only when a relevant signal arrives.
+    ///
+    /// The stream is filtered to Sanctum-relevant events before buffering and
+    /// coalesced to a single pending trigger (`refresh()` reads full current
+    /// state, so one pending trigger is equivalent to many). After the stream is
+    /// registered, one refresh runs immediately so any change published between
+    /// the call and registration is still reflected.
     func startLiveRefresh(interval: Duration = .seconds(2)) {
+        // `interval` retained for API compatibility; ignored.
+        _ = interval
         stopLiveRefresh()
+        let eventBus = container.eventBus
         refreshTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(for: interval)
-                guard !Task.isCancelled else { break }
-                self?.refresh()
+            let stream = await eventBus.events(bufferingNewest: 1) { event in
+                SanctumViewModel.isRelevant(event)
+            }
+            // Stream is now registered; catch up on anything published before that.
+            guard !Task.isCancelled else { return }
+            self?.refresh()
+            for await _ in stream {
+                guard !Task.isCancelled, let self else { break }
+                self.refresh()
             }
         }
     }
@@ -63,5 +79,24 @@ final class SanctumViewModel {
     /// Accent source for the living place — prefer aspect over legacy persona ID.
     var presenceAccentID: String {
         activeAspect.rawValue
+    }
+
+    /// Events that affect displayed Sanctum state.
+    /// `nonisolated` so the EventBus actor can evaluate it as a stream filter.
+    nonisolated private static func isRelevant(_ event: EventBus.Event) -> Bool {
+        switch event {
+        case .personaDidChange,
+             .memoryDidUpdate,
+             .signalReceived,
+             .timeContextDidChange,
+             .batteryPressureChanged,
+             .thermalPressureChanged,
+             .networkConditionChanged,
+             .aiRequestCompleted,
+             .focusDidChange:
+            return true
+        case .featureFlagDidChange, .aiRequestStarted, .custom:
+            return false
+        }
     }
 }
