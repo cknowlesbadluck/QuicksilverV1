@@ -38,7 +38,10 @@ let package = Package(
         .testTarget(
             name: "QuicksilverCoreTests",
             dependencies: ["Core", "Memory", "Personas", "ServicesAI", "Nexus", "QuicksilverIntents"],
-            path: "Tests"
+            path: "Tests",
+            resources: [
+                .copy("Fixtures")
+            ]
         )
     ]
 )
