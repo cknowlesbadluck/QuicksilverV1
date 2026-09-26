@@ -26,6 +26,7 @@ final class MercuryBrain {
 
     private let intentEngine = IntentEngine()
     private let aspectPolicy = AspectPolicy()
+    private let registerPolicy = RegisterPolicy()
     private let broker = IntelligenceBroker()
 
     private(set) var personality = PersonalityState()
@@ -33,6 +34,8 @@ final class MercuryBrain {
     private(set) var livingStatus: String = "Quicksilver is present. Observing."
     private(set) var visualState: VisualState = .idle
     private(set) var activeAspect: Aspect = .quicksilver
+    /// Latched conversational register. Resets to `.playful` on a new Brain session.
+    private(set) var activeRegister: Register = .playful
     private var lastAspectChangeAt: Date?
 
     init(
@@ -61,9 +64,24 @@ final class MercuryBrain {
     /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
         personaManager.recordInteraction()
+
+        // Mask slip (P-T5): evaluate register from pre-turn VisualState + Nexus
+        // severity BEFORE moving to `.thinking`, so `.critical` is still visible.
+        let intent = intentEngine.classify(query)
+        let preTurnVisual = visualState
+        let nexusCritical = nexus.state.recentInsights.contains { $0.severity == .critical }
+            || nexus.state.recentEvents.contains { $0.severity == .critical }
+        activeRegister = registerPolicy.evaluate(
+            text: query,
+            visualState: preTurnVisual,
+            intent: intent,
+            previous: activeRegister,
+            thermalState: nexus.state.thermalState,
+            nexusSeverityCritical: nexusCritical
+        )
+
         visualState = .thinking
 
-        let intent = intentEngine.classify(query)
         let environment = AspectPolicy.Environment(
             isLowPower: nexus.state.lowPowerMode,
             thermalState: nexus.state.thermalState
@@ -77,6 +95,9 @@ final class MercuryBrain {
         // Idempotent recompute from aspect baseline; nudges applied after (P-T18).
         personality.recomputeForTurn(aspect: activeAspect)
         personality.noteInteraction()
+        if activeRegister == .plain {
+            personality.enterPlainRegister()
+        }
 
         let relevantMemory = retrieveRelevantMemory()
         // Compose first so broker estimates include core identity, bias, and device context.
@@ -295,10 +316,11 @@ extension MercuryBrain {
     private func buildSystemPrompt(for config: PersonaConfiguration, memory: [MemoryItem]) -> String {
         BrainComposition.systemPrompt(
             base: config.systemPrompt,
-            bias: personality.promptBias(),
+            bias: personality.promptBias(register: activeRegister),
             memory: memory,
             state: nexus.state,
-            aspect: activeAspect
+            aspect: activeAspect,
+            plainMode: activeRegister == .plain
         )
     }
 }
