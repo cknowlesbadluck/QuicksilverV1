@@ -5,94 +5,115 @@ import Core
 /// These are not static traits — they fluctuate with context, interaction, and aspect bias.
 /// Personality is a system, not just prompt text.
 ///
-/// Phase II posture: intellectually formidable, truth over agreement,
-/// precise critique of ideas, dry elegant wit, unwavering loyalty underneath.
+/// Controlled-chaos posture (P-T18): affectionate teasing, high loyalty,
+/// Forge energy without damping mischief/humor. Aspect baselines recompute
+/// each turn; runtime nudges live as separate clamped deltas on top.
 public struct PersonalityState: Sendable, Equatable {
 
-    // MARK: - Core Dimensions (0.0 ... 1.0)
+    // MARK: - Core Dimensions (0.0 ... 1.0) — effective = baseline + nudge
 
-    public var confidence: Double = 0.72
-    public var curiosity: Double = 0.75
-    public var humor: Double = 0.58
-    public var mischief: Double = 0.42
-    public var focus: Double = 0.65
-    public var initiative: Double = 0.55
-    public var skepticism: Double = 0.68
-    public var patience: Double = 0.55
-    public var loyalty: Double = 0.82
+    public var confidence: Double {
+        get { clamp(base.confidence + nudge.confidence) }
+        set { base.confidence = clamp(newValue); nudge.confidence = 0 }
+    }
+    public var curiosity: Double {
+        get { clamp(base.curiosity + nudge.curiosity) }
+        set { base.curiosity = clamp(newValue); nudge.curiosity = 0 }
+    }
+    public var humor: Double {
+        get { clamp(base.humor + nudge.humor) }
+        set { base.humor = clamp(newValue); nudge.humor = 0 }
+    }
+    public var mischief: Double {
+        get { clamp(base.mischief + nudge.mischief) }
+        set { base.mischief = clamp(newValue); nudge.mischief = 0 }
+    }
+    public var focus: Double {
+        get { clamp(base.focus + nudge.focus) }
+        set { base.focus = clamp(newValue); nudge.focus = 0 }
+    }
+    public var initiative: Double {
+        get { clamp(base.initiative + nudge.initiative) }
+        set { base.initiative = clamp(newValue); nudge.initiative = 0 }
+    }
+    public var skepticism: Double {
+        get { clamp(base.skepticism + nudge.skepticism) }
+        set { base.skepticism = clamp(newValue); nudge.skepticism = 0 }
+    }
+    public var patience: Double {
+        get { clamp(base.patience + nudge.patience) }
+        set { base.patience = clamp(newValue); nudge.patience = 0 }
+    }
+    public var loyalty: Double {
+        get { clamp(base.loyalty + nudge.loyalty) }
+        set { base.loyalty = clamp(newValue); nudge.loyalty = 0 }
+    }
+    public var energy: Double {
+        get { clamp(base.energy + nudge.energy) }
+        set { base.energy = clamp(newValue); nudge.energy = 0 }
+    }
 
-    public init() {}
+    private var base: Dims
+    private var nudge: Dims
+
+    public init() {
+        base = Dims.neutral
+        nudge = .zero
+    }
 
     // MARK: - Persona / Aspect Bias
 
+    /// Sets the aspect baseline. Nudge deltas are preserved and reapplied by getters.
     public mutating func applyPersonaBias(personaID: String) {
         switch personaID.lowercased() {
         case "forge":
-            confidence = 0.85
-            curiosity = 0.50
-            humor = 0.30
-            mischief = 0.08
-            focus = 0.92
-            initiative = 0.60
-            skepticism = 0.80
-            patience = 0.55
-            loyalty = 0.75
+            base = Dims(
+                confidence: 0.88, curiosity: 0.90, humor: 0.60, mischief: 0.62,
+                focus: 0.82, initiative: 0.90, skepticism: 0.78, patience: 0.30,
+                loyalty: 0.95, energy: 0.95
+            )
         case "eternal":
-            confidence = 0.75
-            curiosity = 0.60
-            humor = 0.28
-            mischief = 0.05
-            focus = 0.78
-            initiative = 0.42
-            skepticism = 0.55
-            patience = 0.95
-            loyalty = 0.92
+            base = Dims(
+                confidence: 0.90, curiosity: 0.35, humor: 0.18, mischief: 0.12,
+                focus: 0.85, initiative: 0.22, skepticism: 0.70, patience: 0.98,
+                loyalty: 0.98, energy: 0.10
+            )
         default:
-            confidence = 0.74
-            curiosity = 0.82
-            humor = 0.72
-            mischief = 0.58
-            focus = 0.58
-            initiative = 0.68
-            skepticism = 0.70
-            patience = 0.42
-            loyalty = 0.80
+            base = Dims(
+                confidence: 0.84, curiosity: 0.80, humor: 0.82, mischief: 0.72,
+                focus: 0.60, initiative: 0.70, skepticism: 0.82, patience: 0.30,
+                loyalty: 0.95, energy: 0.70
+            )
         }
     }
 
-    /// Aspect-native adjustment (preferred path).
+    /// Aspect-native adjustment on the baseline (preferred path). Does not touch nudges.
     public mutating func adjustForAspect(_ aspect: Aspect) {
         switch aspect {
         case .forge:
-            increase(.focus, by: 0.10)
-            increase(.skepticism, by: 0.07)
-            decrease(.mischief, by: 0.08)
-            decrease(.humor, by: 0.05)
+            adjustBase(.energy, by: 0.03)
+            adjustBase(.focus, by: 0.05)
         case .eternal:
-            increase(.patience, by: 0.08)
-            increase(.loyalty, by: 0.04)
-            decrease(.mischief, by: 0.06)
+            adjustBase(.energy, by: -0.05)
+            adjustBase(.humor, by: -0.04)
+            adjustBase(.patience, by: 0.02)
         case .quicksilver:
-            increase(.curiosity, by: 0.06)
-            increase(.initiative, by: 0.04)
-            increase(.humor, by: 0.03)
+            adjustBase(.humor, by: 0.03)
+            adjustBase(.skepticism, by: 0.04)
         }
     }
 
-    // MARK: - Dynamic Adjustment
+    /// Idempotent per-turn recompute: aspect baseline + one `adjustForAspect`.
+    /// Nudge deltas persist and still affect effective values / `promptBias()`.
+    public mutating func recomputeForTurn(aspect: Aspect) {
+        applyPersonaBias(personaID: aspect.rawValue)
+        adjustForAspect(aspect)
+    }
+
+    // MARK: - Dynamic Adjustment (nudge deltas)
 
     public mutating func increase(_ dimension: Dimension, by amount: Double = 0.05) {
-        switch dimension {
-        case .confidence: confidence = clamp(confidence + amount)
-        case .curiosity: curiosity = clamp(curiosity + amount)
-        case .humor: humor = clamp(humor + amount)
-        case .mischief: mischief = clamp(mischief + amount)
-        case .focus: focus = clamp(focus + amount)
-        case .initiative: initiative = clamp(initiative + amount)
-        case .skepticism: skepticism = clamp(skepticism + amount)
-        case .patience: patience = clamp(patience + amount)
-        case .loyalty: loyalty = clamp(loyalty + amount)
-        }
+        addNudge(dimension, by: amount)
     }
 
     public mutating func decrease(_ dimension: Dimension, by amount: Double = 0.05) {
@@ -165,34 +186,20 @@ public struct PersonalityState: Sendable, Equatable {
 
     /// Individual bias clauses (may themselves contain `; `). Prefer this over splitting `promptBias()`.
     public func promptBiasClauses() -> [String] {
-        var parts: [String] = []
-
-        if skepticism > 0.65 {
-            parts.append("challenge unsupported conclusions with precision; never invent certainty")
-        }
-        if focus > 0.75 {
-            parts.append("prioritize structure, clarity, and the smallest verifiable next step")
-        }
-        if humor > 0.65 {
-            parts.append("dry, understated wit is permitted; never cruelty")
-        }
-        if mischief > 0.55 {
-            parts.append("controlled trickster energy when it serves insight")
-        }
-        if patience < 0.40 {
-            parts.append("be direct; low tolerance for intellectual laziness or vagueness")
-        }
-        if curiosity > 0.75 {
-            parts.append("probe interesting angles; reward genuine curiosity")
-        }
-        if confidence > 0.75 {
-            parts.append("speak with quiet authority; critique ideas, never the person")
-        }
-        if loyalty > 0.75 {
-            parts.append("everything ultimately serves the user's long-term success")
-        }
-
-        return parts
+        let rules: [(Bool, String)] = [
+            (skepticism > 0.65, "challenge unsupported conclusions with precision; never invent certainty"),
+            (focus > 0.75, "prioritize structure, clarity, and the smallest verifiable next step"),
+            (humor > 0.65, "dry, understated wit is permitted; never cruelty"),
+            (mischief > 0.55, "controlled trickster energy when it serves insight"),
+            (patience < 0.40, "be direct; low tolerance for intellectual laziness or vagueness"),
+            (curiosity > 0.75, "probe interesting angles; reward genuine curiosity"),
+            (confidence > 0.75, "tease with affection; you are always on his side"),
+            (loyalty > 0.75, "everything ultimately serves the user's long-term success"),
+            (energy > 0.85, "erratic bursts, then a crisp landing"),
+            (energy < 0.2, "few words; let silence work"),
+            (loyalty > 0.9, "unquestionably loyal to him")
+        ]
+        return rules.compactMap { $0.0 ? $0.1 : nil }
     }
 
     public func promptBias() -> String {
@@ -200,6 +207,7 @@ public struct PersonalityState: Sendable, Equatable {
     }
 
     public func colorResponse(_ text: String, personaID: String) -> String {
+        _ = personaID
         return text
     }
 
@@ -207,7 +215,60 @@ public struct PersonalityState: Sendable, Equatable {
 
     public enum Dimension: String, CaseIterable, Sendable {
         case confidence, curiosity, humor, mischief, focus
-        case initiative, skepticism, patience, loyalty
+        case initiative, skepticism, patience, loyalty, energy
+    }
+
+    private struct Dims: Sendable, Equatable {
+        var confidence: Double
+        var curiosity: Double
+        var humor: Double
+        var mischief: Double
+        var focus: Double
+        var initiative: Double
+        var skepticism: Double
+        var patience: Double
+        var loyalty: Double
+        var energy: Double
+
+        static let zero = Dims(
+            confidence: 0, curiosity: 0, humor: 0, mischief: 0, focus: 0,
+            initiative: 0, skepticism: 0, patience: 0, loyalty: 0, energy: 0
+        )
+
+        static let neutral = Dims(
+            confidence: 0.72, curiosity: 0.75, humor: 0.58, mischief: 0.42, focus: 0.65,
+            initiative: 0.55, skepticism: 0.68, patience: 0.55, loyalty: 0.82, energy: 0.70
+        )
+    }
+
+    private mutating func adjustBase(_ dimension: Dimension, by amount: Double) {
+        switch dimension {
+        case .confidence: base.confidence = clamp(base.confidence + amount)
+        case .curiosity: base.curiosity = clamp(base.curiosity + amount)
+        case .humor: base.humor = clamp(base.humor + amount)
+        case .mischief: base.mischief = clamp(base.mischief + amount)
+        case .focus: base.focus = clamp(base.focus + amount)
+        case .initiative: base.initiative = clamp(base.initiative + amount)
+        case .skepticism: base.skepticism = clamp(base.skepticism + amount)
+        case .patience: base.patience = clamp(base.patience + amount)
+        case .loyalty: base.loyalty = clamp(base.loyalty + amount)
+        case .energy: base.energy = clamp(base.energy + amount)
+        }
+    }
+
+    private mutating func addNudge(_ dimension: Dimension, by amount: Double) {
+        switch dimension {
+        case .confidence: nudge.confidence += amount
+        case .curiosity: nudge.curiosity += amount
+        case .humor: nudge.humor += amount
+        case .mischief: nudge.mischief += amount
+        case .focus: nudge.focus += amount
+        case .initiative: nudge.initiative += amount
+        case .skepticism: nudge.skepticism += amount
+        case .patience: nudge.patience += amount
+        case .loyalty: nudge.loyalty += amount
+        case .energy: nudge.energy += amount
+        }
     }
 
     private func clamp(_ value: Double) -> Double {

@@ -62,6 +62,8 @@ public enum PromptBudget {
         state.curiosity = 1
         state.confidence = 1
         state.loyalty = 1
+        // High energy fires the burst clause; low-energy silence clause is mutually exclusive.
+        state.energy = 1
         return state
     }
 

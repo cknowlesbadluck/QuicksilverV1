@@ -178,6 +178,34 @@ final class CoreContractsTests: XCTestCase {
         XCTAssertEqual(result, .forge)
     }
 
+
+    func testAspectPolicyOpenTurnEnvironmentForcesForge() {
+        let policy = AspectPolicy()
+        let inquire = Intent(kind: .inquire)
+        XCTAssertEqual(
+            policy.aspectForTurn(
+                intent: inquire,
+                environment: AspectPolicy.Environment(isLowPower: true)
+            ),
+            .forge
+        )
+        XCTAssertEqual(
+            policy.aspectForTurn(
+                intent: inquire,
+                environment: AspectPolicy.Environment(thermalState: "serious")
+            ),
+            .forge
+        )
+        // Eternal / Forge intents are not overridden by environment.
+        XCTAssertEqual(
+            policy.aspectForTurn(
+                intent: Intent(kind: .observe),
+                environment: AspectPolicy.Environment(isLowPower: true, thermalState: "critical")
+            ),
+            .eternal
+        )
+    }
+
     // MARK: - IntelligenceBroker
 
     func testBrokerAllowsInteractive() {

@@ -78,8 +78,8 @@ public struct PersonaConfiguration: Sendable, Codable, Equatable {
         systemPrompt: PromptManager.systemPrompt(for: "forge", fallback: forgePromptFallback),
         accentColorName: "forgeOrange",
         traits: ["tone": "erratic", "style": "precision", "focus": "structure"],
-        preferredTemperature: 0.3,
-        maxTokensHint: 1024
+        preferredTemperature: 0.45,
+        maxTokensHint: 1536
     )
 
     public static let quicksilver = PersonaConfiguration(
@@ -96,7 +96,7 @@ public struct PersonaConfiguration: Sendable, Codable, Equatable {
             "archetype": "trickster"
         ],
         preferredTemperature: 0.7,
-        maxTokensHint: 1536
+        maxTokensHint: 1024
     )
 
     public static let eternal = PersonaConfiguration(
@@ -106,8 +106,8 @@ public struct PersonaConfiguration: Sendable, Codable, Equatable {
         systemPrompt: PromptManager.systemPrompt(for: "eternal", fallback: eternalPromptFallback),
         accentColorName: "eternalViolet",
         traits: ["tone": "aloof", "style": "ancient", "focus": "continuity"],
-        preferredTemperature: 0.4,
-        maxTokensHint: 2048
+        preferredTemperature: 0.35,
+        maxTokensHint: 512
     )
 
     public static func forAspect(_ aspect: Aspect) -> PersonaConfiguration {
