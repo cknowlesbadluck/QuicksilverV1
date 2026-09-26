@@ -91,7 +91,7 @@ final class PromptBudgetTests: XCTestCase {
         let core = try prepared("core")
         let maxBias = PromptBudget.maximumPromptBias()
         XCTAssertFalse(maxBias.isEmpty)
-        XCTAssertGreaterThanOrEqual(PromptBudget.biasClauses(from: maxBias).count, 6)
+        XCTAssertGreaterThanOrEqual(PromptBudget.maximumPromptBiasClauses().count, 6)
 
         for name in aspectNames {
             let aspect = try prepared(name)
@@ -108,7 +108,15 @@ final class PromptBudgetTests: XCTestCase {
     func testCompactComposedBudgets() throws {
         let compact = try prepared("core-compact")
         let compactBias = PromptBudget.compactModeBias()
-        let clauseCount = PromptBudget.biasClauses(from: compactBias).count
+        let selected = PromptBudget.maximumPromptBiasClauses()
+            .sorted { $0.count > $1.count }
+            .prefix(PromptBudget.compactBiasClauseLimit)
+        let clauseCount = selected.count
+        XCTAssertEqual(
+            compactBias,
+            selected.joined(separator: "; "),
+            "compactModeBias must keep whole clauses, not semicolon fragments"
+        )
         XCTAssertLessThanOrEqual(clauseCount, PromptBudget.compactBiasClauseLimit)
         XCTAssertGreaterThan(clauseCount, 0)
 

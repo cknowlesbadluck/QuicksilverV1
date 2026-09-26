@@ -51,15 +51,8 @@ public enum PromptBudget {
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Split a `promptBias()` string into its `; `-joined clauses.
-    public static func biasClauses(from bias: String) -> [String] {
-        bias.split(separator: ";", omittingEmptySubsequences: false)
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-    }
-
-    /// Worst-case `promptBias()`: every clause that `PersonalityState.promptBias()` can emit.
-    public static func maximumPromptBias() -> String {
+    /// PersonalityState configured so every `promptBias()` clause fires.
+    public static func maximumBiasState() -> PersonalityState {
         var state = PersonalityState()
         state.skepticism = 1
         state.focus = 1
@@ -69,15 +62,27 @@ public enum PromptBudget {
         state.curiosity = 1
         state.confidence = 1
         state.loyalty = 1
-        return state.promptBias()
+        return state
     }
 
-    /// Up to ``compactBiasClauseLimit`` longest clauses (worst-case compact-mode bias).
-    public static func compactModeBias(from bias: String = maximumPromptBias()) -> String {
-        let clauses = biasClauses(from: bias)
+    /// Structural clauses from the maxed personality (never split on `;`).
+    public static func maximumPromptBiasClauses() -> [String] {
+        maximumBiasState().promptBiasClauses()
+    }
+
+    /// Worst-case `promptBias()`: every clause that `PersonalityState.promptBias()` can emit.
+    public static func maximumPromptBias() -> String {
+        maximumBiasState().promptBias()
+    }
+
+    /// Up to ``compactBiasClauseLimit`` longest whole clauses (worst-case compact-mode bias).
+    public static func compactModeBias(
+        from clauses: [String] = maximumPromptBiasClauses()
+    ) -> String {
+        let selected = clauses
             .sorted { $0.count > $1.count }
             .prefix(compactBiasClauseLimit)
-        return clauses.joined(separator: "; ")
+        return selected.joined(separator: "; ")
     }
 
     /// Compose core + aspect (+ optional bias) the same way `PromptComposer` does
