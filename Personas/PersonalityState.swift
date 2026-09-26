@@ -163,7 +163,8 @@ public struct PersonalityState: Sendable, Equatable {
 
     // MARK: - Expression Helpers
 
-    public func promptBias() -> String {
+    /// Individual bias clauses (may themselves contain `; `). Prefer this over splitting `promptBias()`.
+    public func promptBiasClauses() -> [String] {
         var parts: [String] = []
 
         if skepticism > 0.65 {
@@ -191,7 +192,11 @@ public struct PersonalityState: Sendable, Equatable {
             parts.append("everything ultimately serves the user's long-term success")
         }
 
-        return parts.joined(separator: "; ")
+        return parts
+    }
+
+    public func promptBias() -> String {
+        promptBiasClauses().joined(separator: "; ")
     }
 
     public func colorResponse(_ text: String, personaID: String) -> String {
