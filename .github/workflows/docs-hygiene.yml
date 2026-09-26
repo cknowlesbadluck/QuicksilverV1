@@ -1,0 +1,33 @@
+name: Docs hygiene
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs-hygiene.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/docs-hygiene.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  no-hourly-audits:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reject hourly portfolio audit files
+        run: |
+          set -euo pipefail
+          hits=$(git ls-tree -r --name-only HEAD | grep -E '^docs/PORTFOLIO-AUDIT-[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{4}\.md$' || true)
+          if [ -n "$hits" ]; then
+            echo "Hourly PORTFOLIO-AUDIT-HHMM files are forbidden:"
+            echo "$hits"
+            echo "Update docs/AUDIT-*.md in place."
+            exit 1
+          fi
+          echo "docs hygiene ok"
