@@ -275,3 +275,46 @@ public struct PersonalityState: Sendable, Equatable {
         min(1.0, max(0.0, value))
     }
 }
+
+// MARK: - Plain register (P-T5)
+
+extension PersonalityState {
+
+    /// Loyalty + structure clauses only. Used when the mask slip is active so
+    /// wit / tease / trickster / erratic / low-tolerance never reach the prompt.
+    public static let plainModeBiasAllowlist: Set<String> = [
+        "prioritize structure, clarity, and the smallest verifiable next step",
+        "everything ultimately serves the user's long-term success",
+        "unquestionably loyal to him"
+    ]
+
+    /// Bias clauses filtered for the active register.
+    public func promptBiasClauses(register: Register) -> [String] {
+        let clauses = promptBiasClauses()
+        guard register == .plain else { return clauses }
+        return clauses.filter { Self.plainModeBiasAllowlist.contains($0) }
+    }
+
+    public func promptBias(register: Register) -> String {
+        promptBiasClauses(register: register).joined(separator: "; ")
+    }
+
+    /// Mask-slip posture: kill mischief/chaos energy, keep warmth and loyalty.
+    /// Call after `recomputeForTurn` so aspect baselines do not overwrite it.
+    /// Nudge deltas are preserved so a later playful turn still sees them.
+    public mutating func enterPlainRegister() {
+        let kept = nudge
+        let loyaltyTarget = min(1.0, loyalty + 0.05)
+        // Hit effective targets via base, then restore nudges and back them out of base
+        // so clamp(base + nudge) stays at the plain posture without discarding nudges.
+        mischief = 0
+        humor = 0.1
+        energy = 0.1
+        loyalty = loyaltyTarget
+        nudge = kept
+        base.mischief = 0 - kept.mischief
+        base.humor = 0.1 - kept.humor
+        base.energy = 0.1 - kept.energy
+        base.loyalty = loyaltyTarget - kept.loyalty
+    }
+}
