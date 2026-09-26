@@ -5,7 +5,7 @@ import Core
 /// Not a settings screen. The user is altering the fundamental laws.
 struct CodexView: View {
     @Environment(DependencyContainer.self) private var container
-    @State private var viewModel: SettingsViewModel?
+    @State private var viewModel: CodexViewModel?
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -14,7 +14,7 @@ struct CodexView: View {
                 codexContent(vm)
             } else {
                 ProgressView()
-                    .onAppear { viewModel = SettingsViewModel(container: container) }
+                    .onAppear { viewModel = CodexViewModel(container: container) }
             }
         }
         .navigationTitle("The Codex")
@@ -28,7 +28,7 @@ struct CodexView: View {
     }
 
     @ViewBuilder
-    private func codexContent(_ vm: SettingsViewModel) -> some View {
+    private func codexContent(_ vm: CodexViewModel) -> some View {
         Form {
             Section {
                 Toggle("Intelligence Active", isOn: Binding(
