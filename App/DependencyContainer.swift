@@ -62,20 +62,7 @@ final class DependencyContainer {
             logger: logger
         )
 
-        let brainRef = brain
-        IntentDependencies.shared.configure(
-            .init(
-                personaManager: personaManager,
-                nexusCoordinator: nexus,
-                memoryManager: memoryManager,
-                aiService: aiService,
-                eventBus: eventBus,
-                logger: logger,
-                askHandler: { query in
-                    try await brainRef.ask(query)
-                }
-            )
-        )
+        IntentDependencies.shared.configure(surface: brain)
 
         nexus.updatePersonaContext(personaManager.activeConfiguration.id)
         nexus.start()

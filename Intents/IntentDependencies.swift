@@ -1,78 +1,32 @@
 import Foundation
 import Core
-import Personas
-import Nexus
-import Memory
-import ServicesAI
 
 /// Process-wide dependency registry for App Intents.
 /// App Intents are system-instantiated and cannot receive constructor injection.
+///
+/// M1-T6: Intents talk only to `IntelligenceSurface` (MercuryBrain in production).
 @MainActor
 public final class IntentDependencies {
     public static let shared = IntentDependencies()
 
-    public private(set) var personaManager: PersonaManager?
-    public private(set) var nexusCoordinator: NexusCoordinator?
-    public private(set) var memoryManager: MemoryManager?
-    public private(set) var aiService: AIService?
-    public private(set) var eventBus: EventBus?
-    public private(set) var logger: LoggerService?
+    public private(set) var surface: IntelligenceSurface?
 
-    /// Routes Ask / QueryNexus through MercuryBrain (composed core identity).
-    public private(set) var askHandler: (@MainActor (String) async throws -> String)?
-
-    public var isConfigured: Bool {
-        personaManager != nil && nexusCoordinator != nil && aiService != nil && askHandler != nil
-    }
-
-    public struct Configuration {
-        public let personaManager: PersonaManager
-        public let nexusCoordinator: NexusCoordinator
-        public let memoryManager: MemoryManager
-        public let aiService: AIService
-        public let eventBus: EventBus
-        public let logger: LoggerService
-        public let askHandler: @MainActor (String) async throws -> String
-
-        public init(
-            personaManager: PersonaManager,
-            nexusCoordinator: NexusCoordinator,
-            memoryManager: MemoryManager,
-            aiService: AIService,
-            eventBus: EventBus,
-            logger: LoggerService,
-            askHandler: @escaping @MainActor (String) async throws -> String
-        ) {
-            self.personaManager = personaManager
-            self.nexusCoordinator = nexusCoordinator
-            self.memoryManager = memoryManager
-            self.aiService = aiService
-            self.eventBus = eventBus
-            self.logger = logger
-            self.askHandler = askHandler
-        }
-    }
+    public var isConfigured: Bool { surface != nil }
 
     private init() {}
 
-    public func configure(_ configuration: Configuration) {
+    public func configure(surface: IntelligenceSurface) {
         guard !isConfigured else { return }
-        personaManager = configuration.personaManager
-        nexusCoordinator = configuration.nexusCoordinator
-        memoryManager = configuration.memoryManager
-        aiService = configuration.aiService
-        eventBus = configuration.eventBus
-        logger = configuration.logger
-        askHandler = configuration.askHandler
+        self.surface = surface
     }
 
-    func resetForTesting() {
-        personaManager = nil
-        nexusCoordinator = nil
-        memoryManager = nil
-        aiService = nil
-        eventBus = nil
-        logger = nil
-        askHandler = nil
+    /// Resolve the configured surface or throw a cold-start-readable error.
+    public func requireSurface() throws -> IntelligenceSurface {
+        guard let surface else { throw AppError.nexusNotReady }
+        return surface
+    }
+
+    public func resetForTesting() {
+        surface = nil
     }
 }

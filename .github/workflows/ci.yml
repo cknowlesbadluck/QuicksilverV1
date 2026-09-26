@@ -43,6 +43,7 @@ jobs:
             Core/Protocols/DiagnosticProvider.swift \
             Core/Protocols/PersonaEngine.swift \
             Core/Protocols/AutomationProvider.swift \
+            Core/Protocols/IntelligenceSurface.swift \
             Core/Models/AIRequest.swift \
             Core/Models/AIResponse.swift \
             Core/Models/MemoryItem.swift \

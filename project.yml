@@ -97,9 +97,6 @@ targets:
     dependencies:
       - target: Core
       - target: Personas
-      - target: Nexus
-      - target: Memory
-      - target: ServicesAI
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.intents
