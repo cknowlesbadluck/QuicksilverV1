@@ -62,6 +62,7 @@ final class DependencyContainer {
             logger: logger
         )
 
+        let brainRef = brain
         IntentDependencies.shared.configure(
             .init(
                 personaManager: personaManager,
@@ -69,7 +70,10 @@ final class DependencyContainer {
                 memoryManager: memoryManager,
                 aiService: aiService,
                 eventBus: eventBus,
-                logger: logger
+                logger: logger,
+                askHandler: { query in
+                    try await brainRef.ask(query)
+                }
             )
         )
 

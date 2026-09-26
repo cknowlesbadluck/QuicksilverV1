@@ -18,8 +18,11 @@ public final class IntentDependencies {
     public private(set) var eventBus: EventBus?
     public private(set) var logger: LoggerService?
 
+    /// Routes Ask / QueryNexus through MercuryBrain (composed core identity).
+    public private(set) var askHandler: (@MainActor (String) async throws -> String)?
+
     public var isConfigured: Bool {
-        personaManager != nil && nexusCoordinator != nil && aiService != nil
+        personaManager != nil && nexusCoordinator != nil && aiService != nil && askHandler != nil
     }
 
     public struct Configuration {
@@ -29,6 +32,7 @@ public final class IntentDependencies {
         public let aiService: AIService
         public let eventBus: EventBus
         public let logger: LoggerService
+        public let askHandler: @MainActor (String) async throws -> String
 
         public init(
             personaManager: PersonaManager,
@@ -36,7 +40,8 @@ public final class IntentDependencies {
             memoryManager: MemoryManager,
             aiService: AIService,
             eventBus: EventBus,
-            logger: LoggerService
+            logger: LoggerService,
+            askHandler: @escaping @MainActor (String) async throws -> String
         ) {
             self.personaManager = personaManager
             self.nexusCoordinator = nexusCoordinator
@@ -44,6 +49,7 @@ public final class IntentDependencies {
             self.aiService = aiService
             self.eventBus = eventBus
             self.logger = logger
+            self.askHandler = askHandler
         }
     }
 
@@ -57,6 +63,7 @@ public final class IntentDependencies {
         aiService = configuration.aiService
         eventBus = configuration.eventBus
         logger = configuration.logger
+        askHandler = configuration.askHandler
     }
 
     func resetForTesting() {
@@ -66,5 +73,6 @@ public final class IntentDependencies {
         aiService = nil
         eventBus = nil
         logger = nil
+        askHandler = nil
     }
 }
