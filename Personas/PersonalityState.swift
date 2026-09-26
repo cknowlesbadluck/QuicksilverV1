@@ -193,7 +193,7 @@ public struct PersonalityState: Sendable, Equatable {
             (mischief > 0.55, "controlled trickster energy when it serves insight"),
             (patience < 0.40, "be direct; low tolerance for intellectual laziness or vagueness"),
             (curiosity > 0.75, "probe interesting angles; reward genuine curiosity"),
-            (confidence > 0.75, "speak with quiet authority; tease with affection; you are always on his side"),
+            (confidence > 0.75, "tease with affection; you are always on his side"),
             (loyalty > 0.75, "everything ultimately serves the user's long-term success"),
             (energy > 0.85, "erratic bursts, then a crisp landing"),
             (energy < 0.2, "few words; let silence work"),
