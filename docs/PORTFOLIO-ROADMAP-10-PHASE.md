@@ -1,15 +1,12 @@
-# Portfolio 10-phase roadmap — 2026-09-26 12:00 EDT
+# Portfolio 10-phase roadmap — 2026-09-26 13:01 EDT
 
-Owner-blocked items stay owner-blocked. Agents do not invent Netlify secrets or claim device HG.
-Update this file and `docs/AUDIT-2026-09-25.md` only.
-
-1. **Ready-or-refuse on main** — DONE (Resonance #108). Live still 503 until SERVICE_ROLE is set.
-2. **Owner: set resonancenexus env + schema** — Exit: `GET https://resonancenexus.netlify.app/api/ready` 200. Apply `supabase/migrations` including `20260925120000_execution_partial_status.sql`. Confirmed still missing SERVICE_ROLE at 12:00. Env names present: URL, ANON, AUTH_MODE, DEPLOY_STAGE, PROJECT_ID, NEXT_PUBLIC_RESONANCE_PROJECT_ID.
-3. **Prove durable GitHub vertical slice** — member-only evidence after restart; deny proofs. Needs live `GITHUB_TOKEN` + `GITHUB_WEBHOOK_SECRET`.
-4. **Device HG CHR-55** — Archive IPA on iPhone 16e from QuicksilverV1 `98b400f8` or later. GitHub Actions success is not acceptance.
-5. **Quicksilver next code slice after HG** — CHR-12 realm a11y, or first on-device AI turn after Covenant bind. P-T1/P-T2/P-T3/P-T18 shipped. P-T4 stays behind M3.5-T4.
-6. **Conduit freeze + repair red drafts** — keep #119/#120 draft. Recut off `dacff1d3` / product `5659a495` only. Do not merge red.
-7. **Conduit #125 keyset pagination** — DONE. Merged 2026-09-26T12:09:14Z.
-8. **Resonance iOS I1** — blocked by phase 2. Codex SideStore #116/#117 closed (packaging red).
-9. **Chamber lifecycle slice** — do not start while live ready is 503.
-10. **Release surface** — SideStore/IPA evidence, unskip production-smoke, owner prune leftover refs (`docs/hygiene-*`, `codex/*`, `release/0.8.0`), archive abandoned `Quicksilver` repo.
+1. Ready-or-refuse on Resonance main — DONE. Live 503 until SERVICE_ROLE.
+2. Owner sets `SUPABASE_SERVICE_ROLE_KEY` on resonancenexus only. Exit: `/api/ready` 200.
+3. Durable GitHub adapter evidence. Needs live tokens.
+4. Quicksilver device HG CHR-55 on iPhone 16e from `98b400f8` or later. Simulator CI is not acceptance.
+5. Quicksilver next code slice after HG (CHR-12 a11y or first bound AI turn). P-T1/P-T2/P-T3/P-T18 shipped. P-T4 stays behind M3.5-T4.
+6. Conduit freeze; repair #119/#120 off current main. Do not merge red.
+7. Conduit #125 keyset pagination — DONE.
+8. Resonance iOS I1 against a ready host. Blocked by phase 2.
+9. Chamber form/work/dissolve with audit. Blocked by phase 2.
+10. Release surface: SideStore evidence, unskip production-smoke, owner prune leftover branches. Archive abandoned `cknowlesbadluck/Quicksilver`.
