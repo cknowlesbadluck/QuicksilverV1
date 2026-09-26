@@ -8,6 +8,28 @@ import Foundation
 /// existing PersonaConfiguration during the transition period.
 public struct AspectPolicy: Sendable {
 
+    /// Lightweight environment for turn-time aspect selection (P-T18).
+    public struct Environment: Sendable, Equatable {
+        public var isLowPower: Bool
+        public var thermalState: String?
+
+        public init(isLowPower: Bool = false, thermalState: String? = nil) {
+            self.isLowPower = isLowPower
+            self.thermalState = thermalState
+        }
+
+        /// Serious or critical thermal pressure (bible §3 / mask-slip adjacency).
+        public var hasSeriousThermal: Bool {
+            guard let thermal = thermalState?.lowercased() else { return false }
+            return thermal.contains("serious") || thermal.contains("critical")
+        }
+
+        /// Low power or serious thermal — open (Quicksilver) turns move to Forge.
+        public var forcesForgeForOpenTurn: Bool {
+            isLowPower || hasSeriousThermal
+        }
+    }
+
     /// Minimum dwell before an autonomous aspect change is allowed.
     public let minimumDwellSeconds: TimeInterval
 
@@ -56,7 +78,19 @@ public struct AspectPolicy: Sendable {
     /// Immediate mapping from a single Intent (no dwell check).
     /// Used by Brain for the current turn's visual and expression bias.
     public func aspectForTurn(intent: Intent) -> Aspect {
-        fromIntent(intent) ?? .quicksilver
+        aspectForTurn(intent: intent, environment: Environment())
+    }
+
+    /// Turn mapping with environment (P-T18): low power or serious thermal
+    /// moves an **open** (Quicksilver) turn to Forge. Intent-selected Forge
+    /// or Eternal is unchanged. Returns Forge even when the open aspect
+    /// already matched intent, so the Brain still switches.
+    public func aspectForTurn(intent: Intent, environment: Environment) -> Aspect {
+        let base = fromIntent(intent) ?? .quicksilver
+        if environment.forcesForgeForOpenTurn, base == .quicksilver {
+            return .forge
+        }
+        return base
     }
 
     // MARK: - Mapping

@@ -51,7 +51,7 @@ final class MercuryBrain {
         self.logger = logger
 
         activeAspect = BrainComposition.aspect(forPersonaID: personaManager.activePersonaID)
-        personality.applyPersonaBias(personaID: activeAspect.rawValue)
+        personality.recomputeForTurn(aspect: activeAspect)
         refreshLivingStatus()
     }
 
@@ -61,17 +61,22 @@ final class MercuryBrain {
     /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
         personaManager.recordInteraction()
-        personality.noteInteraction()
         visualState = .thinking
 
         let intent = intentEngine.classify(query)
-        let turnAspect = aspectPolicy.aspectForTurn(intent: intent)
+        let environment = AspectPolicy.Environment(
+            isLowPower: nexus.state.lowPowerMode,
+            thermalState: nexus.state.thermalState
+        )
+        let turnAspect = aspectPolicy.aspectForTurn(intent: intent, environment: environment)
         await applyAspect(turnAspect, reason: "turn intent \(intent.kind.rawValue)")
 
         personaManager.updateTaskContext(description: query)
 
         let config = PersonaConfiguration.forAspect(activeAspect)
-        personality.adjustForAspect(activeAspect)
+        // Idempotent recompute from aspect baseline; nudges applied after (P-T18).
+        personality.recomputeForTurn(aspect: activeAspect)
+        personality.noteInteraction()
 
         let relevantMemory = retrieveRelevantMemory()
         // Compose first so broker estimates include core identity, bias, and device context.
@@ -183,7 +188,7 @@ extension MercuryBrain {
             logger.error("Aspect projection failed: \(error.localizedDescription)", category: logger.persona)
         }
 
-        personality.applyPersonaBias(personaID: aspect.rawValue)
+        personality.recomputeForTurn(aspect: aspect)
         nexus.updatePersonaContext(aspect.rawValue)
         logger.info("Mercury Brain: aspect → \(aspect.rawValue) [\(reason)]", category: logger.persona)
 
