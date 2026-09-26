@@ -1,5 +1,6 @@
 import SwiftUI
 import Core
+import Personas
 
 /// Spatial destinations inside Quicksilver's domain.
 /// Places and instruments — not separate assistants or products.
@@ -55,7 +56,7 @@ enum SpatialDestination: String, CaseIterable, Identifiable {
     var quip: String {
         switch self {
         case .workshop: return "Finally. Something worth making."
-        case .planetarium: return "Careful. Eternal is watching."
+        case .planetarium: return "Tread softly. I remember everything here."
         case .archive: return "Let's see what I've managed to remember."
         case .codex: return "Ah. The rules. Everyone's favorite."
         case .diagnostics: return "You want to look underneath? Fine."
@@ -196,7 +197,7 @@ struct SpatialSanctum: View {
     }
 
     private var greetingPrompt: String {
-        if !livingStatus.isEmpty && livingStatus != "Quicksilver is present." {
+        if !livingStatus.isEmpty && livingStatus != LivingNarration.defaultStatus {
             return livingStatus
         }
         return "What are we getting into?"

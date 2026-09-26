@@ -44,16 +44,10 @@ struct AskView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 12) {
-                    HStack {
-                        Text("Provider: \(vm.providerName)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(container.activeConfiguration.displayName)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(accent)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Provider: \(vm.providerName)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     ForEach(vm.turns) { turn in
                         turnBubble(turn, accent: accent, assistantOpacity: bubble.opacity, assistantWeight: bubble.weight)
@@ -102,7 +96,7 @@ struct AskView: View {
     @ViewBuilder
     private func inputBar(_ vm: AskViewModel, accent: Color) -> some View {
         HStack(alignment: .bottom, spacing: 12) {
-            TextField("Ask \(container.activeConfiguration.displayName)…", text: Binding(
+            TextField("Go on. Impress me.", text: Binding(
                 get: { vm.draft },
                 set: { vm.draft = $0 }
             ), axis: .vertical)

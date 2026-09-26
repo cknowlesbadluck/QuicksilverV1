@@ -31,7 +31,7 @@ final class MercuryBrain {
 
     private(set) var personality = PersonalityState()
     private(set) var primaryInsight: String?
-    private(set) var livingStatus: String = "Quicksilver is present. Observing."
+    private(set) var livingStatus: String = LivingNarration.defaultStatus
     private(set) var visualState: VisualState = .idle
     private(set) var activeAspect: Aspect = .quicksilver
     /// Latched conversational register. Resets to `.playful` on a new Brain session.
@@ -160,7 +160,7 @@ final class MercuryBrain {
 extension MercuryBrain {
 
     func refreshLivingStatus() {
-        let reading = BrainComposition.livingReading(state: nexus.state, label: activeAspect.diagnosticLabel)
+        let reading = BrainComposition.livingReading(state: nexus.state)
         if let insightTitle = reading.insightTitle {
             primaryInsight = insightTitle
         }

@@ -9,7 +9,7 @@ import Nexus
 final class SanctumViewModel {
     private(set) var activePersonaID: String = "quicksilver"
     private(set) var activeAspect: Aspect = .quicksilver
-    private(set) var livingStatus: String = "Quicksilver is present."
+    private(set) var livingStatus: String = LivingNarration.defaultStatus
     private(set) var latestInsight: Insight?
     private(set) var batteryLevelText: String = "—"
     private(set) var networkStatus: String = "—"

@@ -12,27 +12,15 @@ import Nexus
 enum BrainComposition {
 
     /// Living-status narration for the current Nexus state.
-    struct LivingReading {
-        let text: String
-        let insightTitle: String?
-        let nudge: (dimension: PersonalityState.Dimension, amount: Double)?
-    }
+    /// Thin adapter over `LivingNarration` (Personas) — no aspect label.
+    typealias LivingReading = LivingNarration.Reading
 
-    static func livingReading(state: NexusState, label: String) -> LivingReading {
-        if let insight = state.recentInsights.first {
-            return LivingReading(text: "\(label): \(insight.title)", insightTitle: insight.title, nudge: nil)
-        }
-        if state.overallHealthScore < 50 {
-            return LivingReading(
-                text: "\(label) watches rising pressure. Health \(state.overallHealthScore).",
-                insightTitle: nil,
-                nudge: (.skepticism, 0.04)
-            )
-        }
-        if state.lowPowerMode {
-            return LivingReading(text: "\(label) notes low power. Conserving.", insightTitle: nil, nudge: (.patience, 0.03))
-        }
-        return LivingReading(text: "\(label) is present. The Sanctum holds.", insightTitle: nil, nudge: nil)
+    static func livingReading(state: NexusState) -> LivingReading {
+        LivingNarration.reading(
+            insightTitle: state.recentInsights.first?.title,
+            healthScore: state.overallHealthScore,
+            lowPowerMode: state.lowPowerMode
+        )
     }
 
     static func brokerDecision(
