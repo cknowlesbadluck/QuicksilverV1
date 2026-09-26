@@ -207,7 +207,8 @@ public struct QueryNexusIntent: AppIntent {
             throw AppError.nexusNotReady
         }
         let answer = try await ask(query)
-        return .result(value: answer)
+        // P-T6: never prefix with [Aspect] — Mercury is one being.
+        return .result(value: LivingNarration.presentIntentAnswer(answer))
     }
 
 }
