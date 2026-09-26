@@ -248,4 +248,57 @@ final class RegisterPolicyTests: XCTestCase {
         XCTAssertFalse(bias.contains("erratic"), bias)
         XCTAssertFalse(bias.contains("low tolerance"), bias)
     }
+
+    // MARK: - Review fixes (apostrophe, negation, nudges, tokens)
+
+    func testCurlyApostropheDistressIsPlain() {
+        let scared = "I" + "\u{2019}" + "m scared"
+        let cant = "I can" + "\u{2019}" + "t cope"
+        let broke = "I" + "\u{2019}" + "m broke and need help"
+        XCTAssertEqual(evaluate(scared), .plain)
+        XCTAssertEqual(evaluate(cant), .plain)
+        XCTAssertEqual(evaluate(broke), .plain)
+        XCTAssertEqual(RegisterPolicy.normalize("I" + "\u{2019}" + "m sick"), "i'm sick")
+    }
+
+    func testNegatedLighteningKeepsPlainLatch() {
+        XCTAssertEqual(
+            evaluate("Don't tell me a joke; I need to focus", previous: .plain),
+            .plain
+        )
+        XCTAssertEqual(
+            evaluate("please do not be funny right now", previous: .plain),
+            .plain
+        )
+    }
+
+    func testEmergencyAndCredentialTriggersArePlain() {
+        XCTAssertEqual(evaluate("there is an emergency"), .plain)
+        XCTAssertEqual(evaluate("my password was stolen"), .plain)
+        XCTAssertEqual(evaluate("I lost all my data"), .plain)
+    }
+
+    func testNineEightEightMatchesAsWholeTokenOnly() {
+        XCTAssertEqual(evaluate("please call 988 now"), .plain)
+        XCTAssertEqual(evaluate("fix issue #1988"), .playful)
+        XCTAssertEqual(evaluate("connect to port 5988"), .playful)
+    }
+
+    func testEnterPlainRegisterPreservesNudgesForLaterPlayfulTurn() {
+        var state = PersonalityState()
+        state.recomputeForTurn(aspect: .quicksilver)
+        state.increase(.loyalty, by: 0.04)
+        state.increase(.curiosity, by: 0.03)
+        let curiosityBeforePlain = state.curiosity
+
+        state.enterPlainRegister()
+        XCTAssertEqual(state.mischief, 0, accuracy: 0.0001)
+        XCTAssertEqual(state.humor, 0.1, accuracy: 0.0001)
+        XCTAssertEqual(state.energy, 0.1, accuracy: 0.0001)
+
+        // Leave plain: recompute restores aspect base; nudges must still apply.
+        state.recomputeForTurn(aspect: .quicksilver)
+        XCTAssertEqual(state.loyalty, min(1.0, 0.95 + 0.04), accuracy: 0.0001)
+        XCTAssertEqual(state.curiosity, curiosityBeforePlain, accuracy: 0.0001)
+    }
 }
