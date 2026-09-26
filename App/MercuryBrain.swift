@@ -74,14 +74,15 @@ final class MercuryBrain {
         personality.adjustForAspect(activeAspect)
 
         let relevantMemory = retrieveRelevantMemory()
+        // Compose first so broker estimates include core identity, bias, and device context.
+        let system = buildSystemPrompt(for: config, memory: relevantMemory)
         let estimatedTokens = BrainComposition.estimateContextTokens(
-            systemHint: config.systemPrompt,
-            memory: relevantMemory,
+            systemHint: system,
+            memory: [],
             query: query
         )
 
         let effectivePlan = try evaluateBrokerDecision(intent: intent, tokens: estimatedTokens)
-        let system = buildSystemPrompt(for: config, memory: relevantMemory)
         let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
         return try await completeAsk(query: query, system: system, config: config, maxTokens: maxTokens)
     }
