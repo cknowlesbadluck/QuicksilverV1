@@ -29,14 +29,9 @@ public enum PromptBudget {
 
     // MARK: - Owner substitution for measurement
 
-    /// Longest value `PromptComposer` may substitute for `{{owner}}`.
-    public static let longestOwnerSubstitution: String = {
-        let candidates = [
-            PromptComposer.defaultOwnerName,
-            PromptComposer.cloudOwnerLabel
-        ]
-        return candidates.max(by: { $0.count < $1.count }) ?? PromptComposer.defaultOwnerName
-    }()
+    /// Longest value `PromptComposer` may substitute for `{{owner}}`
+    /// (`defaultOwnerName` is longer than `cloudOwnerLabel`).
+    public static let longestOwnerSubstitution = PromptComposer.defaultOwnerName
 
     // MARK: - Pure estimators
 

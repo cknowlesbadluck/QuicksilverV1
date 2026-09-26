@@ -4,6 +4,12 @@ import XCTest
 /// P-T3: prompt token-budget guard — named caps, chars÷4 estimator, SPM measurement table.
 final class PromptBudgetTests: XCTestCase {
 
+    private struct Measurement {
+        let name: String
+        let words: Int
+        let tokens: Int
+    }
+
     private var personasDir: URL {
         URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -130,17 +136,27 @@ final class PromptBudgetTests: XCTestCase {
     // MARK: - SPM log table
 
     func testPrintMeasurementTable() throws {
-        var rows: [(String, Int, Int)] = []
+        var rows: [Measurement] = []
         for name in allNames {
             let text = try prepared(name)
-            rows.append((name, PromptBudget.wordCount(text), PromptBudget.estimatedTokens(text)))
+            rows.append(
+                Measurement(
+                    name: name,
+                    words: PromptBudget.wordCount(text),
+                    tokens: PromptBudget.estimatedTokens(text)
+                )
+            )
         }
 
-        var table = "\nP-T3 PromptBudget measurement table ({{owner}}→\(PromptBudget.longestOwnerSubstitution)):\n"
-        table += String(format: "%-14s %6s %8s\n", "file", "words", "tokens")
-        table += String(repeating: "-", count: 32) + "\n"
-        for (name, words, tokens) in rows {
-            table += String(format: "%-14s %6d %8d\n", name, words, tokens)
+        var table = "\nP-T3 PromptBudget measurement table"
+        table += " ({{owner}}→\(PromptBudget.longestOwnerSubstitution)):\n"
+        table += pad("file", 14) + pad("words", 8) + pad("tokens", 8) + "\n"
+        table += String(repeating: "-", count: 30) + "\n"
+        for row in rows {
+            table += pad(row.name, 14)
+            table += pad(String(row.words), 8)
+            table += pad(String(row.tokens), 8)
+            table += "\n"
         }
 
         let maxBias = PromptBudget.maximumPromptBias()
@@ -159,19 +175,20 @@ final class PromptBudgetTests: XCTestCase {
             let compactPlus = PromptBudget.estimatedTokens(
                 PromptBudget.composedHead(core: compact, aspect: aspect, bias: compactBias)
             )
-            table += String(
-                format: "  %-12s full+maxBias=%d  compact=%d  compact+2bias=%d\n",
-                name,
-                full,
-                compactAlone,
-                compactPlus
-            )
+            table += "  \(name): full+maxBias=\(full)"
+            table += "  compact=\(compactAlone)"
+            table += "  compact+2bias=\(compactPlus)\n"
         }
         print(table)
         XCTAssertEqual(rows.count, 5)
     }
 
     // MARK: - Helpers
+
+    private func pad(_ text: String, _ width: Int) -> String {
+        if text.count >= width { return text }
+        return text + String(repeating: " ", count: width - text.count)
+    }
 
     private func loadPersonaFile(_ name: String) throws -> String {
         let url = personasDir.appendingPathComponent("\(name).txt")
