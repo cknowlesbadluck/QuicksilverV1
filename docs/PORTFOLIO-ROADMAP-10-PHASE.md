@@ -1,12 +1,12 @@
-# Portfolio 10-phase roadmap — 2026-09-26 09:00 EDT
+# Portfolio 10-phase roadmap — 2026-09-26 10:05 EDT
 
 Owner-blocked items stay owner-blocked. Agents do not invent Netlify secrets or claim device HG.
 Update this file and `docs/AUDIT-2026-09-25.md` only.
 
 1. **Ready-or-refuse on main** — DONE (Resonance #108). Live still 503 until SERVICE_ROLE is set.
-2. **Owner: set resonancenexus env + schema** — Exit: `GET https://resonancenexus.netlify.app/api/ready` 200. Apply `supabase/migrations` including `20260925120000_execution_partial_status.sql`. Confirmed still missing SERVICE_ROLE at 09:00.
+2. **Owner: set resonancenexus env + schema** — Exit: `GET https://resonancenexus.netlify.app/api/ready` 200. Apply `supabase/migrations` including `20260925120000_execution_partial_status.sql`. Confirmed still missing SERVICE_ROLE at 10:05.
 3. **Prove durable GitHub vertical slice** — member-only evidence after restart; deny proofs. Needs live `GITHUB_TOKEN` + `GITHUB_WEBHOOK_SECRET`.
-4. **Device HG CHR-55** — Archive IPA on iPhone 16e from QuicksilverV1 `68ce1b43` or later. GitHub Actions success is not acceptance.
+4. **Device HG CHR-55** — Archive IPA on iPhone 16e from QuicksilverV1 `db1ffd7d` or later. GitHub Actions success is not acceptance.
 5. **Quicksilver next code slice after HG** — CHR-12 realm a11y, or first on-device AI turn after Covenant bind. P-T1/P-T2/P-T3 shipped. P-T4 stays behind M3.5-T4.
 6. **Conduit freeze + repair red drafts** — keep #119/#120 draft. Recut limiter only with a test that oldest keys leave first.
 7. **Conduit #125 keyset pagination** — DONE. Merged 2026-09-26T12:09:14Z. Main `5659a495`.
