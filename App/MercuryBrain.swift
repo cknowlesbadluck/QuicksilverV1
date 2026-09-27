@@ -119,13 +119,6 @@ final class MercuryBrain {
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
-    func switchPersona(to id: String) async throws {
-        visualState = .transitioning
-        await applyAspect(BrainComposition.aspect(forPersonaID: id), reason: "explicit switch", force: true)
-        visualState = environmentalBaseline()
-    }
-
-    /// Switch by Aspect (preferred diagnostics API).
     func switchAspect(to aspect: Aspect) async throws {
         visualState = .transitioning
         await applyAspect(aspect, reason: "explicit aspect", force: true)

@@ -89,7 +89,7 @@ final class ForgeViewModel {
     /// Enter the Workshop chamber via Brain (never directly via PersonaManager).
     func awakenForge() async {
         do {
-            try await container.brain.switchPersona(to: "forge")
+            try await container.brain.switchAspect(to: .forge)
             refresh()
         } catch {
             livingStatus = "Workshop could not awaken: \(error.localizedDescription)"
@@ -112,7 +112,7 @@ final class ForgeViewModel {
     func askForge(_ query: String) async -> String {
         do {
             if container.brain.activeAspect != .forge {
-                try await container.brain.switchPersona(to: "forge")
+                try await container.brain.switchAspect(to: .forge)
             }
             let answer = try await container.brain.ask(query)
             refresh()
