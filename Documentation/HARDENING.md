@@ -29,7 +29,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - GrokAIProvider: Task cancellation, 45 s timeout, no secret leakage in errors
 - **LoggerService + QuicksilverLogger**: default privacy `.private`; improved `redact` covers token/secret/Bearer; explicit `isPrivate` opt-out only when intentional
 - **PrivacyInfo.xcprivacy** present and embedded
-- DependencyContainer: structured aspect switch (`switchAspect`) with error logging
+- MercuryBrain: structured aspect switch (`switchAspect`) with error logging
 
 ### P1 — Architecture & Maintainability
 - Persona prompts externalized to `Resources/Personas/*.txt`
@@ -102,7 +102,7 @@ The existing `prune-branches.yml` will automatically delete *merged* remote bran
 4. Launch → Sanctum / Home shows Quicksilver presence + Nexus health
 5. Enter Forge → awaken, capture notes, ask
 6. Enter Eternal → observe signals / memory constellation
-7. Confirm aspect selection (Auto / Quicksilver / Forge / Eternal) — accent, density, insight tone change; no persona switcher
+7. Confirm aspect overrides (Quicksilver / Forge / Eternal via Diagnostics) — accent, density, insight tone change; autonomous default when unset; no persona switcher
 8. Codex → bind keys (free Gemini; optional Grok) — binding the first key enables intelligence
 9. Memory → policy label, add/delete/clear/export
 10. Background 5–10 min → no excessive drain

@@ -77,7 +77,7 @@ Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**
 2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
 4. Codex → bind keys: free Gemini (AI Studio, no billing) and optional Grok if you already have xAI credits. Binding the first key enables intelligence.
-5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → aspect selection (Auto / Quicksilver / Forge / Eternal).
+5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → aspect overrides (Quicksilver / Forge / Eternal in Diagnostics).
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 
