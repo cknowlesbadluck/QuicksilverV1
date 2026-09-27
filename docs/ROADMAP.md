@@ -53,7 +53,7 @@ It is **not production-ready**. The M1 ship-blockers are resolved:
 
 Other gaps:
 
-- **Intents bypass the Brain.** They call `PersonaManager.switchTo` directly, which desyncs `MercuryBrain.activeAspect`.
+- ~~**Intents bypass the Brain.**~~ Cleared in M1-T6/M1-T7/M1-T9: Intents go through `IntelligenceSurface` → `MercuryBrain.switchAspect`.
 - **Conversation is single-turn**, and memory retrieval ignores the query.
 - ~~The Gemini key is sent as a URL query parameter.~~ Fixed in M1-T13: it is sent in the `x-goog-api-key` header.
 - **App-layer code has no CI tests.** Nothing in App/ or UI/ is exercised in CI, because CI only runs `swift test` and a simulator *build*.

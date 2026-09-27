@@ -63,17 +63,12 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 
 ## Development Roadmap Status
 
-### Milestone 1 — Foundation Stability → Done
-### Milestone 2 — Device Intelligence → Done
-### Milestone 3 — Memory System → Done
-### Milestone 4 — AI Integration → Largely done
-### Milestone 5 — Polished UI / Personality → Slice A landed + Forge/Eternal realms on main
-### Milestone 6 — SideStore production hardening → Done (plus Sentry)
-### Living Realms v1 → In progress (GitHub #57)
+### Historical slices (pre-roadmap numbering) → Done
+Foundation Stability · Device Intelligence · Memory System · AI Integration · Polished UI / Personality (Slice A + Forge/Eternal) · SideStore hardening (+ Sentry).
 
-Remaining focus:
-- M2 test and CI foundation (AppTests, iPhone 16e simulator preference, full-repo strict lint)
-- M3 Mercury Gateway and free cloud intelligence; M3.5 Apple Intelligence and App Intents
+### Production roadmap (`docs/ROADMAP.md`) — remaining focus
+- **M2 — Test & CI foundation** (AppTests, iPhone 16e simulator preference, full-repo strict lint) — distinct from the completed historical "Device Intelligence" slice above
+- **M3** Mercury Gateway and free cloud intelligence; **M3.5** Apple Intelligence and App Intents
 - Accessibility / Dynamic Type / Reduce Motion pass
 - First formal GitHub Release once quality gate is satisfied
 
