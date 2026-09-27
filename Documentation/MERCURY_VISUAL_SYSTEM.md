@@ -10,7 +10,7 @@ The Figma file defines the native iOS visual direction:
 
 - `Mercury — Visual System` — master composition, materials, tokens, and motion language.
 - `Realms` — Forge Workshop and Eternal Observatory compositions.
-- `Nexus & Codex` — realm selection, aspect mood, integrations, memory, diagnostics, and Codex (governance — not Settings).
+- `Sanctum & Codex` — Sanctum realm gateways; Codex for governance (keys/options — not Settings); Nexus remains sensing/diagnostics.
 
 ## Product visual doctrine
 
@@ -44,7 +44,9 @@ Idle state is a slow breath. Listening, thinking, processing, and speaking progr
 
 - **Forge Workshop:** dense, instrument-like, energetic, emerald/ember accents.
 - **Eternal Observatory:** spacious, contemplative, celestial, gold/violet accents.
-- **Nexus / Codex:** realm selection and governance (Codex binds keys and options); it should feel spatial and intentional rather than like a conventional Settings tab.
+- **Sanctum:** realm selection / gateways to Workshop and Observatory (not Nexus).
+- **Codex:** governance (binds keys and options); spatial and intentional rather than a conventional Settings tab.
+- **Nexus:** sensing and diagnostics only — persona-agnostic Sense layer.
 
 ## Material language
 
