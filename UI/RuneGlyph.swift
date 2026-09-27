@@ -86,7 +86,7 @@ struct RuneGlyph: View {
                 pressed = true
             }
             action?()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + MotionTokens.microInteractionDuration) {
                 withAnimation(MotionTokens.glyphActivation) {
                     pressed = false
                 }
