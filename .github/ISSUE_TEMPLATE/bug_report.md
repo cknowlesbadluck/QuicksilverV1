@@ -20,7 +20,7 @@ assignees: ''
 
 ## Environment
 
-- Device: iPhone 14 / Simulator / other
+- Device: iPhone 16e / Simulator / other
 - iOS version:
 - Install method: SideStore / Xcode / other
 - Build: CI run URL or commit SHA
@@ -31,6 +31,6 @@ assignees: ''
 
 - [ ] Crash
 - [ ] Data loss / Memory wrong
-- [ ] AI / Grok path
+- [ ] AI / Codex bind path
 - [ ] Nexus / Diagnostics
 - [ ] UI only
