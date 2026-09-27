@@ -20,6 +20,16 @@ enum PersonaTheme {
     static let mercuryShadow = Color(red: 0.180, green: 0.205, blue: 0.235)
     static let mercuryBlue = Color(red: 0.380, green: 0.560, blue: 0.720)
 
+    // Absorbed from MercuryVisualTokens (M1-T11) — atmosphere + instrument accents.
+    static let sanctumPurple = Color(red: 0.220, green: 0.105, blue: 0.360)
+    static let quicksilver = Color(red: 0.350, green: 0.950, blue: 0.720)
+    static let quicksilverDeep = Color(red: 0.090, green: 0.280, blue: 0.220)
+    static let ember = Color(red: 0.780, green: 0.340, blue: 0.180)
+    static let eternalGold = Color(red: 0.780, green: 0.650, blue: 0.300)
+    static let panel = Color(red: 0.055, green: 0.045, blue: 0.090)
+    static let warningEmber = Color(red: 0.95, green: 0.35, blue: 0.2)
+    static let criticalRed = Color(red: 0.95, green: 0.25, blue: 0.28)
+
     // Legacy aliases so existing call-sites compile while migrating.
     static let cosmicBlack = voidBlack
     static let deepViolet = glowPurple
@@ -40,6 +50,11 @@ enum PersonaTheme {
     static let chaosParticleRadius: CGFloat = 0.022
     static let chaosSurfaceOpacity = 0.72
     static let chaosGlassOpacity = 0.10
+
+    // MARK: - Surface Geometry (absorbed from MercuryVisualTokens)
+
+    static let glassCornerRadius: CGFloat = 18
+    static let largeCornerRadius: CGFloat = 26
 
     // MARK: - Persona Accents
 
@@ -146,7 +161,7 @@ enum PersonaTheme {
         switch score {
         case 80...: return toxicGreen
         case 50..<80: return hazardGreen
-        default: return Color(red: 0.95, green: 0.25, blue: 0.28)
+        default: return criticalRed
         }
     }
 }

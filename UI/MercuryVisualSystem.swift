@@ -1,26 +1,7 @@
 import SwiftUI
 
-/// Visual language for Mercury: Quicksilver.
-///
-/// The system deliberately avoids dashboard chrome. Surfaces behave like
-/// instruments inside a dark chamber: layered atmosphere, metallic text,
-/// restrained glass, and a living mercury core.
-enum MercuryVisualTokens {
-    static let void = Color(red: 0.020, green: 0.015, blue: 0.040)
-    static let sanctumPurple = Color(red: 0.220, green: 0.105, blue: 0.360)
-    static let quicksilver = Color(red: 0.350, green: 0.950, blue: 0.720)
-    static let quicksilverDeep = Color(red: 0.090, green: 0.280, blue: 0.220)
-    static let silver = Color(red: 0.720, green: 0.760, blue: 0.820)
-    static let ember = Color(red: 0.780, green: 0.340, blue: 0.180)
-    static let eternalGold = Color(red: 0.780, green: 0.650, blue: 0.300)
-    static let panel = Color(red: 0.055, green: 0.045, blue: 0.090)
-
-    static let cornerRadius: CGFloat = 18
-    static let largeCornerRadius: CGFloat = 26
-    static let corePulseDuration: TimeInterval = 2.8
-    static let realmTransitionDuration: TimeInterval = 0.42
-    static let microInteractionDuration: TimeInterval = 0.16
-}
+/// Mercury visual system views (Sanctum backdrop, presence orb, glass surface, realm pill).
+/// Colour and geometry come from `PersonaTheme`; durations from `MotionTokens`.
 
 /// Atmospheric foundation for the Sanctum.
 /// It is intentionally layered rather than a single flat background so the
@@ -30,17 +11,17 @@ struct MercurySanctumBackdrop: View {
 
     var body: some View {
         ZStack {
-            MercuryVisualTokens.void
+            PersonaTheme.voidBlack
 
             RadialGradient(
-                colors: [accent.opacity(0.20), MercuryVisualTokens.void.opacity(0)],
+                colors: [accent.opacity(0.20), PersonaTheme.voidBlack.opacity(0)],
                 center: .center,
                 startRadius: 24,
                 endRadius: 270
             )
 
             RadialGradient(
-                colors: [MercuryVisualTokens.sanctumPurple.opacity(0.18), .clear],
+                colors: [PersonaTheme.sanctumPurple.opacity(0.18), .clear],
                 center: UnitPoint(x: 0.20, y: 0.22),
                 startRadius: 10,
                 endRadius: 260
@@ -56,7 +37,7 @@ struct MercurySanctumBackdrop: View {
                 for point in seed {
                     let center = CGPoint(x: point.x * size.width, y: point.y * size.height)
                     let rect = CGRect(x: center.x, y: center.y, width: 1.5, height: 1.5)
-                    context.fill(Path(ellipseIn: rect), with: .color(MercuryVisualTokens.silver.opacity(0.22)))
+                    context.fill(Path(ellipseIn: rect), with: .color(PersonaTheme.mercurySilver.opacity(0.22)))
                 }
             }
             .blendMode(.screen)
@@ -75,7 +56,7 @@ struct MercuryPresenceOrb: View {
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
-            let phase = timeline.date.timeIntervalSinceReferenceDate / MercuryVisualTokens.corePulseDuration
+            let phase = timeline.date.timeIntervalSinceReferenceDate / MotionTokens.corePulseDuration
             let pulse = 0.5 + 0.5 * sin(phase * .pi * 2.0)
             let scale = 0.96 + (0.045 * pulse)
             let opacity = 0.58 + (0.20 * pulse)
@@ -99,7 +80,7 @@ struct MercuryPresenceOrb: View {
                             colors: [
                                 .white.opacity(0.92),
                                 accent.opacity(opacity),
-                                MercuryVisualTokens.quicksilverDeep.opacity(0.72),
+                                PersonaTheme.quicksilverDeep.opacity(0.72),
                                 .clear
                             ],
                             center: .center,
@@ -133,9 +114,9 @@ struct MercuryGlassSurface<Content: View>: View {
     var body: some View {
         content
             .padding(14)
-            .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous))
+            .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: PersonaTheme.glassCornerRadius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: MercuryVisualTokens.cornerRadius, style: .continuous)
+                RoundedRectangle(cornerRadius: PersonaTheme.glassCornerRadius, style: .continuous)
                     .stroke(accent.opacity(0.22), lineWidth: 1)
             }
     }
@@ -157,11 +138,11 @@ struct MercuryRealmPill: View {
                 Text(title.uppercased())
                     .font(.caption.weight(.semibold))
                     .tracking(1.1)
-                    .foregroundStyle(active ? accent : MercuryVisualTokens.silver)
+                    .foregroundStyle(active ? accent : PersonaTheme.mercurySilver)
 
                 Text(subtitle)
                     .font(.caption2)
-                    .foregroundStyle(MercuryVisualTokens.silver.opacity(0.55))
+                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.55))
             }
 
             Spacer(minLength: 0)

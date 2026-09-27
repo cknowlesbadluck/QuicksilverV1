@@ -71,7 +71,7 @@ struct RuneGlyph: View {
 
     private var accent: Color {
         switch state {
-        case .warning: return Color(red: 0.95, green: 0.35, blue: 0.2)
+        case .warning: return PersonaTheme.warningEmber
         case .active: return PersonaTheme.accent(for: personaID)
         case .attention: return PersonaTheme.secondaryAccent(for: personaID)
         case .disabled: return PersonaTheme.mercurySilver.opacity(0.25)
