@@ -1,0 +1,32 @@
+name: M1-T12 Codex fix
+on:
+  workflow_dispatch:
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/m1-t12-codex-followup
+      - name: Clarify M1-T13 failed-request capture is historical
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p = Path('docs/ROADMAP.md')
+          t = p.read_text()
+          old = 'Needed before HG1 because failed-request capture in Sentry is still on.'
+          new = 'Historically needed before HG1 while failed-request capture was still on; capture is now off (errors+hangs only — see App audit / M4-T8 remaining gaps).'
+          if old not in t:
+              raise SystemExit('old sentence missing — already fixed?')
+          p.write_text(t.replace(old, new, 1))
+          print('ROADMAP updated')
+          PY
+          rm -f .github/workflows/m1-t12-codex-fix.yml
+          git config user.name 'Grok Bot'
+          git config user.email 'grok-bot@users.noreply.github.com'
+          git add docs/ROADMAP.md
+          git add -u .github/workflows/m1-t12-codex-fix.yml
+          git commit -m 'M1-T12: clarify M1-T13 failed-request capture is historical'
+          git push origin HEAD:feat/m1-t12-codex-followup
