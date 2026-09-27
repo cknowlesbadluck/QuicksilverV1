@@ -34,8 +34,7 @@ final class DependencyContainer {
 
         self.personaManager = PersonaManager(
             eventBus: eventBus,
-            logger: logger,
-            featureFlags: featureFlags
+            logger: logger
         )
 
         let memoryStore: MemoryStore

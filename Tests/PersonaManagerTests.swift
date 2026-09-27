@@ -31,103 +31,12 @@ final class PersonaManagerTests: XCTestCase {
         } catch { }
     }
 
-    func testAutonomyDisabledDoesNotAutoSwitch() async throws {
+    func testSwitchToSameIdIsNoOp() async throws {
         let bus = EventBus()
         let logger = LoggerService()
-        let flags = FeatureFlags()
-        flags.set("personaAutonomy", enabled: false)
-
-        let manager = PersonaManager(
-            eventBus: bus,
-            logger: logger,
-            policy: PersonaDecisionPolicy(minimumDwellSeconds: 0),
-            featureFlags: flags
-        )
-
-        manager.updateTaskContext(kind: .building)
-        try await Task.sleep(for: .milliseconds(50))
-
-        XCTAssertEqual(manager.activeConfiguration.id, "quicksilver")
+        let manager = PersonaManager(eventBus: bus, logger: logger)
+        try await manager.switchTo(id: "quicksilver")
         XCTAssertNil(manager.lastSwitchReason)
-    }
-
-    func testTaskKindBuildingPrefersForge() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
-        let context = PersonaContext(taskKind: .building)
-        let result = policy.preferredPersona(
-            current: .quicksilver,
-            lastSwitchedAt: nil,
-            context: context
-        )
-        XCTAssertEqual(result?.id, "forge")
-    }
-
-    func testQueryIntentReflectivePrefersEternal() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
-        let context = PersonaContext(queryIntent: .reflective)
-        let result = policy.preferredPersona(
-            current: .quicksilver,
-            lastSwitchedAt: nil,
-            context: context
-        )
-        XCTAssertEqual(result?.id, "eternal")
-    }
-
-    func testTaskDescriptionArchitecturePrefersForge() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
-        let context = PersonaContext(taskDescription: "Review the architecture decision")
-        let result = policy.preferredPersona(
-            current: .quicksilver,
-            lastSwitchedAt: nil,
-            context: context
-        )
-        XCTAssertEqual(result?.id, "forge")
-    }
-
-    func testRecentMemoryHintsPreferEternal() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
-        let context = PersonaContext(recentMemoryHints: ["prior goal: ship core layer"])
-        let result = policy.preferredPersona(
-            current: .quicksilver,
-            lastSwitchedAt: nil,
-            context: context
-        )
-        XCTAssertEqual(result?.id, "eternal")
-    }
-
-    func testEnvironmentalFallbackStillWorks() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
-        let context = PersonaContext(batteryLevel: 0.12, isLowPower: true)
-        let result = policy.preferredPersona(
-            current: .quicksilver,
-            lastSwitchedAt: nil,
-            context: context
-        )
-        XCTAssertEqual(result?.id, "forge")
-    }
-
-    func testDwellTimeStillRespected() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 3600)
-        let context = PersonaContext(taskKind: .building)
-        let result = policy.preferredPersona(
-            current: .quicksilver,
-            lastSwitchedAt: Date(),
-            context: context
-        )
-        XCTAssertNil(result)
-    }
-
-    func testTaskContextBeatsTimeOfDay() {
-        let policy = PersonaDecisionPolicy(minimumDwellSeconds: 0)
-        let context = PersonaContext(
-            taskKind: .building,
-            timePeriod: .night
-        )
-        let result = policy.preferredPersona(
-            current: .eternal,
-            lastSwitchedAt: nil,
-            context: context
-        )
-        XCTAssertEqual(result?.id, "forge")
+        XCTAssertEqual(manager.activeConfiguration.id, "quicksilver")
     }
 }

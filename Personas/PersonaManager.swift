@@ -17,18 +17,12 @@ public final class PersonaManager: PersonaEngine {
         initial: PersonaConfiguration = .quicksilver,
         available: [PersonaConfiguration] = PersonaConfiguration.all,
         eventBus: EventBus,
-        logger: LoggerService,
-        policy: PersonaDecisionPolicy = PersonaDecisionPolicy(),
-        featureFlags: FeatureFlags? = nil
+        logger: LoggerService
     ) {
         self.state = PersonaState(configuration: initial)
         self.available = available
         self.eventBus = eventBus
         self.logger = logger
-        // Legacy policy/feature-flag parameters are intentionally ignored.
-        // They remain in the initializer temporarily for source compatibility.
-        _ = policy
-        _ = featureFlags
     }
 
     public var activePersonaID: String {
@@ -69,20 +63,6 @@ public final class PersonaManager: PersonaEngine {
 
     public func recordInteraction() {
         state.recordInteraction()
-    }
-
-    /// Legacy context hook retained as a no-op during migration.
-    /// Aspect selection is owned exclusively by MercuryBrain.
-    public func updateTaskContext(
-        description: String? = nil,
-        kind: TaskKind? = nil,
-        queryIntent: QueryIntent? = nil,
-        memoryHints: [String]? = nil
-    ) {
-        _ = description
-        _ = kind
-        _ = queryIntent
-        _ = memoryHints
     }
 
     private func performSwitch(to config: PersonaConfiguration, reason: String) async throws {
