@@ -19,9 +19,9 @@ final class IntentsTests: XCTestCase {
         fake = nil
     }
 
-    func testForcePersonaRoutesToSwitchAspect() async throws {
-        let intent = ForcePersonaIntent(
-            persona: PersonaEntity(id: "forge", displayName: "Forge")
+    func testForceAspectRoutesToSwitchAspect() async throws {
+        let intent = ForceAspectIntent(
+            aspect: AspectEntity(id: "forge", displayName: "Forge")
         )
         _ = try await intent.perform()
         XCTAssertEqual(fake.switchAspectCalls, [.forge])

@@ -3,13 +3,13 @@ import Foundation
 import Core
 import Personas
 
-// MARK: - Get Current Persona (primary read surface)
+// MARK: - Get Current Aspect (primary read surface)
 
 @available(iOS 17.0, macOS 14.0, *)
-public struct GetCurrentPersonaIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Get Current Persona"
+public struct GetCurrentAspectIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Get Current Aspect"
     public static let description = IntentDescription(
-        "Returns the persona currently active in Quicksilver (autonomously chosen or overridden)."
+        "Returns the aspect currently active in Quicksilver (autonomously chosen or overridden)."
     )
     public static let openAppWhenRun: Bool = false
 
@@ -25,31 +25,33 @@ public struct GetCurrentPersonaIntent: AppIntent {
     }
 }
 
-// MARK: - Force Persona (explicit override — uses PersonaEntity)
+// MARK: - Force Aspect (explicit override — uses AspectEntity)
 
 @available(iOS 17.0, macOS 14.0, *)
-public struct ForcePersonaIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Force Persona"
-    public static let description = IntentDescription("Manually override the autonomous persona selection. Use sparingly.")
+public struct ForceAspectIntent: AppIntent {
+    public static let title: LocalizedStringResource = "Force Aspect"
+    public static let description = IntentDescription(
+        "Manually override the autonomous aspect selection. Use sparingly."
+    )
     public static let openAppWhenRun: Bool = false
 
-    @Parameter(title: "Persona")
-    public var persona: PersonaEntity
+    @Parameter(title: "Aspect")
+    public var aspect: AspectEntity
 
     public init() {}
-    public init(persona: PersonaEntity) {
-        self.persona = persona
+    public init(aspect: AspectEntity) {
+        self.aspect = aspect
     }
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
         let surface = try IntentDependencies.shared.requireSurface()
-        let id = persona.id.lowercased()
-        guard let aspect = Aspect(rawValue: id) else {
+        let id = aspect.id.lowercased()
+        guard let resolved = Aspect(rawValue: id) else {
             throw AppError.personaUnavailable(id)
         }
-        try await surface.switchAspect(to: aspect)
-        return .result(value: "Forced to \(aspect.diagnosticLabel)")
+        try await surface.switchAspect(to: resolved)
+        return .result(value: "Forced to \(resolved.diagnosticLabel)")
     }
 }
 
@@ -58,7 +60,9 @@ public struct ForcePersonaIntent: AppIntent {
 @available(iOS 17.0, macOS 14.0, *)
 public struct SwitchToForgeIntent: AppIntent {
     public static let title: LocalizedStringResource = "Switch to Forge"
-    public static let description = IntentDescription("Immediately activate the Forge persona for building and engineering work.")
+    public static let description = IntentDescription(
+        "Immediately activate the Forge aspect for building and engineering work."
+    )
     public static let openAppWhenRun: Bool = false
 
     public init() {}
@@ -100,7 +104,9 @@ public struct CaptureMemoryIntent: AppIntent {
 @available(iOS 17.0, macOS 14.0, *)
 public struct GetContextIntent: AppIntent {
     public static let title: LocalizedStringResource = "What's the Context"
-    public static let description = IntentDescription("Returns a short summary of current Quicksilver state (persona + health signals).")
+    public static let description = IntentDescription(
+        "Returns a short summary of current Quicksilver state (aspect + health signals)."
+    )
     public static let openAppWhenRun: Bool = false
 
     public init() {}
@@ -180,13 +186,13 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
     public static var appShortcuts: [AppShortcut] {
         // 1
         AppShortcut(
-            intent: GetCurrentPersonaIntent(),
+            intent: GetCurrentAspectIntent(),
             phrases: [
-                "What persona is active in \(.applicationName)",
-                "Current persona in \(.applicationName)",
+                "What aspect is active in \(.applicationName)",
+                "Current aspect in \(.applicationName)",
                 "Who is active in \(.applicationName)"
             ],
-            shortTitle: "Current Persona",
+            shortTitle: "Current Aspect",
             systemImageName: "person.crop.circle"
         )
         // 2
@@ -194,7 +200,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             intent: SwitchToForgeIntent(),
             phrases: [
                 "Switch to Forge in \(.applicationName)",
-                "Activate Forge persona in \(.applicationName)",
+                "Activate Forge in \(.applicationName)",
                 "Start building with Forge in \(.applicationName)"
             ],
             shortTitle: "Switch to Forge",
@@ -254,7 +260,7 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Ask Nexus",
             systemImageName: "sparkles"
         )
-        // ForcePersonaIntent remains available in the Shortcuts app and via Siri
+        // ForceAspectIntent remains available in the Shortcuts app and via Siri
         // but is intentionally not promoted to an App Shortcut so we stay under the 10 limit
         // and keep the highest-frequency actions in the automatic surface.
     }
