@@ -34,8 +34,8 @@ public final class FeatureFlags {
         }
     }
 
-    // Only keys that still have readers. Schema v2 migration above still
-    // forces personaAutonomy off for upgrades from autonomous-persona installs.
+    /// Defaults for new installs. Schema v2 migration above still forces
+    /// `personaAutonomy` off when upgrading older autonomous-persona installs.
     private static let defaultFlags: [String: Bool] = [
         "aiServiceEnabled": false
     ]
