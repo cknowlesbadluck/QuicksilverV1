@@ -2,7 +2,6 @@ import AppIntents
 import Foundation
 import Core
 import Personas
-import ServicesAI
 
 // MARK: - Get Current Persona (primary read surface)
 
@@ -18,12 +17,11 @@ public struct GetCurrentPersonaIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
-            throw AppError.nexusNotReady
-        }
-        let name = manager.activeConfiguration.displayName
-        let id = manager.activeConfiguration.id
-        return .result(value: "\(name) (\(id))")
+        let report = try IntentDependencies.shared.requireSurface().statusReport()
+        let aspect = report.split(separator: "|")
+            .first
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) } ?? report
+        return .result(value: aspect)
     }
 }
 
@@ -45,11 +43,13 @@ public struct ForcePersonaIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
-            throw AppError.nexusNotReady
+        let surface = try IntentDependencies.shared.requireSurface()
+        let id = persona.id.lowercased()
+        guard let aspect = Aspect(rawValue: id) else {
+            throw AppError.personaUnavailable(id)
         }
-        try await manager.switchTo(id: persona.id.lowercased())
-        return .result(value: "Forced to \(manager.activeConfiguration.displayName)")
+        try await surface.switchAspect(to: aspect)
+        return .result(value: "Forced to \(aspect.diagnosticLabel)")
     }
 }
 
@@ -65,15 +65,12 @@ public struct SwitchToForgeIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager else {
-            throw AppError.nexusNotReady
-        }
-        try await manager.switchTo(id: "forge")
+        try await IntentDependencies.shared.requireSurface().switchAspect(to: .forge)
         return .result(value: "Forge is now active")
     }
 }
 
-// MARK: - Capture Memory (now actually persists)
+// MARK: - Capture Memory
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct CaptureMemoryIntent: AppIntent {
@@ -91,34 +88,9 @@ public struct CaptureMemoryIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager,
-              let memory = IntentDependencies.shared.memoryManager else {
-            throw AppError.nexusNotReady
-        }
-
+        let surface = try IntentDependencies.shared.requireSurface()
         let truncated = String(content.prefix(500))
-        let personaID = manager.activeConfiguration.id
-        let policy = manager.activeMemoryPolicy
-
-        manager.updateTaskContext(
-            description: "Capture memory: \(String(truncated.prefix(80)))",
-            kind: .reflecting,
-            queryIntent: .reflective,
-            memoryHints: [String(truncated.prefix(120))]
-        )
-
-        await memory.set(
-            key: "note.intent.\(UUID().uuidString.prefix(8))",
-            value: truncated,
-            category: .temporary,
-            metadata: ["source": "appintent", "persona": personaID],
-            importanceBoost: policy.writeImportanceHint,
-            personaScope: personaID
-        )
-
-        if let logger = IntentDependencies.shared.logger {
-            logger.info("Memory capture persisted: \(truncated.prefix(60))", category: logger.memory)
-        }
+        await surface.remember(truncated)
         return .result(value: "Captured: \(truncated)")
     }
 }
@@ -135,19 +107,12 @@ public struct GetContextIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let manager = IntentDependencies.shared.personaManager,
-              let nexus = IntentDependencies.shared.nexusCoordinator else {
-            throw AppError.nexusNotReady
-        }
-        let persona = manager.activeConfiguration.displayName
-        let health = nexus.state.overallHealthScore
-        let battery = nexus.state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        let network = nexus.state.networkStatus
-        return .result(value: "Persona: \(persona) | Health: \(health) | Battery: \(battery) | Network: \(network)")
+        let report = try IntentDependencies.shared.requireSurface().statusReport()
+        return .result(value: report)
     }
 }
 
-// MARK: - Report Status (uses AutomationBridge)
+// MARK: - Report Status
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct ReportStatusIntent: AppIntent {
@@ -159,10 +124,7 @@ public struct ReportStatusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let nexus = IntentDependencies.shared.nexusCoordinator else {
-            throw AppError.nexusNotReady
-        }
-        let report = try nexus.bridge.triggerDiagnostic(named: "full")
+        let report = try IntentDependencies.shared.requireSurface().statusReport()
         return .result(value: report)
     }
 }
@@ -185,7 +147,7 @@ public struct OpenDiagnosticsIntent: AppIntent {
     }
 }
 
-// MARK: - Query Nexus (wired to AIService)
+// MARK: - Query Nexus (wired through IntelligenceSurface.ask)
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {
@@ -203,14 +165,11 @@ public struct QueryNexusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let ask = IntentDependencies.shared.askHandler else {
-            throw AppError.nexusNotReady
-        }
-        let answer = try await ask(query)
+        let surface = try IntentDependencies.shared.requireSurface()
+        let answer = try await surface.ask(query)
         // P-T6: never prefix with [Aspect] — Mercury is one being.
         return .result(value: LivingNarration.presentIntentAnswer(answer))
     }
-
 }
 
 // MARK: - App Shortcuts provider (≤ 10 hard limit)
