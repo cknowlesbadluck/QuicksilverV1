@@ -7,7 +7,7 @@
 | Layer | Value | Reason |
 |-------|-------|--------|
 | Primary validation device | **iPhone 16e** / **iOS 27** | Owner device (updated 2026-09-19) |
-| `IPHONEOS_DEPLOYMENT_TARGET` | **18.0** | Build floor; CI uses Xcode 26.3 (iOS 26 SDK) via `latest-stable` |
+| `IPHONEOS_DEPLOYMENT_TARGET` | **18.0** | Build floor; CI selects `latest-stable` (currently Xcode 26.3 / iOS 26 SDK) |
 | `AppConfiguration.minimumOSVersion` | 18.0 | Matches build floor |
 | `AppConfiguration.primaryDeviceOSVersion` | 27.0 | Honest about where we test |
 

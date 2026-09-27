@@ -32,7 +32,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 ## Status
 
 - **Aspect architecture** — merged to `main` (PR #98). IntentEngine, AspectPolicy, Brain-owned active aspect, Sanctum presence, Workshop/Observatory surfaces.
-- **Provider routing** — Interim: bind a free Gemini key (and optional Grok) in the Codex; credentials stay device-local in Keychain. Gateway routing lands in M3.
+- **Provider routing** — Interim Codex bind: free Gemini key recommended; optional Grok. **If Grok is bound, it is primary** (Gemini fallback) and can consume xAI credits — bind Grok only when you already have credits. Credentials stay in Keychain. Gateway routing lands in M3.
 - **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
 - **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
 - **Hygiene (2026-09-19)** — Logger privacy defaulted to `.private`, primary validation device updated to iPhone 16e, AppConfiguration version aligned.
@@ -66,7 +66,7 @@ open Quicksilver.xcodeproj
 # or: swift test
 ```
 
-Requires Xcode with an iOS SDK. CI currently uses **Xcode 26.3** (iOS 26 SDK); deployment target stays iOS 18.0 so the binary still installs on iOS 27 via SideStore.
+Requires Xcode with an iOS SDK. CI selects `latest-stable` Xcode (**currently 26.3** / iOS 26 SDK); deployment target stays iOS 18.0 so the binary still installs on iOS 27 via SideStore.
 
 ## On-device (iPhone 16e / iOS 27) — SideStore path
 

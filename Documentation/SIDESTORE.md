@@ -10,7 +10,7 @@
 
 ## Why the deployment target is not 27.0 yet
 
-CI uses **Xcode 26.3** (iOS 26 SDK) via `latest-stable` on GitHub-hosted `macos-15` runners. The app's `IPHONEOS_DEPLOYMENT_TARGET` stays **18.0** so Archive keeps producing SideStore IPAs that install on Christopher's iPhone 16e / iOS 27. Raising the floor to 27.0 before runners ship an iOS 27 SDK would break every Archive job.
+CI/Archive/Release workflows select Xcode with `xcode-version: latest-stable` (not pinned). On the current runners that resolves to **Xcode 26.3** (iOS 26 SDK); the SDK can change when GitHub updates the stable channel. The app's `IPHONEOS_DEPLOYMENT_TARGET` stays **18.0** so Archive keeps producing SideStore IPAs that install on Christopher's iPhone 16e / iOS 27. Raising the floor to 27.0 before runners ship an iOS 27 SDK would break every Archive job.
 
 When CI gains an iOS 27 SDK, raise `Package.swift`, `project.yml`, and `AppConfiguration.minimumOSVersion` together.
 
@@ -72,7 +72,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 6. Diagnostics → live signals + aspect-toned insights.
 7. Memory → policy label visible (threshold · scope · write); add a note, swipe delete, Clear All, Export.
 8. Ask → send a message with the active aspect; with no key bound, expect "Intelligence unbound".
-9. Shortcuts: Current Aspect, Remember, Ask Nexus, Full Status (and Switch to Forge / Open Diagnostics).
+9. Shortcuts: Current Aspect, Remember, Ask Nexus, Full Status, Switch to Forge. (Open Diagnostics is listed in Shortcuts but only launches the app today — deep link lands in M3.5-T15.)
 10. Background the app 5–10 minutes, then return — state should survive.
 11. Force-quit + relaunch → state intact.
 12. Confirm no excessive battery drain while backgrounded.
