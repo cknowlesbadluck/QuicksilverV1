@@ -76,22 +76,4 @@ final class DependencyContainer {
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
     }
-
-    func switchPersona(to id: String) {
-        Task { @MainActor in
-            do {
-                try await brain.switchPersona(to: id)
-            } catch {
-                logger.error("Persona switch failed: \(error.localizedDescription)", category: logger.persona)
-            }
-        }
-    }
-
-    func switchPersona(to config: PersonaConfiguration) {
-        switchPersona(to: config.id)
-    }
-
-    func switchPersonaThrowing(to id: String) async throws {
-        try await brain.switchPersona(to: id)
-    }
 }

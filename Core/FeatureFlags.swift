@@ -34,13 +34,10 @@ public final class FeatureFlags {
         }
     }
 
+    /// Defaults for new installs. Schema v2 migration above still forces
+    /// `personaAutonomy` off when upgrading older autonomous-persona installs.
     private static let defaultFlags: [String: Bool] = [
-        "personaSwitching": true,
-        "personaAutonomy": false,
-        "memoryPersistence": true,
-        "aiServiceEnabled": false,
-        "nexusDetailedMetrics": false,
-        "experimentalEventBus": true
+        "aiServiceEnabled": false
     ]
 
     public func isEnabled(_ key: String) -> Bool {

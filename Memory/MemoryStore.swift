@@ -77,7 +77,3 @@ public actor KeychainMemoryStore: MemoryStore {
         }
     }
 }
-
-/// Compatibility name retained temporarily for existing tests/integrations.
-/// It is no longer backed by UserDefaults.
-public typealias UserDefaultsMemoryStore = KeychainMemoryStore
