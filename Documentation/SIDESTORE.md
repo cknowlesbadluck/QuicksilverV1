@@ -10,7 +10,7 @@
 
 ## Why the deployment target is not 27.0 yet
 
-GitHub-hosted `macos-15` runners currently ship Xcode with the iOS 18 SDK. Setting `IPHONEOS_DEPLOYMENT_TARGET = 27.0` would make every Archive job fail until an Xcode with the iOS 27 SDK is available on the runner. A lower deployment target is the standard, correct way to keep producing SideStore IPAs that still run on newer OS versions.
+CI uses **Xcode 26.3** (iOS 26 SDK) via `latest-stable` on GitHub-hosted `macos-15` runners. The app's `IPHONEOS_DEPLOYMENT_TARGET` stays **18.0** so Archive keeps producing SideStore IPAs that install on Christopher's iPhone 16e / iOS 27. Raising the floor to 27.0 before runners ship an iOS 27 SDK would break every Archive job.
 
 When CI gains an iOS 27 SDK, raise `Package.swift`, `project.yml`, and `AppConfiguration.minimumOSVersion` together.
 
@@ -64,15 +64,15 @@ When secrets are present you get both artifacts: unsigned + signed.
 
 ## First-run checklist (iPhone 16e / iOS 27) — 0.2.0 build 7
 
-1. Settings → paste your xAI API key → enable AI Service.
-2. Sanctum / Home → confirm persona switcher, accent, and Nexus health.
-3. Switch personas (Quicksilver / Forge / Eternal) — accent, density, and insight tone should change.
+1. Codex → bind keys: free Gemini (Google AI Studio, project with **no billing**) and optional Grok only if you already have xAI credits. Binding the first key enables intelligence.
+2. Sanctum / Home → confirm Quicksilver presence, aspect accent, and Nexus health.
+3. Confirm aspect overrides (Quicksilver / Forge / Eternal in Diagnostics) — accent, density, and insight tone should follow the active aspect; leave unset for autonomous default. There is no separate persona switcher.
 4. Enter Forge → Awaken Forge, capture a note, ask a constructive question.
 5. Enter Eternal → Awaken Eternal, capture an observation, ask a reflective question.
-6. Diagnostics → live signals + persona-toned insights.
+6. Diagnostics → live signals + aspect-toned insights.
 7. Memory → policy label visible (threshold · scope · write); add a note, swipe delete, Clear All, Export.
-8. Ask → persona-colored bubbles and send button; send a message with the active persona.
-9. Shortcuts: Current Persona, Remember, Ask Nexus, Full Status (and any Slice C phrases if present).
+8. Ask → send a message with the active aspect; with no key bound, expect "Intelligence unbound".
+9. Shortcuts: Current Aspect, Remember, Ask Nexus, Full Status (and Switch to Forge / Open Diagnostics).
 10. Background the app 5–10 minutes, then return — state should survive.
 11. Force-quit + relaunch → state intact.
 12. Confirm no excessive battery drain while backgrounded.
@@ -104,7 +104,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 | Workflow fails to find .app | XcodeGen or build error | Check build-logs artifact |
 | SideStore rejects unsigned IPA | Rare packaging issue | Re-run workflow or try signed path |
 | App crashes on launch | Signing / trust issue | Trust the profile again, reboot |
-| Keychain / AI fails | First-run permission or key missing | Re-enter key in Settings |
+| Keychain / AI fails | First-run permission or key missing | Re-bind key in Codex |
 | Install fails with OS version error | Extremely rare for lower-floor binary on higher OS | Re-download IPA / check SideStore logs |
 | Missing persona personality | Prompt file not embedded | Check Archive logs for resource warnings; fallback prompts still work |
 

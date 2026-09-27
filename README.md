@@ -32,7 +32,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 ## Status
 
 - **Aspect architecture** — merged to `main` (PR #98). IntentEngine, AspectPolicy, Brain-owned active aspect, Sanctum presence, Workshop/Observatory surfaces.
-- **Provider routing** — Grok primary with Gemini fallback; credentials remain device-local in Keychain.
+- **Provider routing** — Interim: bind a free Gemini key (and optional Grok) in the Codex; credentials stay device-local in Keychain. Gateway routing lands in M3.
 - **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
 - **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
 - **Hygiene (2026-09-19)** — Logger privacy defaulted to `.private`, primary validation device updated to iPhone 16e, AppConfiguration version aligned.
@@ -44,7 +44,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 | **Home / Sanctum** | Living Quicksilver presence + Nexus health + latest insight |
 | **Workshop** | Forge aspect: creation / engineering instruments |
 | **Observatory** | Eternal aspect: observation / continuity / memory |
-| **Ask** | Persona-aware chat with Memory history |
+| **Ask** | Aspect-aware conversation with Memory history |
 | **Memory** | Policy-filtered notes, delete / clear / export |
 | **Diagnostics** | Live insights + signals |
 | **Codex** | Bind/unbind provider keys (Gemini, optional Grok) + automatic provider routing; with no key bound, Mercury shows "Intelligence unbound" |
@@ -66,7 +66,7 @@ open Quicksilver.xcodeproj
 # or: swift test
 ```
 
-Requires Xcode with an iOS SDK. CI currently uses the iOS 18 SDK; the resulting binary runs on iOS 27.
+Requires Xcode with an iOS SDK. CI currently uses **Xcode 26.3** (iOS 26 SDK); deployment target stays iOS 18.0 so the binary still installs on iOS 27 via SideStore.
 
 ## On-device (iPhone 16e / iOS 27) — SideStore path
 
@@ -76,8 +76,8 @@ Hardening report: **[Documentation/HARDENING.md](Documentation/HARDENING.md)**
 1. Trigger **Actions → Archive IPA → Run workflow** (Release).
 2. Download the **Quicksilver-unsigned-IPA** artifact from the finished run.
 3. Install the IPA in SideStore (LocalDevVPN connected).
-4. Settings → configure Grok and/or Gemini keys → enable AI Service. Grok is primary when configured; Gemini is fallback. Provider availability and billing remain account-controlled.
-5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → aspect selection.
+4. Codex → bind keys: free Gemini (AI Studio, no billing) and optional Grok if you already have xAI credits. Binding the first key enables intelligence.
+5. Validate Sanctum / Home → Forge → Eternal → Diagnostics → Memory → Ask → aspect overrides (Quicksilver / Forge / Eternal in Diagnostics).
 
 No private APIs. Public Apple frameworks only. Compatible with free Apple ID + 7-day refresh cycle.
 

@@ -10,11 +10,11 @@ The Figma file defines the native iOS visual direction:
 
 - `Mercury — Visual System` — master composition, materials, tokens, and motion language.
 - `Realms` — Forge Workshop and Eternal Observatory compositions.
-- `Nexus & Settings` — realm selection, persona, integrations, memory, diagnostics, and configuration.
+- `Nexus & Codex` — realm selection, aspect mood, integrations, memory, diagnostics, and Codex (governance — not Settings).
 
 ## Product visual doctrine
 
-Mercury is a **place**, not a dashboard. Quicksilver is experienced through a living material system rather than conventional AI-chat chrome.
+Mercury is a **distinct, capable AI assistant** ("ChatGPT, Siri and Loki combined"), **not a game**. He is a **place**, not a dashboard. Quicksilver is experienced through a living material system rather than conventional AI-chat chrome; presence expresses state and personality subtly, with no toy or poke mechanics. See [docs/mercury-visual-direction.md](../docs/mercury-visual-direction.md).
 
 The visual identity is built from two coupled ideas:
 
@@ -44,7 +44,7 @@ Idle state is a slow breath. Listening, thinking, processing, and speaking progr
 
 - **Forge Workshop:** dense, instrument-like, energetic, emerald/ember accents.
 - **Eternal Observatory:** spacious, contemplative, celestial, gold/violet accents.
-- **Nexus:** the realm-selection and configuration layer; it should feel spatial and intentional rather than like a conventional settings tab.
+- **Nexus / Codex:** realm selection and governance (Codex binds keys and options); it should feel spatial and intentional rather than like a conventional Settings tab.
 
 ## Material language
 
@@ -80,10 +80,10 @@ The visual system is split between reusable primitives and the living core:
 - `UI/QuicksilverCoreView.swift` — procedural living-mercury surface and controlled-chaos field.
 - `UI/QuicksilverPresenceView.swift` — presence composition around the core.
 
-The core uses lightweight SwiftUI `Canvas` rendering rather than rasterized artwork so it remains appropriate for the iPhone 14 target and scales with the native layout system.
+The core uses lightweight SwiftUI `Canvas` rendering rather than rasterized artwork so it remains appropriate for the primary device (iPhone 16e) and scales with the native layout system.
 
-## iPhone 14 target
+## iPhone 16e target
 
-Primary design canvas: **390 × 844 pt**, portrait.
+Primary validation device: **iPhone 16e** / iOS 27. Design canvas oriented to that class of phone (portrait), with a 60 Hz panel budget (no ProMotion).
 
-The design favors native SwiftUI layout behavior, dynamic type compatibility, safe-area awareness, accessibility, and procedural vector rendering.
+The design favors native SwiftUI layout behavior, Dynamic Type compatibility, safe-area awareness, accessibility, and procedural vector rendering.

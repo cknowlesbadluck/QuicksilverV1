@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: CI green → provider verification → SideStore smoke → legacy persona/bridge cleanup → depth.
+Current focus: M1 complete through M1-T12 (docs synced to Codex/aspects/Xcode 26.3/iPhone 16e). Next: M2 test & CI foundation, then remaining backlog (M3 gateway, M3.5 Apple Intelligence). Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 
