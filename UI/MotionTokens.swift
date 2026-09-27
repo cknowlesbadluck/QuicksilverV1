@@ -5,6 +5,15 @@ import SwiftUI
 /// No anonymous springs or durations scattered through views.
 enum MotionTokens {
 
+    // MARK: - Durations (raw intervals; prefer Animation presets below)
+
+    /// Living-core pulse period (MercuryPresenceOrb TimelineView phase).
+    static let corePulseDuration: TimeInterval = 2.8
+    /// Legacy timed realm cross-fade (spring `realmTransition` is preferred).
+    static let realmTransitionDuration: TimeInterval = 0.42
+    /// Short press / pill micro-interaction.
+    static let microInteractionDuration: TimeInterval = 0.16
+
     // MARK: - Ambient (always present)
 
     /// Slow core breathing — idle life.
