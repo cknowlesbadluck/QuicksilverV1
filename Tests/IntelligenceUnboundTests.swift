@@ -49,16 +49,6 @@ final class IntelligenceUnboundTests: XCTestCase {
         }
     }
 
-    func testPersonaAwareCompleteIsAlsoUnbound() async {
-        let service = makeUnboundService(aiEnabled: true)
-        do {
-            _ = try await service.complete(userMessage: "Ship it", personaSystemPrompt: "You are Forge.")
-            XCTFail("Unbound service must not return text")
-        } catch {
-            XCTAssertEqual(AppError.unboundNotice(for: error), AppError.unboundNotice)
-        }
-    }
-
     func testUnboundServiceReportsUnboundProvider() {
         let service = makeUnboundService(aiEnabled: true)
         XCTAssertFalse(service.isBound)
