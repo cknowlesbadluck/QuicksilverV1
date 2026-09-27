@@ -5,7 +5,12 @@ import XCTest
 @MainActor
 final class MemoryManagerTests: XCTestCase {
     func testSetAndRetrievePreference() async {
-        let store = KeychainMemoryStore(defaults: UserDefaults(suiteName: "test.memory")!)
+        let storageKey = "test.memory.\(UUID().uuidString)"
+        defer { KeychainStore.delete(forKey: storageKey) }
+        let store = KeychainMemoryStore(
+            storageKey: storageKey,
+            legacyDefaults: UserDefaults(suiteName: "test.memory")!
+        )
         let bus = EventBus()
         let logger = LoggerService()
         let manager = MemoryManager(store: store, eventBus: bus, logger: logger)
