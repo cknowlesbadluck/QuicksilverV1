@@ -1,13 +1,13 @@
 # Quicksilver Hardening Report & Roadmap
 
-**Last updated:** 2026-09-19 (Full hygiene pass: Logger privacy default `.private`, primary validation device → iPhone 16e, AppConfiguration version aligned to 0.2.0 build 7)
+**Last updated:** 2026-09-27 (M1-T12 docs sync: Codex bind path, aspects not personas, CI Xcode 26.3, iPhone 16e target)
 
 ## Device / OS policy
 
 | Layer | Value | Reason |
 |-------|-------|--------|
 | Primary validation device | **iPhone 16e** / **iOS 27** | Owner device (updated 2026-09-19) |
-| `IPHONEOS_DEPLOYMENT_TARGET` | **18.0** | CI runners (Xcode 16) only ship iOS 18 SDK |
+| `IPHONEOS_DEPLOYMENT_TARGET` | **18.0** | Build floor; CI uses Xcode 26.3 (iOS 26 SDK) via `latest-stable` |
 | `AppConfiguration.minimumOSVersion` | 18.0 | Matches build floor |
 | `AppConfiguration.primaryDeviceOSVersion` | 27.0 | Honest about where we test |
 
@@ -29,7 +29,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - GrokAIProvider: Task cancellation, 45 s timeout, no secret leakage in errors
 - **LoggerService + QuicksilverLogger**: default privacy `.private`; improved `redact` covers token/secret/Bearer; explicit `isPrivate` opt-out only when intentional
 - **PrivacyInfo.xcprivacy** present and embedded
-- DependencyContainer: structured persona switch with error logging
+- DependencyContainer: structured aspect switch (`switchAspect`) with error logging
 
 ### P1 — Architecture & Maintainability
 - Persona prompts externalized to `Resources/Personas/*.txt`
@@ -39,7 +39,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - AppConfiguration documents both build floor (18) and primary device (27); version/build aligned to shipped 0.2.0 (7)
 
 ### P2 — Experience
-- **PersonaTheme**: accent colors, density, card radius, bubble style per persona
+- **PersonaTheme**: accent colors, density, card radius, bubble style per aspect
 - **InsightPresenter**: distinct tone + action labels
 - **ForgeView** + **EternalView** present on main as functional realms
 - Sanctum as primary place with RealmGateway transitions
@@ -72,9 +72,9 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 ### Living Realms v1 → In progress (GitHub #57)
 
 Remaining focus:
-- Finish functional depth of Forge + Eternal (actions, visualization, quality)
+- M2 test and CI foundation (AppTests, iPhone 16e simulator preference, full-repo strict lint)
+- M3 Mercury Gateway and free cloud intelligence; M3.5 Apple Intelligence and App Intents
 - Accessibility / Dynamic Type / Reduce Motion pass
-- Branch hygiene (many historical forge/sprint branches still present)
 - First formal GitHub Release once quality gate is satisfied
 
 ---
@@ -99,11 +99,11 @@ The existing `prune-branches.yml` will automatically delete *merged* remote bran
 1. Trigger **Actions → Archive IPA → Run workflow** (Release)
 2. Download **Quicksilver-unsigned-IPA** artifact
 3. Install via SideStore (LocalDevVPN connected)
-4. Launch → Sanctum / Home shows persona + Nexus health
+4. Launch → Sanctum / Home shows Quicksilver presence + Nexus health
 5. Enter Forge → awaken, capture notes, ask
 6. Enter Eternal → observe signals / memory constellation
-7. Switch personas — confirm accent, density, insight tone change
-8. Settings → paste xAI key → enable AI Service
+7. Confirm aspect selection (Auto / Quicksilver / Forge / Eternal) — accent, density, insight tone change; no persona switcher
+8. Codex → bind keys (free Gemini; optional Grok) — binding the first key enables intelligence
 9. Memory → policy label, add/delete/clear/export
 10. Background 5–10 min → no excessive drain
 11. Force-quit + relaunch → state intact

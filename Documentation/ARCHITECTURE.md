@@ -65,7 +65,7 @@ Central intelligence coordinator (`App/MercuryBrain.swift`).
 
 Confidence · Curiosity · Humor · Mischief · Focus · Initiative · Skepticism · Patience · Loyalty
 
-Phase II posture: intellectually formidable, truth over agreement, precise critique of ideas, dry elegant wit, unwavering loyalty.
+Controlled-chaos posture: witty surface over a precise core; affectionate teasing allowed, absolute loyalty to the owner; mask slip goes plain when it matters.
 
 ## Core Contracts
 
@@ -81,7 +81,7 @@ Phase II posture: intellectually formidable, truth over agreement, precise criti
 
 Cosmic black · deep violet · mercury silver · emerald · subtle gold · glass · liquid metal.
 
-Ambient particles, glyph rotation, reflective presence. Intensity derived from active persona + VisualState.
+Ambient particles, glyph rotation, reflective presence. Intensity derived from active aspect + VisualState.
 
 ## Engineering Rules
 
