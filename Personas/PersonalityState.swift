@@ -130,58 +130,6 @@ public struct PersonalityState: Sendable, Equatable {
         increase(.initiative, by: 0.02)
     }
 
-    /// Legacy path retained for callers that still supply QueryIntent/TaskKind.
-    public mutating func adjustFor(intent: QueryIntent, kind: TaskKind) {
-        adjustForIntent(intent)
-        adjustForTaskKind(kind)
-    }
-
-    private mutating func adjustForIntent(_ intent: QueryIntent) {
-        switch intent {
-        case .preciseTechnical:
-            increase(.focus, by: 0.10)
-            increase(.skepticism, by: 0.07)
-            decrease(.mischief, by: 0.08)
-            decrease(.humor, by: 0.05)
-        case .reflective:
-            increase(.patience, by: 0.08)
-            increase(.loyalty, by: 0.04)
-            decrease(.mischief, by: 0.06)
-        case .creative:
-            increase(.curiosity, by: 0.09)
-            increase(.mischief, by: 0.06)
-            increase(.humor, by: 0.05)
-        case .diagnostic:
-            increase(.skepticism, by: 0.09)
-            increase(.focus, by: 0.06)
-            decrease(.humor, by: 0.04)
-        case .strategic:
-            increase(.initiative, by: 0.05)
-            increase(.confidence, by: 0.04)
-        case .unknown:
-            break
-        }
-    }
-
-    private mutating func adjustForTaskKind(_ kind: TaskKind) {
-        switch kind {
-        case .building:
-            increase(.focus, by: 0.06)
-            increase(.skepticism, by: 0.03)
-        case .debugging:
-            increase(.skepticism, by: 0.08)
-            increase(.focus, by: 0.05)
-        case .reflecting:
-            increase(.patience, by: 0.06)
-        case .exploring:
-            increase(.curiosity, by: 0.06)
-        case .communicating:
-            increase(.loyalty, by: 0.03)
-        case .unknown:
-            break
-        }
-    }
-
     // MARK: - Expression Helpers
 
     /// Individual bias clauses (may themselves contain `; `). Prefer this over splitting `promptBias()`.

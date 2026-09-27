@@ -91,8 +91,6 @@ final class MercuryBrain {
         let turnAspect = aspectPolicy.aspectForTurn(intent: intent, environment: environment)
         await applyAspect(turnAspect, reason: "turn intent \(intent.kind.rawValue)")
 
-        personaManager.updateTaskContext(description: query)
-
         let config = PersonaConfiguration.forAspect(activeAspect)
         // Idempotent recompute from aspect baseline; nudges applied after (P-T18).
         personality.recomputeForTurn(aspect: activeAspect)
@@ -138,7 +136,6 @@ final class MercuryBrain {
         let truncated = String(content.prefix(500))
         let policy = personaManager.activeMemoryPolicy
         await applyAspectForRemember(content: content)
-        updateTaskContextForRemember(truncated: truncated)
         await storeMemoryItem(truncated: truncated, policy: policy)
         completeRememberInteraction()
     }
@@ -233,13 +230,6 @@ extension MercuryBrain {
     private func applyAspectForRemember(content: String) async {
         let intent = Intent(kind: .remember, rawText: content, confidence: 1.0)
         await applyAspect(aspectPolicy.aspectForTurn(intent: intent), reason: "remember")
-    }
-
-    private func updateTaskContextForRemember(truncated: String) {
-        personaManager.updateTaskContext(
-            description: "Capture memory: \(String(truncated.prefix(80)))",
-            memoryHints: [String(truncated.prefix(120))]
-        )
     }
 
     private func storeMemoryItem(truncated: String, policy: MemoryPolicy) async {
