@@ -15,8 +15,6 @@ public final class AIService {
     private let eventBus: EventBus
     private let logger: LoggerService
     private let featureFlags: FeatureFlags
-    private let promptBuilder = PromptBuilder()
-    private let contextAssembler = ContextAssembler()
     
     public static let grokAPIKeyKeychainAccount = "xai.apiKey"
     public static let geminiAPIKeyKeychainAccount = "google.gemini.apiKey"
@@ -138,29 +136,6 @@ public final class AIService {
         primaryProvider = nil
         secondaryProvider = nil
         logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
-    }
-    
-    public func complete(
-        userMessage: String,
-        personaSystemPrompt: String,
-        preferredTemperature: Double = 0.7,
-        maxTokensHint: Int = 1024,
-        context: ContextAssembler.Input = .init()
-    ) async throws -> AIResponse {
-        let assembled = contextAssembler.assemble(context)
-        let built = promptBuilder.build(
-            personaSystemPrompt: personaSystemPrompt,
-            preferredTemperature: preferredTemperature,
-            maxTokensHint: maxTokensHint,
-            userMessage: userMessage,
-            assembledContext: assembled
-        )
-        return try await execute(
-            prompt: built.userPrompt,
-            systemPrompt: built.systemPrompt,
-            temperature: built.temperature,
-            maxTokens: built.maxTokens
-        )
     }
     
     public func complete(

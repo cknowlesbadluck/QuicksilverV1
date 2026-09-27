@@ -118,26 +118,6 @@ final class AIServiceTests: XCTestCase {
         XCTAssertFalse(error.localizedDescription.contains("secret provider payload"))
     }
     
-    func testPersonaAwareCompleteBuildsResponse() async throws {
-        let bus = EventBus()
-        let logger = LoggerService()
-        let flags = FeatureFlags()
-        flags.set("aiServiceEnabled", enabled: true)
-        let service = AIService(
-            provider: MockAIProvider(),
-            eventBus: bus,
-            logger: logger,
-            featureFlags: flags
-        )
-        let response = try await service.complete(
-            userMessage: "Ship the vertical slice",
-            personaSystemPrompt: "You are Forge.",
-            preferredTemperature: 0.3,
-            maxTokensHint: 512
-        )
-        XCTAssertFalse(response.content.isEmpty)
-        XCTAssertEqual(response.finishReason, .stop)
-    }
 }
 
 private struct AlwaysOnStubProvider: AIProvider {
