@@ -1,7 +1,7 @@
-# Portfolio 10-phase roadmap — 2026-09-27 02:00 EDT
+# Portfolio 10-phase roadmap — 2026-09-27 06:00 EDT
 
 1. Ready-or-refuse on Resonance main — DONE. Live 503 until SERVICE_ROLE.
-2. Owner sets `SUPABASE_SERVICE_ROLE_KEY` on resonancenexus only. Exit: `/api/ready` 200. Confirmed still missing at 02:00.
+2. Owner sets `SUPABASE_SERVICE_ROLE_KEY` on resonancenexus only. Exit: `/api/ready` 200. Confirmed still missing at 06:00.
 3. Durable GitHub adapter evidence. Needs live tokens.
 4. Quicksilver device HG CHR-55 on iPhone 16e from `d96c0804` or later. Simulator CI is not acceptance.
 5. Quicksilver next code slice after HG: M2-T1 app-hosted tests or CHR-12 a11y. P-T1/P-T2/P-T3/P-T18/P-T5/P-T6/M1-T5/M1-T6/M1-T7 shipped. P-T4 stays behind M3.5-T4.
