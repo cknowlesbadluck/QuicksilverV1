@@ -193,8 +193,8 @@ jobs:
           xcrun simctl list devices available || true
 
           DEST=""
-          for name in "iPhone 16" "iPhone 16 Pro" "iPhone 15" "iPhone 15 Pro" "iPhone 14"; do
-            if xcrun simctl list devices available | grep -q "$name"; then
+          for name in "iPhone 16e" "iPhone 16" "iPhone 16 Pro" "iPhone 15" "iPhone 15 Pro" "iPhone 14"; do
+            if xcrun simctl list devices available | grep -F "$name ("; then
               DEST="platform=iOS Simulator,name=$name"
               echo "Matched preferred device: $name"
               break
@@ -210,7 +210,7 @@ jobs:
           fi
 
           if [[ -z "$DEST" ]]; then
-            DEST="platform=iOS Simulator,name=iPhone 16"
+            DEST="platform=iOS Simulator,name=iPhone 16e"
             echo "No available device listed; using default name fallback"
           fi
 
