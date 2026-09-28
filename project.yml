@@ -163,6 +163,17 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
 
+  QuicksilverAppTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: Quicksilver
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   Quicksilver:
     build:
@@ -175,9 +186,11 @@ schemes:
         QuicksilverIntents: all
         Quicksilver: all
         QuicksilverTests: [test]
+        QuicksilverAppTests: [test]
     test:
       targets:
         - QuicksilverTests
+        - QuicksilverAppTests
     run:
       config: Debug
     archive:
