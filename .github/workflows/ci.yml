@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "== Required directories =="
-          for d in App Core Personas Nexus UI Memory Services Tests Documentation Intents Resources; do
+          for d in App AppTests Core Personas Nexus UI Memory Services Tests Documentation Intents Resources; do
             if [[ ! -d "$d" ]]; then
               echo "::error::Missing required directory: $d/"
               exit 1
@@ -230,6 +230,21 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee xcodebuild.log
 
+      - name: Run app-hosted unit tests
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          xcodebuild \
+            -project Quicksilver.xcodeproj \
+            -scheme Quicksilver \
+            -destination "${{ steps.dest.outputs.destination }}" \
+            -derivedDataPath DerivedData \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            test \
+            -only-testing:QuicksilverAppTests \
+            2>&1 | tee app-tests.log
+
       - name: Build diagnostics on failure
         if: failure()
         run: |
@@ -262,6 +277,7 @@ jobs:
           name: ios-simulator-build-logs
           path: |
             xcodebuild.log
+            app-tests.log
             DerivedData/Logs
           retention-days: 7
           if-no-files-found: ignore
