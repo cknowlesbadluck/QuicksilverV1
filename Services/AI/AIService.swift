@@ -35,8 +35,9 @@ public final class AIService {
         )
     }
 
-    /// Explicit routing (tests). `primary == nil` is the unbound state; the Keychain is not read.
-    init(
+    /// Explicit routing (tests, previews, injected containers). `primary == nil` is the unbound
+    /// state; the Keychain is not read.
+    public init(
         primary: AIProvider?,
         secondary: AIProvider?,
         eventBus: EventBus,

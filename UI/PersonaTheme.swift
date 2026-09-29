@@ -146,9 +146,10 @@ enum PersonaTheme {
     }
 }
 
-// MARK: - Private helper
+// MARK: - Shadow token
 
-private struct Shadow {
+/// Internal (not private): `PersonaTheme.subtleShadow` / `.emphasizedShadow` expose it.
+struct Shadow {
     let color: Color
     let radius: CGFloat
     let x: CGFloat
