@@ -97,7 +97,7 @@ The existing `prune-branches.yml` will automatically delete *merged* remote bran
 4. Launch → Sanctum / Home shows Quicksilver presence + Nexus health
 5. Enter Forge → awaken, capture notes, ask
 6. Enter Eternal → observe signals / memory constellation
-7. Confirm aspect overrides (Quicksilver / Forge / Eternal via Diagnostics) — accent, density, insight tone change; autonomous default when unset; no persona switcher
+7. Confirm Diagnostics displays the Brain's active aspect without selection controls; accent, density, and insight tone change with context
 8. Codex → bind keys (free Gemini; optional Grok) — binding the first key enables intelligence
 9. Memory → policy label, add/delete/clear/export
 10. Background 5–10 min → no excessive drain

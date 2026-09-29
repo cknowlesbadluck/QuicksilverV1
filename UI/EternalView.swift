@@ -70,7 +70,7 @@ struct EternalView: View {
             VStack(alignment: .leading, spacing: spacing) {
                 ObservatoryHeader(isAwake: vm.isAwake, livingStatus: vm.livingStatus, accent: accent, radius: radius)
                 if !vm.isAwake {
-                    awakenCard(vm, accent: accent, radius: radius)
+                    awakenCard(accent: accent, radius: radius)
                 }
                 ObservatorySignalsRow(
                     batteryLevelText: vm.batteryLevelText,
@@ -97,7 +97,7 @@ struct EternalView: View {
         }
     }
 
-    private func awakenCard(_ vm: EternalViewModel, accent: Color, radius: CGFloat) -> some View {
+    private func awakenCard(accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Mercury is listening.")
                 .font(.headline)
@@ -105,18 +105,6 @@ struct EternalView: View {
             Text("Enter the observational field: patterns, continuity, diagnostics, memory.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Button {
-                Task { await vm.awakenEternal() }
-            } label: {
-                Text("Enter Observatory")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(accent.opacity(0.18))
-                    .foregroundStyle(accent)
-                    .clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
-            }
-            .buttonStyle(.plain)
         }
         .padding(16)
         .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: radius, style: .continuous))

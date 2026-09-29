@@ -2,11 +2,10 @@ import SwiftUI
 import Core
 import Nexus
 
-/// Diagnostics — the only first-class surface for explicit aspect override.
+/// Diagnostics show the Brain's current state without changing its aspect.
 struct DiagnosticsView: View {
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: DiagnosticsViewModel?
-    @State private var isSwitching = false
 
     var body: some View {
         Group {
@@ -32,7 +31,7 @@ struct DiagnosticsView: View {
         let personaID = container.brain.activeAspect.rawValue
 
         List {
-            aspectOverrideSection
+            aspectStateSection
             statusSection(vm)
             insightsSection(vm, personaID: personaID)
             signalsSection(vm)
@@ -44,7 +43,7 @@ struct DiagnosticsView: View {
     }
 
     @ViewBuilder
-    private var aspectOverrideSection: some View {
+    private var aspectStateSection: some View {
         Section {
             HStack {
                 Text("Active")
@@ -59,31 +58,10 @@ struct DiagnosticsView: View {
                     .foregroundStyle(.secondary)
             }
 
-            ForEach(Aspect.allCases) { aspect in
-                Button {
-                    guard !isSwitching else { return }
-                    isSwitching = true
-                    Task {
-                        try? await container.brain.switchAspect(to: aspect)
-                        isSwitching = false
-                        viewModel?.refresh()
-                    }
-                } label: {
-                    HStack {
-                        Text(aspect.diagnosticLabel)
-                        Spacer()
-                        if container.brain.activeAspect == aspect {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(PersonaTheme.accent(for: aspect.rawValue))
-                        }
-                    }
-                }
-                .disabled(isSwitching || container.brain.activeAspect == aspect)
-            }
         } header: {
-            Text("Aspect override")
+            Text("Quicksilver state")
         } footer: {
-            Text("Brain selects aspect from intent. This is the only explicit override surface.")
+            Text("Quicksilver chooses the aspect that fits the current context.")
         }
     }
 

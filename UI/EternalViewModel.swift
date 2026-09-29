@@ -80,16 +80,6 @@ final class EternalViewModel {
         refreshTask = nil
     }
 
-    /// Enter the Observatory chamber via Brain.
-    func awakenEternal() async {
-        do {
-            try await container.brain.switchAspect(to: .eternal)
-            refresh()
-        } catch {
-            livingStatus = "Observatory could not awaken: \(error.localizedDescription)"
-        }
-    }
-
     /// Capture a long-horizon observation through the Brain memory path.
     func captureObservation(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -105,9 +95,6 @@ final class EternalViewModel {
     /// Ask the Brain a reflective / pattern question while in Eternal context.
     func askEternal(_ query: String) async -> String {
         do {
-            if container.brain.activeAspect != .eternal {
-                try await container.brain.switchAspect(to: .eternal)
-            }
             let answer = try await container.brain.ask(query)
             refresh()
             return answer

@@ -86,16 +86,6 @@ final class ForgeViewModel {
         refreshTask = nil
     }
 
-    /// Enter the Workshop chamber via Brain (never directly via PersonaManager).
-    func awakenForge() async {
-        do {
-            try await container.brain.switchAspect(to: .forge)
-            refresh()
-        } catch {
-            livingStatus = "Workshop could not awaken: \(error.localizedDescription)"
-        }
-    }
-
     /// Capture a short constructive note through the Brain memory path.
     func captureNote(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -111,9 +101,6 @@ final class ForgeViewModel {
     /// Ask the Brain a construction-oriented question while in Forge context.
     func askForge(_ query: String) async -> String {
         do {
-            if container.brain.activeAspect != .forge {
-                try await container.brain.switchAspect(to: .forge)
-            }
             let answer = try await container.brain.ask(query)
             refresh()
             return answer

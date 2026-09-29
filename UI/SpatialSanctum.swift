@@ -204,7 +204,7 @@ struct SpatialSanctum: View {
     }
 
     private var navigationPrompt: some View {
-        HStack(spacing: 6) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 12) {
             ForEach(SpatialDestination.allCases) { destination in
                 SpatialPortalButton(destination: destination) {
                     onDestination(destination)
@@ -280,7 +280,7 @@ private struct SpatialPortalButton: View {
                     .minimumScaleFactor(0.8)
 
                 Text(destination.subtitle)
-                    .font(.system(size: 8, weight: .medium))
+                    .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
