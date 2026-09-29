@@ -11,10 +11,6 @@ let package = Package(
         .library(name: "QuicksilverCore", targets: ["Core", "Memory", "Personas", "ServicesAI", "Nexus"]),
         .library(name: "QuicksilverIntents", targets: ["QuicksilverIntents"])
     ],
-    dependencies: [
-        // Official Sentry Cocoa SDK (compile-from-source product recommended)
-        .package(url: "https://github.com/getsentry/sentry-cocoa", from: "9.25.0")
-    ],
     targets: [
         .target(name: "Core", path: "Core"),
         .target(

@@ -126,6 +126,9 @@ final class MercuryBrain {
     }
 
     func remember(_ content: String) async {
+        // Never store empty/whitespace-only memories (e.g. an unfilled Shortcut parameter).
+        let content = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !content.isEmpty else { return }
         let truncated = String(content.prefix(500))
         let policy = personaManager.activeMemoryPolicy
         await applyAspectForRemember(content: content)

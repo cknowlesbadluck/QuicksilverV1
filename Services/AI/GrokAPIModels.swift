@@ -42,7 +42,15 @@ enum GrokAPI {
 
     struct ChatResponseMessage: Decodable {
         let role: String?
-        let content: String
+        /// Optional: xAI returns `null` or omits `content` for refusals / tool-call turns.
+        /// The provider turns a missing or empty value into a typed error.
+        let content: String?
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: GrokChatResponseMessageCodingKeys.self)
+            role = try container.decodeIfPresent(String.self, forKey: .role)
+            content = try container.decodeIfPresent(String.self, forKey: .content)
+        }
     }
 
     struct ChatUsage: Decodable {
@@ -67,6 +75,10 @@ private enum GrokChatRequestCodingKeys: String, CodingKey {
 private enum GrokChatChoiceCodingKeys: String, CodingKey {
     case message
     case finishReason = "finish_reason"
+}
+
+private enum GrokChatResponseMessageCodingKeys: String, CodingKey {
+    case role, content
 }
 
 private enum GrokChatUsageCodingKeys: String, CodingKey {

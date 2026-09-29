@@ -23,6 +23,11 @@ public enum KeychainStore: Sendable {
         return data
     }
 
+    /// Stores `data` for `key`, or removes the item when `data` is nil.
+    ///
+    /// Updates in place with `SecItemUpdate` and only adds when the item does not exist
+    /// yet. The previous delete-then-add left a window in which a failed add (or a crash)
+    /// lost the existing credential.
     @discardableResult
     public static func set(_ data: Data?, forKey key: String) -> Bool {
         let query: [String: Any] = [
@@ -30,17 +35,22 @@ public enum KeychainStore: Sendable {
             kSecAttrService as String: service,
             kSecAttrAccount as String: key
         ]
-        SecItemDelete(query as CFDictionary)
 
-        guard let data else { return true }
+        guard let data else {
+            let status = SecItemDelete(query as CFDictionary)
+            return status == errSecSuccess || status == errSecItemNotFound
+        }
 
-        let addQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: key,
+        let attributes: [String: Any] = [
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         ]
+        let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if updateStatus == errSecSuccess { return true }
+        guard updateStatus == errSecItemNotFound else { return false }
+
+        var addQuery = query
+        addQuery.merge(attributes) { _, new in new }
         return SecItemAdd(addQuery as CFDictionary, nil) == errSecSuccess
     }
 

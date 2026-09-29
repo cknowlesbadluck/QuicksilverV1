@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   archive:
-    name: Archive & Export IPA (Unsigned + Optional Signed + Sentry dSYMs)
+    name: Archive & Export IPA (Unsigned + Optional Signed + dSYMs artifact)
     runs-on: macos-15
     steps:
       - name: Checkout
@@ -63,17 +63,6 @@ jobs:
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
             echo "No signing secrets. Will produce unsigned IPA for SideStore re-signing."
-          fi
-
-      - name: Check Sentry secrets
-        id: sentry
-        run: |
-          if [[ -n "${{ secrets.SENTRY_AUTH_TOKEN }}" ]]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-            echo "Sentry auth token present — will upload debug symbols."
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "No SENTRY_AUTH_TOKEN. Skipping dSYM upload."
           fi
 
       - name: Install signing certificate & profile
@@ -186,26 +175,6 @@ jobs:
             echo "found=false" >> "$GITHUB_OUTPUT"
             echo "::warning::No dSYMs found — symbolication will be limited."
           fi
-
-      - name: Upload debug symbols to Sentry
-        if: steps.sentry.outputs.available == 'true' && steps.dsyms.outputs.found == 'true'
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG || 'inbetween' }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT || 'quicksilver' }}
-        run: |
-          set -euo pipefail
-          echo "Installing sentry-cli…"
-          curl -sL https://sentry.io/get-cli/ | bash
-          export PATH="$HOME/.local/bin:$PATH"
-
-          echo "Uploading dSYMs to Sentry (org=$SENTRY_ORG project=$SENTRY_PROJECT)…"
-          sentry-cli debug-files upload \
-            --org "$SENTRY_ORG" \
-            --project "$SENTRY_PROJECT" \
-            build/dSYMs
-
-          echo "Sentry dSYM upload complete."
 
       - name: Archive + Export signed IPA (optional)
         if: steps.signing.outputs.available == 'true'

@@ -32,6 +32,29 @@ final class IntentsTests: XCTestCase {
         XCTAssertEqual(fake.askCalls, ["how should I store keys?"])
     }
 
+    func testCaptureMemoryTrimsAndRejectsBlankContent() async throws {
+        _ = try await CaptureMemoryIntent(content: "  note  ").perform()
+        XCTAssertEqual(fake.rememberCalls, ["note"])
+
+        do {
+            _ = try await CaptureMemoryIntent(content: "   \n ").perform()
+            XCTFail("expected a needs-value prompt for blank content")
+        } catch {
+            // Expected: blank content prompts instead of storing an empty memory.
+        }
+        XCTAssertEqual(fake.rememberCalls, ["note"])
+    }
+
+    func testQueryNexusRejectsBlankQuery() async throws {
+        do {
+            _ = try await QueryNexusIntent(query: " ").perform()
+            XCTFail("expected a needs-value prompt for a blank query")
+        } catch {
+            // Expected: blank query prompts instead of asking the brain.
+        }
+        XCTAssertTrue(fake.askCalls.isEmpty)
+    }
+
     func testUnconfiguredSurfaceThrows() async {
         IntentDependencies.shared.resetForTesting()
         let intent = QueryNexusIntent(query: "ping")

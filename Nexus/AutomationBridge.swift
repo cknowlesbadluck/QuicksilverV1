@@ -3,9 +3,14 @@ import Core
 
 /// Bridge between Nexus perception and external automation surfaces (App Intents / Shortcuts).
 /// Kept lightweight and privacy-first: only exposes already-collected public signals.
-public final class AutomationBridge: @unchecked Sendable {
+///
+/// Main-actor isolated: `configure` mutates state that the report methods read, and its
+/// only owner (`NexusCoordinator`) is `@MainActor`. This replaces `@unchecked Sendable`,
+/// which let `configure` race with reads from other isolation domains.
+@MainActor
+public final class AutomationBridge {
 
-    public enum Capability: String, CaseIterable {
+    public enum Capability: String, CaseIterable, Sendable {
         case runDiagnostic
         case reportNetworkStatus
         case reportBatteryStatus
@@ -28,7 +33,6 @@ public final class AutomationBridge: @unchecked Sendable {
 
     // MARK: - Capability implementations
 
-    @MainActor
     public func reportNetworkStatus() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
@@ -40,7 +44,6 @@ public final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
-    @MainActor
     public func reportBatteryStatus() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
@@ -50,7 +53,6 @@ public final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
-    @MainActor
     public func reportOverallHealth() throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
         if let state = nexus?.state {
@@ -59,7 +61,6 @@ public final class AutomationBridge: @unchecked Sendable {
         return "unknown (Nexus not attached)"
     }
 
-    @MainActor
     public func triggerDiagnostic(named name: String) throws -> String {
         guard isConfigured else { throw AppError.nexusNotReady }
 

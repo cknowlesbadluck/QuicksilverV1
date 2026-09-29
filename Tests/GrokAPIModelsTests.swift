@@ -1,5 +1,6 @@
 import XCTest
 @testable import ServicesAI
+import Core
 
 final class GrokAPIModelsTests: XCTestCase {
     func testChatResponseDecoding() throws {
@@ -34,6 +35,43 @@ final class GrokAPIModelsTests: XCTestCase {
         XCTAssertNil(object["maxTokens"])
         XCTAssertEqual(object["model"] as? String, "grok-4.6")
         XCTAssertEqual(object["stream"] as? Bool, false)
+    }
+
+    func testChatResponseDecodesNullOrMissingContent() throws {
+        let json = Data("""
+        {
+          "choices": [
+            {"message": {"role": "assistant", "content": null}, "finish_reason": "stop"},
+            {"message": {"role": "assistant"}, "finish_reason": "stop"}
+          ]
+        }
+        """.utf8)
+
+        let decoded = try JSONDecoder().decode(GrokAPI.ChatResponse.self, from: json)
+        XCTAssertEqual(decoded.choices.count, 2)
+        XCTAssertNil(decoded.choices[0].message.content)
+        XCTAssertNil(decoded.choices[1].message.content)
+    }
+
+    func testProviderHTTPErrorDistinguishesAuthAndRateLimit() {
+        guard case .aiKeyRejected(let unauthorized) = ProviderHTTPError.error(provider: "Grok", status: 401),
+              case .aiKeyRejected = ProviderHTTPError.error(provider: "Grok", status: 403),
+              case .aiRateLimited(let limited) = ProviderHTTPError.error(provider: "Gemini", status: 429),
+              case .aiRequestFailed(let server) = ProviderHTTPError.error(provider: "Gemini", status: 500) else {
+            return XCTFail("expected distinct AppError cases")
+        }
+        XCTAssertEqual(unauthorized, "Grok")
+        XCTAssertEqual(limited, "Gemini")
+        XCTAssertTrue(server.contains("HTTP 500"))
+    }
+
+    func testUserFacingMessagesDifferForKeyAndRateLimit() {
+        let key = AppError.aiKeyRejected(provider: "Grok").errorDescription ?? ""
+        let limit = AppError.aiRateLimited(provider: "Grok").errorDescription ?? ""
+        XCTAssertTrue(key.contains("Rebind"))
+        XCTAssertTrue(limit.contains("rate limiting"))
+        XCTAssertNotEqual(key, limit)
+        XCTAssertNotEqual(key, AppError.aiRequestFailed("x").errorDescription)
     }
 
     func testGrokMakeFactory() {

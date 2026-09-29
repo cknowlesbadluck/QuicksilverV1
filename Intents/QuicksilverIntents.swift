@@ -43,8 +43,12 @@ public struct CaptureMemoryIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw $content.needsValueError("What should Quicksilver remember?")
+        }
         let surface = try IntentDependencies.shared.requireSurface()
-        let truncated = String(content.prefix(500))
+        let truncated = String(trimmed.prefix(500))
         await surface.remember(truncated)
         return .result(value: "Captured: \(truncated)")
     }
@@ -122,8 +126,12 @@ public struct QueryNexusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw $query.needsValueError("What would you like to ask?")
+        }
         let surface = try IntentDependencies.shared.requireSurface()
-        let answer = try await surface.ask(query)
+        let answer = try await surface.ask(trimmed)
         // P-T6: never prefix with [Aspect] — Mercury is one being.
         return .result(value: LivingNarration.presentIntentAnswer(answer))
     }
@@ -180,7 +188,8 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
         )
         // 6
         AppShortcut(
-            intent: CaptureMemoryIntent(content: ""),
+            // No pre-filled value: Siri/Shortcuts prompts for the content.
+            intent: CaptureMemoryIntent(),
             phrases: [
                 "Remember this in \(.applicationName)",
                 "Capture memory in \(.applicationName)",
@@ -191,7 +200,8 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
         )
         // 7
         AppShortcut(
-            intent: QueryNexusIntent(query: ""),
+            // No pre-filled value: Siri/Shortcuts prompts for the query.
+            intent: QueryNexusIntent(),
             phrases: [
                 "Ask Nexus in \(.applicationName)",
                 "Ask \(.applicationName)",
