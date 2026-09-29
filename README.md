@@ -25,7 +25,7 @@ Every push and pull request to `main` runs on **GitHub-hosted macOS runners**:
 
 **IPA for SideStore:** Actions → *Archive IPA* → *Run workflow*.  
 Produces an unsigned IPA by default (SideStore re-signs). Optional signed path available when certificate secrets are present. Post-build checks verify app bundle, persona prompts, and IPA structure.  
-When `SENTRY_AUTH_TOKEN` is configured, debug symbols are automatically uploaded to Sentry (`inbetween` / `quicksilver`).
+dSYMs are kept as a workflow artifact for manual symbolication.
 
 Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on your iPhone.
 
@@ -33,7 +33,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 
 - **Aspect architecture** — merged to `main` (PR #98). IntentEngine, AspectPolicy, Brain-owned active aspect, Sanctum presence, Workshop/Observatory surfaces.
 - **Provider routing** — Interim Codex bind: free Gemini key recommended; optional Grok. **If Grok is bound, it is primary** (Gemini fallback) and can consume xAI credits — bind Grok only when you already have credits. Credentials stay in Keychain. Gateway routing lands in M3.
-- **Sentry** — fully integrated (DSN + refined options + automatic dSYM upload on Archive).
+- **Crash reporting** — none. Sentry was removed on 2026-09-29 (owner decision); the app sends no crash, performance or diagnostic data.
 - **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
 - **Hygiene (2026-09-19)** — Logger privacy defaulted to `.private`, primary validation device updated to iPhone 16e, AppConfiguration version aligned.
 

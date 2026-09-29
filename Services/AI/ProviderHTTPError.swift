@@ -3,14 +3,14 @@ import Core
 
 /// Maps a non-2xx provider status onto a distinguishable `AppError`.
 /// 401/403 (bad or revoked key) and 429 (rate limit) need different user actions,
-/// so they carry distinct reasons instead of one generic "request failed".
+/// so they map to distinct `AppError` cases whose `errorDescription` tells the user what to do.
 enum ProviderHTTPError {
     static func error(provider: String, status: Int) -> AppError {
         switch status {
         case 401, 403:
-            return .aiRequestFailed("\(provider) rejected the API key (HTTP \(status)). Rebind the key in the Codex.")
+            return .aiKeyRejected(provider: provider)
         case 429:
-            return .aiRequestFailed("\(provider) rate limit reached (HTTP 429). Try again shortly.")
+            return .aiRateLimited(provider: provider)
         default:
             return .aiRequestFailed("\(provider) API request failed (HTTP \(status))")
         }

@@ -54,17 +54,24 @@ final class GrokAPIModelsTests: XCTestCase {
     }
 
     func testProviderHTTPErrorDistinguishesAuthAndRateLimit() {
-        guard case .aiRequestFailed(let unauthorized) = ProviderHTTPError.error(provider: "Grok", status: 401),
-              case .aiRequestFailed(let forbidden) = ProviderHTTPError.error(provider: "Grok", status: 403),
-              case .aiRequestFailed(let limited) = ProviderHTTPError.error(provider: "Gemini", status: 429),
+        guard case .aiKeyRejected(let unauthorized) = ProviderHTTPError.error(provider: "Grok", status: 401),
+              case .aiKeyRejected = ProviderHTTPError.error(provider: "Grok", status: 403),
+              case .aiRateLimited(let limited) = ProviderHTTPError.error(provider: "Gemini", status: 429),
               case .aiRequestFailed(let server) = ProviderHTTPError.error(provider: "Gemini", status: 500) else {
-            return XCTFail("expected aiRequestFailed")
+            return XCTFail("expected distinct AppError cases")
         }
-        XCTAssertTrue(unauthorized.contains("rejected the API key"))
-        XCTAssertTrue(forbidden.contains("rejected the API key"))
-        XCTAssertTrue(limited.contains("rate limit"))
+        XCTAssertEqual(unauthorized, "Grok")
+        XCTAssertEqual(limited, "Gemini")
         XCTAssertTrue(server.contains("HTTP 500"))
-        XCTAssertNotEqual(unauthorized, limited)
+    }
+
+    func testUserFacingMessagesDifferForKeyAndRateLimit() {
+        let key = AppError.aiKeyRejected(provider: "Grok").errorDescription ?? ""
+        let limit = AppError.aiRateLimited(provider: "Grok").errorDescription ?? ""
+        XCTAssertTrue(key.contains("Rebind"))
+        XCTAssertTrue(limit.contains("rate limiting"))
+        XCTAssertNotEqual(key, limit)
+        XCTAssertNotEqual(key, AppError.aiRequestFailed("x").errorDescription)
     }
 
     func testGrokMakeFactory() {

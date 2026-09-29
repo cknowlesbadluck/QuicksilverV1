@@ -12,6 +12,10 @@ public enum AppError: Error, LocalizedError, Sendable {
     /// Intelligence is switched off in the Codex (`aiServiceEnabled == false`).
     case intelligenceDisabled
     case aiRequestFailed(String)
+    /// The provider rejected the bound API key (HTTP 401/403). The user must rebind it.
+    case aiKeyRejected(provider: String)
+    /// The provider is rate limiting requests (HTTP 429). Retrying later can succeed.
+    case aiRateLimited(provider: String)
     case unknown(String)
 
     public var errorDescription: String? {
@@ -32,6 +36,10 @@ public enum AppError: Error, LocalizedError, Sendable {
             return Self.dormantNotice
         case .aiRequestFailed:
             return "AI request failed. Please try again."
+        case .aiKeyRejected(let provider):
+            return "\(provider) rejected the API key. Rebind it in the Codex."
+        case .aiRateLimited(let provider):
+            return "\(provider) is rate limiting requests. Try again in a moment."
         case .unknown(let message):
             return message
         }

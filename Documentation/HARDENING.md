@@ -19,7 +19,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 |-------|-------|
 | Version | **0.2.0 (build 7)** |
 | Branch | `main` |
-| Sentry | Fully integrated — official `getsentry/sentry-cocoa` 9.25.0 via the **`Sentry`** product, DSN + refined privacy-conscious options, automatic dSYM upload on Archive when `SENTRY_AUTH_TOKEN` is set |
+| Crash reporting | None. Sentry (SDK, DSN, dSYM upload) was removed on 2026-09-29 by owner decision; no crash, performance or diagnostic data leaves the device |
 | Path | Actions → Archive IPA → Quicksilver-unsigned-IPA |
 
 ## Completed Hardening + Recent Work
@@ -46,10 +46,10 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 
 ### CI / SideStore / Observability
 - CI upgraded: `maxim-lobanov/setup-xcode`, strict SwiftLint job, improved SPM + DerivedData caching
-- Archive IPA: unsigned SideStore path + optional signed path + **automatic Sentry dSYM upload**
+- Archive IPA: unsigned SideStore path + optional signed path + dSYMs artifact
 - Structure job enforces modular layout + Core contracts + PrivacyInfo
 - Version / build banner + persona prompt verification in Archive
-- Sentry dependency corrected to official product
+- Sentry removed (2026-09-29)
 
 ### Architecture invariants preserved
 - Sense → Think → Express
@@ -64,7 +64,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 ## Development Roadmap Status
 
 ### Historical slices (pre-roadmap numbering) → Done
-Foundation Stability · Device Intelligence · Memory System · AI Integration · Polished UI / Personality (Slice A + Forge/Eternal) · SideStore hardening (+ Sentry).
+Foundation Stability · Device Intelligence · Memory System · AI Integration · Polished UI / Personality (Slice A + Forge/Eternal) · SideStore hardening.
 
 ### Production roadmap (`docs/ROADMAP.md`) — remaining focus
 - **M2 — Test & CI foundation** (AppTests, iPhone 16e simulator preference, full-repo strict lint) — distinct from the completed historical "Device Intelligence" slice above
@@ -105,4 +105,4 @@ The existing `prune-branches.yml` will automatically delete *merged* remote bran
 12. Confirm PrivacyInfo.xcprivacy present inside the installed app
 13. Confirm no sensitive data (keys, tokens, memory contents) appears in Console / sysdiagnose under default logging
 
-No private APIs. Keychain for secrets only. Sentry active when configured. Logger defaults to private.
+No private APIs. Keychain for secrets only. No crash-reporting SDK. Logger defaults to private.
