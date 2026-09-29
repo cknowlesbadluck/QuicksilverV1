@@ -43,7 +43,7 @@ struct ForgeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: spacing) {
                     realmHeader(vm, accent: accent, radius: radius)
-                    if !vm.isAwake { awakenCard(vm, accent: accent, radius: radius) }
+                    if !vm.isAwake { awakenCard(accent: accent, radius: radius) }
                     instrumentsPanel(vm, accent: accent, radius: radius)
                     if let insight = vm.latestInsight { insightCard(insight, accent: accent, radius: radius) }
                     noteCapture(vm, accent: accent, radius: radius)
@@ -87,7 +87,7 @@ struct ForgeView: View {
         .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(accent.opacity(0.42), lineWidth: 1))
     }
 
-    private func awakenCard(_ vm: ForgeViewModel, accent: Color, radius: CGFloat) -> some View {
+    private func awakenCard(accent: Color, radius: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Mercury is waiting to move.")
                 .font(.headline)
@@ -95,16 +95,6 @@ struct ForgeView: View {
             Text("Enter the constructive field: architecture, Swift, experiments.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Button { Task { await vm.awakenForge() } } label: {
-                Text("Enter Workshop")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(accent.opacity(0.18))
-                    .foregroundStyle(accent)
-                    .clipShape(RoundedRectangle(cornerRadius: radius * 0.7, style: .continuous))
-            }
-            .buttonStyle(.plain)
         }
         .padding(16)
         .background(.ultraThinMaterial.opacity(0.42), in: RoundedRectangle(cornerRadius: radius, style: .continuous))

@@ -66,13 +66,13 @@ When secrets are present you get both artifacts: unsigned + signed.
 
 1. Codex → bind keys: free Gemini (Google AI Studio, project with **no billing**) and optional Grok only if you already have xAI credits. Binding the first key enables intelligence.
 2. Sanctum / Home → confirm Quicksilver presence, aspect accent, and Nexus health.
-3. Confirm aspect overrides (Quicksilver / Forge / Eternal in Diagnostics) — accent, density, and insight tone should follow the active aspect; leave unset for autonomous default. There is no separate persona switcher.
+3. Confirm Diagnostics reports the Brain's active aspect without selection controls; accent, density, and insight tone follow context-driven aspect changes.
 4. Enter Forge → Awaken Forge, capture a note, ask a constructive question.
 5. Enter Eternal → Awaken Eternal, capture an observation, ask a reflective question.
 6. Diagnostics → live signals + aspect-toned insights.
 7. Memory → policy label visible (threshold · scope · write); add a note, swipe delete, Clear All, Export.
 8. Ask → send a message with the active aspect; with no key bound, expect "Intelligence unbound".
-9. Shortcuts: Current Aspect, Remember, Ask Nexus, Full Status, Switch to Forge. (Open Diagnostics is listed in Shortcuts but only launches the app today — deep link lands in M3.5-T15.)
+9. Shortcuts: Current Aspect, Remember, Ask Nexus, Full Status. (Open Diagnostics is listed in Shortcuts but only launches the app today — deep link lands in M3.5-T15.)
 10. Background the app 5–10 minutes, then return — state should survive.
 11. Force-quit + relaunch → state intact.
 12. Confirm no excessive battery drain while backgrounded.

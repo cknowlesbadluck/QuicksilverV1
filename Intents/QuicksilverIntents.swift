@@ -9,7 +9,7 @@ import Personas
 public struct GetCurrentAspectIntent: AppIntent {
     public static let title: LocalizedStringResource = "Get Current Aspect"
     public static let description = IntentDescription(
-        "Returns the aspect currently active in Quicksilver (autonomously chosen or overridden)."
+        "Returns the aspect currently chosen by Quicksilver."
     )
     public static let openAppWhenRun: Bool = false
 
@@ -22,55 +22,6 @@ public struct GetCurrentAspectIntent: AppIntent {
             .first
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) } ?? report
         return .result(value: aspect)
-    }
-}
-
-// MARK: - Force Aspect (explicit override — uses AspectEntity)
-
-@available(iOS 17.0, macOS 14.0, *)
-public struct ForceAspectIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Force Aspect"
-    public static let description = IntentDescription(
-        "Manually override the autonomous aspect selection. Use sparingly."
-    )
-    public static let openAppWhenRun: Bool = false
-
-    @Parameter(title: "Aspect")
-    public var aspect: AspectEntity
-
-    public init() {}
-    public init(aspect: AspectEntity) {
-        self.aspect = aspect
-    }
-
-    @MainActor
-    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        let surface = try IntentDependencies.shared.requireSurface()
-        let id = aspect.id.lowercased()
-        guard let resolved = Aspect(rawValue: id) else {
-            throw AppError.personaUnavailable(id)
-        }
-        try await surface.switchAspect(to: resolved)
-        return .result(value: "Forced to \(resolved.diagnosticLabel)")
-    }
-}
-
-// MARK: - Switch to Forge (high-frequency shortcut)
-
-@available(iOS 17.0, macOS 14.0, *)
-public struct SwitchToForgeIntent: AppIntent {
-    public static let title: LocalizedStringResource = "Switch to Forge"
-    public static let description = IntentDescription(
-        "Immediately activate the Forge aspect for building and engineering work."
-    )
-    public static let openAppWhenRun: Bool = false
-
-    public init() {}
-
-    @MainActor
-    public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        try await IntentDependencies.shared.requireSurface().switchAspect(to: .forge)
-        return .result(value: "Forge is now active")
     }
 }
 
@@ -197,17 +148,6 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
         )
         // 2
         AppShortcut(
-            intent: SwitchToForgeIntent(),
-            phrases: [
-                "Switch to Forge in \(.applicationName)",
-                "Activate Forge in \(.applicationName)",
-                "Start building with Forge in \(.applicationName)"
-            ],
-            shortTitle: "Switch to Forge",
-            systemImageName: "hammer.fill"
-        )
-        // 3
-        AppShortcut(
             intent: GetContextIntent(),
             phrases: [
                 "What's the context in \(.applicationName)",
@@ -260,8 +200,5 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Ask Nexus",
             systemImageName: "sparkles"
         )
-        // ForceAspectIntent remains available in the Shortcuts app and via Siri
-        // but is intentionally not promoted to an App Shortcut so we stay under the 10 limit
-        // and keep the highest-frequency actions in the automatic surface.
     }
 }

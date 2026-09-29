@@ -19,14 +19,6 @@ final class IntentsTests: XCTestCase {
         fake = nil
     }
 
-    func testForceAspectRoutesToSwitchAspect() async throws {
-        let intent = ForceAspectIntent(
-            aspect: AspectEntity(id: "forge", displayName: "Forge")
-        )
-        _ = try await intent.perform()
-        XCTAssertEqual(fake.switchAspectCalls, [.forge])
-    }
-
     func testCaptureMemoryRoutesToRemember() async throws {
         let intent = CaptureMemoryIntent(content: "ship M1-T6")
         _ = try await intent.perform()
@@ -38,12 +30,6 @@ final class IntentsTests: XCTestCase {
         let intent = QueryNexusIntent(query: "how should I store keys?")
         _ = try await intent.perform()
         XCTAssertEqual(fake.askCalls, ["how should I store keys?"])
-    }
-
-    func testSwitchToForgeRoutesToSwitchAspect() async throws {
-        let intent = SwitchToForgeIntent()
-        _ = try await intent.perform()
-        XCTAssertEqual(fake.switchAspectCalls, [.forge])
     }
 
     func testUnconfiguredSurfaceThrows() async {
