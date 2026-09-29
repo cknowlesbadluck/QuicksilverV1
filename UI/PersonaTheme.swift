@@ -164,4 +164,19 @@ enum PersonaTheme {
         default: return criticalRed
         }
     }
+
+    // MARK: - Sanctum field (place, not a board)
+
+    /// Optical center of the living core, as a fraction of the field.
+    static let sanctumCoreX: CGFloat = 0.50
+    static let sanctumCoreY: CGFloat = 0.46
+    /// Portal control size before depth scale. Far portals stay ≥ 44 pt.
+    static let sanctumPortalHit: CGFloat = 56
+    static let sanctumPortalFarScale: CGFloat = 0.86
+    static let sanctumPortalNearScale: CGFloat = 1.12
+    static let sanctumStarCount: Int = 42
+
+    static func sanctumPortalScale(depth: CGFloat) -> CGFloat {
+        sanctumPortalFarScale + (sanctumPortalNearScale - sanctumPortalFarScale) * depth
+    }
 }

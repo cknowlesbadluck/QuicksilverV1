@@ -64,8 +64,8 @@ enum SpatialDestination: String, CaseIterable, Identifiable {
     }
 }
 
-/// First spatial layer of the Sanctum.
-/// 2.5D SwiftUI composition — not a game-engine scene.
+/// The Sanctum as a cosmological field.
+/// Realms are bodies in space. There is no destination grid and no status chrome.
 struct SpatialSanctum: View {
     let visualState: VisualState
     let activeAspect: Aspect
@@ -76,11 +76,13 @@ struct SpatialSanctum: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showGreeting = false
     @State private var orbit: Double = 0
+    @State private var fieldPhase: Double = 0
 
     private var accent: Color { PersonaTheme.accent(for: activeAspect.rawValue) }
 
     var body: some View {
         GeometryReader { proxy in
+            let size = proxy.size
             ZStack {
                 MercurySanctumBackdrop(accent: accent)
                     .ignoresSafeArea()
@@ -90,44 +92,40 @@ struct SpatialSanctum: View {
                     visualState: visualState
                 )
 
-                spatialArchitecture(in: proxy.size)
+                fieldRings(in: size)
 
-                VStack(spacing: 0) {
-                    topPresence
-                    Spacer()
-
-                    QuicksilverPresenceView(
-                        personaID: activeAspect.rawValue,
-                        livingStatus: livingStatus,
-                        visualState: visualState
+                ForEach(SanctumFieldLayout.anchors) { anchor in
+                    let point = SanctumFieldLayout.point(
+                        for: anchor,
+                        phase: fieldPhase,
+                        size: size,
+                        reduceMotion: reduceMotion
                     )
-                    .onTapGesture { onInvoke() }
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityLabel("Speak with Quicksilver")
-
-                    Spacer()
-                    navigationPrompt
+                    SpatialPortal(
+                        destination: anchor.destination,
+                        depth: anchor.depth
+                    ) {
+                        onDestination(anchor.destination)
+                    }
+                    .position(point)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 18)
+
+                presence(in: size)
 
                 if showGreeting {
-                    greeting
-                        .transition(
-                            reduceMotion
-                                ? .opacity
-                                : .opacity.combined(with: .scale(scale: 0.96))
-                        )
+                    inscription
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
                         .allowsHitTesting(false)
                 }
             }
             .onAppear {
                 showGreeting = true
-                if !reduceMotion {
-                    withAnimation(MotionTokens.celestialOrbit) {
-                        orbit = 360
-                    }
+                guard !reduceMotion else { return }
+                withAnimation(MotionTokens.celestialOrbit) {
+                    orbit = 360
+                }
+                withAnimation(MotionTokens.fieldDrift) {
+                    fieldPhase = 1
                 }
             }
         }
@@ -137,52 +135,31 @@ struct SpatialSanctum: View {
         .accessibilityLabel("Quicksilver's Sanctum")
     }
 
-    private var topPresence: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(accent)
-                .frame(width: 7, height: 7)
-                .shadow(color: accent.opacity(0.8), radius: 4)
-
-            Text("SANCTUM")
-                .font(.caption.weight(.semibold))
-                .tracking(1.6)
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
-
-            Text("·")
-                .foregroundStyle(.tertiary)
-
-            Text(visualState.rawValue.uppercased())
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.55))
-
-            Spacer()
-
-            Button(action: onInvoke) {
-                Image(systemName: "bubble.left")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.72))
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Speak with Quicksilver")
-        }
+    private func presence(in size: CGSize) -> some View {
+        QuicksilverPresenceView(
+            personaID: activeAspect.rawValue,
+            livingStatus: livingStatus,
+            visualState: visualState
+        )
+        .frame(width: min(size.width * 0.62, 280))
+        .position(
+            x: size.width * PersonaTheme.sanctumCoreX,
+            y: size.height * PersonaTheme.sanctumCoreY
+        )
+        .onTapGesture { onInvoke() }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Speak with Quicksilver")
+        .accessibilityHint(livingStatus)
     }
 
-    private var greeting: some View {
-        VStack(spacing: 7) {
-            Text(greetingTitle)
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(PersonaTheme.mercurySilver)
-
-            Text(greetingPrompt)
-                .font(.subheadline)
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.66))
-        }
-        .multilineTextAlignment(.center)
-        .padding(.horizontal, 30)
-        .offset(y: -118)
+    private var inscription: some View {
+        Text(greetingTitle)
+            .font(.title3.weight(.medium))
+            .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.88))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 36)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .padding(.top, 28)
     }
 
     private var greetingTitle: String {
@@ -196,68 +173,36 @@ struct SpatialSanctum: View {
         }
     }
 
-    private var greetingPrompt: String {
-        if !livingStatus.isEmpty && livingStatus != LivingNarration.defaultStatus {
-            return livingStatus
-        }
-        return "What are we getting into?"
-    }
-
-    private var navigationPrompt: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 12) {
-            ForEach(SpatialDestination.allCases) { destination in
-                SpatialPortalButton(destination: destination) {
-                    onDestination(destination)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Mercury realms")
-    }
-
-    private func spatialArchitecture(in size: CGSize) -> some View {
+    private func fieldRings(in size: CGSize) -> some View {
         ZStack {
-            Circle()
+            Ellipse()
                 .stroke(
-                    PersonaTheme.mercurySilver.opacity(0.08),
-                    style: StrokeStyle(lineWidth: 1, dash: [3, 12])
+                    PersonaTheme.mercurySilver.opacity(0.07),
+                    style: StrokeStyle(lineWidth: 1, dash: [2, 14])
                 )
-                .frame(
-                    width: min(size.width * 1.45, 650),
-                    height: min(size.width * 1.45, 650)
-                )
-                .rotationEffect(.degrees(orbit))
+                .frame(width: size.width * 0.92, height: size.height * 0.62)
+                .rotationEffect(.degrees(orbit * 0.15))
 
-            portalHalo(.workshop, x: 0.12, y: 0.36, size: size)
-            portalHalo(.planetarium, x: 0.86, y: 0.29, size: size)
-            portalHalo(.archive, x: 0.88, y: 0.67, size: size)
-            portalHalo(.codex, x: 0.18, y: 0.72, size: size)
-            portalHalo(.diagnostics, x: 0.50, y: 0.17, size: size)
+            Ellipse()
+                .stroke(
+                    accent.opacity(0.10),
+                    style: StrokeStyle(lineWidth: 0.7, dash: [10, 18])
+                )
+                .frame(width: size.width * 0.70, height: size.height * 0.42)
+                .rotationEffect(.degrees(-orbit * 0.08))
         }
+        .position(
+            x: size.width * PersonaTheme.sanctumCoreX,
+            y: size.height * PersonaTheme.sanctumCoreY
+        )
         .allowsHitTesting(false)
-    }
-
-    private func portalHalo(
-        _ destination: SpatialDestination,
-        x: CGFloat,
-        y: CGFloat,
-        size: CGSize
-    ) -> some View {
-        let radius: CGFloat = destination == .diagnostics ? 74 : 58
-        return Circle()
-            .fill(destination.accent.opacity(0.035))
-            .overlay {
-                Circle()
-                    .stroke(destination.accent.opacity(0.10), lineWidth: 1)
-            }
-            .frame(width: radius, height: radius)
-            .position(x: size.width * x, y: size.height * y)
+        .accessibilityHidden(true)
     }
 }
 
-private struct SpatialPortalButton: View {
+private struct SpatialPortal: View {
     let destination: SpatialDestination
+    let depth: CGFloat
     let action: () -> Void
 
     var body: some View {
@@ -265,26 +210,30 @@ private struct SpatialPortalButton: View {
             VStack(spacing: 6) {
                 ZStack {
                     Circle()
-                        .fill(destination.accent.opacity(0.10))
-                        .frame(width: 44, height: 44)
+                        .stroke(destination.accent.opacity(0.55), lineWidth: 1)
+                        .background(
+                            Circle().fill(destination.accent.opacity(0.08 + (0.08 * depth)))
+                        )
+                        .frame(
+                            width: PersonaTheme.sanctumPortalHit * 0.72,
+                            height: PersonaTheme.sanctumPortalHit * 0.72
+                        )
 
                     Image(systemName: destination.symbol)
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(destination.accent.opacity(0.92))
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(destination.accent)
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
                     .font(.caption2.weight(.medium))
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.78))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-
-                Text(destination.subtitle)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity)
+            .frame(
+                width: PersonaTheme.sanctumPortalHit,
+                height: PersonaTheme.sanctumPortalHit + 16
+            )
+            .scaleEffect(PersonaTheme.sanctumPortalScale(depth: depth))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

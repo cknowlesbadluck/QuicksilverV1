@@ -25,7 +25,11 @@ struct AmbientLayer: View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSinceReferenceDate
-                let center = CGPoint(x: size.width * 0.5, y: size.height * 0.42)
+                let center = CGPoint(x: size.width * 0.5, y: size.height * PersonaTheme.sanctumCoreY)
+                let drift = reduceMotion ? 0 : time
+
+                drawStars(in: context, size: size, drift: drift, intensity: intensity)
+                drawGalacticBand(in: context, size: size, center: center, drift: drift, accent: accent)
 
                 // Stable particle seeds make the chaos feel like a persistent environment.
                 for index in 0..<particleCount {
@@ -97,5 +101,59 @@ struct AmbientLayer: View {
         .allowsHitTesting(false)
         .animation(MotionTokens.environmentalWake, value: personaID)
         .animation(MotionTokens.stabilization, value: visualState)
+    }
+
+    private func drawStars(
+        in context: GraphicsContext,
+        size: CGSize,
+        drift: TimeInterval,
+        intensity: Double
+    ) {
+        let count = PersonaTheme.sanctumStarCount
+        for index in 0..<count {
+            let seed = Double(index) * 1.618
+            let depth = Double(index % 3) / 2
+            let speed = (0.004 + depth * 0.01) * (0.35 + intensity)
+            let xNorm = (seed * 0.173 + drift * speed).truncatingRemainder(dividingBy: 1)
+            let yNorm = (seed * 0.091).truncatingRemainder(dividingBy: 1)
+            let radius = 0.6 + depth * 1.1
+            let xPos = xNorm * size.width
+            let yPos = yNorm * size.height
+            let alpha = 0.12 + depth * 0.28
+            let rect = CGRect(x: xPos, y: yPos, width: radius, height: radius)
+            context.fill(
+                Path(ellipseIn: rect),
+                with: .color(PersonaTheme.mercuryBright.opacity(alpha))
+            )
+        }
+    }
+
+    private func drawGalacticBand(
+        in context: GraphicsContext,
+        size: CGSize,
+        center: CGPoint,
+        drift: TimeInterval,
+        accent: Color
+    ) {
+        let band = CGRect(
+            x: center.x - size.width * 0.62,
+            y: center.y - size.height * 0.08,
+            width: size.width * 1.24,
+            height: size.height * 0.16
+        )
+        var transform = CGAffineTransform(translationX: center.x, y: center.y)
+        transform = transform.rotated(by: -0.42 + drift * 0.002)
+        transform = transform.translatedBy(x: -center.x, y: -center.y)
+        let path = Path(ellipseIn: band).applying(transform)
+        context.stroke(
+            path,
+            with: .color(accent.opacity(0.05)),
+            style: StrokeStyle(lineWidth: 18, lineCap: .round)
+        )
+        context.stroke(
+            path,
+            with: .color(PersonaTheme.mercurySilver.opacity(0.045)),
+            style: StrokeStyle(lineWidth: 1, dash: [3, 16])
+        )
     }
 }
