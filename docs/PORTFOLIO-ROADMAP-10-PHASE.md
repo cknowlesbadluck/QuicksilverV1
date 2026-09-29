@@ -1,4 +1,4 @@
-# Portfolio 10-phase roadmap — 2026-09-29 11:00 EDT
+# Portfolio 10-phase roadmap — 2026-09-29 14:00 EDT
 
 1. Ready-or-refuse on Resonance main — DONE. Live `/api/ready` still 503.
 2. Owner SERVICE_ROLE: key exists on resonancenexus production context (secret, production only, updated 13:01 EDT 2026-09-28). Live process still reports missing because published production is `6ab8ea11`. `main--resonancenexus` also 503 — branch context does not receive the production secret. Exit remains `/api/ready` 200 after a GitHub-backed **production** republish of current main. Do not invent secrets. Do not upload an empty sandbox over the site.
