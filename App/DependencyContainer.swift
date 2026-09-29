@@ -73,6 +73,45 @@ final class DependencyContainer {
         logger.info("DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)", category: logger.general)
     }
 
+    /// Test and preview seam. The production `init` is unchanged and still
+    /// owns sensor start plus memory warm-up. This path does not start Nexus
+    /// and does not read the production Keychain or `UserDefaults.standard`.
+    init(
+        memoryStore: MemoryStore,
+        aiProvider: AIProvider?,
+        nexus: NexusCoordinator,
+        defaults: UserDefaults
+    ) {
+        self.environment = .current
+        self.configuration = .shared
+        self.featureFlags = FeatureFlags(defaults: defaults)
+        self.logger = LoggerService()
+        self.eventBus = EventBus()
+        self.personaManager = PersonaManager(eventBus: eventBus, logger: logger)
+        self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
+        self.aiService = AIService(
+            provider: aiProvider,
+            eventBus: eventBus,
+            logger: logger,
+            featureFlags: featureFlags
+        )
+        self.nexus = nexus
+        self.brain = MercuryBrain(
+            personaManager: personaManager,
+            memoryManager: memoryManager,
+            aiService: aiService,
+            nexus: nexus,
+            eventBus: eventBus,
+            logger: logger
+        )
+
+        IntentDependencies.shared.configure(surface: brain)
+        logger.info(
+            "DependencyContainer injected — sensors left stopped",
+            category: logger.general
+        )
+    }
+
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
     }

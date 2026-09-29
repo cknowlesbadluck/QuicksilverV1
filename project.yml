@@ -170,6 +170,10 @@ targets:
       - path: AppTests
     dependencies:
       - target: Quicksilver
+      - target: Core
+      - target: Memory
+      - target: ServicesAI
+      - target: Nexus
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
