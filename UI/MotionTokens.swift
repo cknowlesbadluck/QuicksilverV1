@@ -22,6 +22,9 @@ enum MotionTokens {
     /// Distant celestial / glyph orbit.
     static let celestialOrbit = Animation.linear(duration: 48).repeatForever(autoreverses: false)
 
+    /// Differential drift of the Sanctum's portals. One field revolution.
+    static let fieldDrift = Animation.linear(duration: 96).repeatForever(autoreverses: false)
+
     /// Faster internal fluid when thinking.
     static let thinkingCirculation = Animation.easeInOut(duration: 1.15).repeatForever(autoreverses: true)
 
