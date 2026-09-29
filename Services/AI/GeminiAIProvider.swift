@@ -67,7 +67,7 @@ struct GeminiAIProvider: AIProvider {
             throw AppError.networkUnavailable
         }
         guard (200...299).contains(http.statusCode) else {
-            throw AppError.aiRequestFailed("Gemini API request failed (HTTP \(http.statusCode))")
+            throw ProviderHTTPError.error(provider: "Gemini", status: http.statusCode)
         }
         return data
     }

@@ -76,7 +76,7 @@ struct GrokAIProvider: AIProvider {
             throw AppError.networkUnavailable
         }
         guard (200...299).contains(http.statusCode) else {
-            throw AppError.aiRequestFailed("Grok API request failed (HTTP \(http.statusCode))")
+            throw ProviderHTTPError.error(provider: "Grok", status: http.statusCode)
         }
         return data
     }
@@ -91,6 +91,10 @@ struct GrokAIProvider: AIProvider {
         
         guard let first = decoded.choices.first else {
             throw AppError.aiRequestFailed("Grok response contained no choices")
+        }
+        guard let content = first.message.content,
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw AppError.aiRequestFailed("Grok response contained no text")
         }
         let finishReason: AIResponse.FinishReason
         switch first.finishReason {
@@ -108,7 +112,7 @@ struct GrokAIProvider: AIProvider {
         }
         return AIResponse(
             requestID: requestID,
-            content: first.message.content,
+            content: content,
             finishReason: finishReason,
             usage: usage
         )
