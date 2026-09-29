@@ -126,6 +126,11 @@ jobs:
           echo "Found app at: $APP_PATH"
           echo "app_path=$APP_PATH" >> "$GITHUB_OUTPUT"
 
+          # A successful build alone does not prove the icon catalog reached the IPA.
+          test -f "$APP_PATH/Assets.car" || { echo "::error::Asset catalog missing from app bundle"; exit 1; }
+          ICON_NAME=$(plutil -extract CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName raw -o - "$APP_PATH/Info.plist")
+          [[ "$ICON_NAME" == "AppIcon" ]] || { echo "::error::Primary app icon is not AppIcon"; exit 1; }
+
           # --- SideStore critical: verify persona prompts are embedded ---
           echo "Verifying persona prompt resources…"
           for persona in quicksilver forge eternal; do

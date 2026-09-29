@@ -230,6 +230,14 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee xcodebuild.log
 
+      - name: Verify primary app icon
+        run: |
+          set -euo pipefail
+          APP_PATH=DerivedData/Build/Products/Debug-iphonesimulator/Quicksilver.app
+          test -f "$APP_PATH/Assets.car"
+          ICON_NAME=$(plutil -extract CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName raw -o - "$APP_PATH/Info.plist")
+          [[ "$ICON_NAME" == "AppIcon" ]]
+
       - name: Run app-hosted unit tests
         run: |
           set -euo pipefail
