@@ -2,7 +2,7 @@ import SwiftUI
 import Core
 
 /// Living environment for the Sanctum.
-/// Controlled chaos is persistent but bounded: particles, traces and a slow
+/// Controlled chaos is persistent but bounded: particles, traces, stars, and a slow
 /// atmospheric field orbit the same invisible center as the mercury core.
 struct AmbientLayer: View {
     let personaID: String
@@ -25,21 +25,25 @@ struct AmbientLayer: View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSinceReferenceDate
-                let center = CGPoint(x: size.width * 0.5, y: size.height * PersonaTheme.sanctumCoreY)
+                // Respect Reduce Motion globally
                 let drift = reduceMotion ? 0 : time
+                let center = CGPoint(x: size.width * 0.5, y: size.height * PersonaTheme.sanctumCoreY)
 
+                // Background stars (depth layers)
                 drawStars(in: context, size: size, drift: drift, intensity: intensity)
+                
+                // Galactic band orbit
                 drawGalacticBand(in: context, size: size, center: center, drift: drift, accent: accent)
 
                 // Stable particle seeds make the chaos feel like a persistent environment.
                 for index in 0..<particleCount {
                     let seed = Double(index) * 1.37
-                    let angle = seed * 2.399963 + time * (0.012 + intensity * 0.025)
+                    let angle = seed * 2.399963 + drift * (0.012 + intensity * 0.025)
                     let orbit = min(size.width, size.height) * (0.24 + 0.06 * sin(seed * 1.73))
                     let xPos = center.x + cos(angle) * orbit * (0.85 + 0.12 * sin(seed))
                     let yPos = center.y + sin(angle * 1.13) * orbit * 1.7
                     let radius = 1.0 + intensity * 1.5
-                    let opacity = 0.035 + 0.09 * intensity + 0.025 * sin(time * 0.35 + seed)
+                    let opacity = 0.035 + 0.09 * intensity + 0.025 * sin(drift * 0.35 + seed)
                     let color = index.isMultiple(of: 4) ? secondary : accent
 
                     context.fill(
@@ -58,8 +62,8 @@ struct AmbientLayer: View {
 
                     for segment in 0..<segments {
                         let t = Double(segment) / Double(segments - 1)
-                        let angle = -1.05 + t * 2.10 + time * (0.006 + intensity * 0.008)
-                        let wobble = sin(angle * 3.0 + seed + time * 0.12) * 5.0 * intensity
+                        let angle = -1.05 + t * 2.10 + drift * (0.006 + intensity * 0.008)
+                        let wobble = sin(angle * 3.0 + seed + drift * 0.12) * 5.0 * intensity
                         let point = CGPoint(
                             x: center.x + cos(angle) * (radius + wobble),
                             y: center.y + sin(angle) * (radius + wobble) * 0.52

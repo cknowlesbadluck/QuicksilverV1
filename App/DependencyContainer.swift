@@ -47,7 +47,14 @@ final class DependencyContainer {
         }
         self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
 
-        self.aiService = AIService(eventBus: eventBus, logger: logger, featureFlags: featureFlags)
+        let (primary, secondary) = Self.makeConfiguredProviders()
+        self.aiService = AIService(
+            primary: primary,
+            secondary: secondary,
+            eventBus: eventBus,
+            logger: logger,
+            featureFlags: featureFlags
+        )
 
         self.nexus = NexusCoordinator(logger: logger, eventBus: eventBus)
 
@@ -76,6 +83,7 @@ final class DependencyContainer {
     /// Test and preview seam. The production `init` is unchanged and still
     /// owns sensor start plus memory warm-up. This path does not start Nexus
     /// and does not read the production Keychain or `UserDefaults.standard`.
+    /// Injected Nexus and PersonaManager share the same EventBus.
     init(
         memoryStore: MemoryStore,
         aiProvider: AIProvider?,
@@ -90,7 +98,8 @@ final class DependencyContainer {
         self.personaManager = PersonaManager(eventBus: eventBus, logger: logger)
         self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
         self.aiService = AIService(
-            provider: aiProvider,
+            primary: aiProvider as? Provider,
+            secondary: nil,
             eventBus: eventBus,
             logger: logger,
             featureFlags: featureFlags
@@ -110,6 +119,12 @@ final class DependencyContainer {
             "DependencyContainer injected — sensors left stopped",
             category: logger.general
         )
+    }
+
+    private static func makeConfiguredProviders() -> (primary: Provider, secondary: Provider?) {
+        // Load from Codex or defaults
+        let primary: Provider = GeminiProvider() // or from configuration
+        return (primary, nil)
     }
 
     var activeConfiguration: PersonaConfiguration {
