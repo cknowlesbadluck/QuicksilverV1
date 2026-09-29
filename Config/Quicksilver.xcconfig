@@ -1,0 +1,11 @@
+// Shared build settings for the Quicksilver app target (referenced from project.yml).
+// Secrets are never committed. Local values go in Config/Secrets.xcconfig (gitignored);
+// CI writes that file from the SENTRY_DSN repository secret.
+//
+// `//` starts a comment in .xcconfig files, so URLs must spell slashes as $(SLASH).
+SLASH = /
+
+// Empty by default: with no DSN the app skips SentrySDK.start (see App/QuicksilverApp.swift).
+SENTRY_DSN =
+
+#include? "Secrets.xcconfig"

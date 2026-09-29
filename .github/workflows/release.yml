@@ -43,6 +43,19 @@ jobs:
           xcodegen generate
           test -d Quicksilver.xcodeproj
 
+      - name: Inject Sentry DSN (optional)
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${SENTRY_DSN:-}" ]]; then
+            echo "::notice::SENTRY_DSN secret not set; building with Sentry disabled."
+            exit 0
+          fi
+          # `//` starts an xcconfig comment, so escape slashes as $(SLASH).
+          ESCAPED=${SENTRY_DSN//\//\$(SLASH)}
+          printf 'SENTRY_DSN = %s\n' "$ESCAPED" > Config/Secrets.xcconfig
+
       - name: SPM unit tests
         run: |
           set -euo pipefail
