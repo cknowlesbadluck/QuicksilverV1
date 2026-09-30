@@ -44,9 +44,7 @@ final class CodexViewModel {
             return
         }
         grokKeyDraft = ""
-        statusMessage = "Grok key saved to Keychain."
-        statusIsError = false
-        refresh()
+        finishSuccessfulBind(savedMessage: "Grok key saved to Keychain.")
     }
 
     func saveGeminiKey() {
@@ -62,9 +60,18 @@ final class CodexViewModel {
             return
         }
         geminiKeyDraft = ""
-        statusMessage = "Gemini key saved to Keychain."
-        statusIsError = false
-        refresh()
+        finishSuccessfulBind(savedMessage: "Gemini key saved to Keychain.")
+    }
+
+    /// The first successful bind wakes intelligence. Later binds leave the flag alone.
+    private func finishSuccessfulBind(savedMessage: String) {
+        if container.featureFlags.isEnabled("aiServiceEnabled") {
+            statusMessage = savedMessage
+            statusIsError = false
+            refresh()
+            return
+        }
+        setAIEnabled(true)
     }
 
     func clearGrokKey() {
