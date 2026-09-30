@@ -114,6 +114,7 @@ struct SpatialSanctum: View {
 
                 if showGreeting {
                     greeting
+                        .frame(maxWidth: proxy.size.width - 36)
                         .transition(
                             reduceMotion
                                 ? .opacity
@@ -216,25 +217,28 @@ struct SpatialSanctum: View {
     }
 
     private func spatialArchitecture(in size: CGSize) -> some View {
-        ZStack {
-            Circle()
-                .stroke(
-                    PersonaTheme.mercurySilver.opacity(0.08),
-                    style: StrokeStyle(lineWidth: 1, dash: [3, 12])
-                )
-                .frame(
-                    width: min(size.width * 1.45, 650),
-                    height: min(size.width * 1.45, 650)
-                )
-                .rotationEffect(.degrees(orbit))
+        let diameter = min(size.width * 1.45, 650)
+        return Color.clear
+            .overlay {
+                ZStack {
+                    Circle()
+                        .stroke(
+                            PersonaTheme.mercurySilver.opacity(0.08),
+                            style: StrokeStyle(lineWidth: 1, dash: [3, 12])
+                        )
+                        .frame(width: diameter, height: diameter)
+                        .rotationEffect(.degrees(orbit))
 
-            portalHalo(.workshop, x: 0.12, y: 0.36, size: size)
-            portalHalo(.planetarium, x: 0.86, y: 0.29, size: size)
-            portalHalo(.archive, x: 0.88, y: 0.67, size: size)
-            portalHalo(.codex, x: 0.18, y: 0.72, size: size)
-            portalHalo(.diagnostics, x: 0.50, y: 0.17, size: size)
-        }
-        .allowsHitTesting(false)
+                    portalHalo(.workshop, x: 0.12, y: 0.36, size: size)
+                    portalHalo(.planetarium, x: 0.86, y: 0.29, size: size)
+                    portalHalo(.archive, x: 0.88, y: 0.67, size: size)
+                    portalHalo(.codex, x: 0.18, y: 0.72, size: size)
+                    portalHalo(.diagnostics, x: 0.50, y: 0.17, size: size)
+                }
+                .frame(width: size.width, height: size.height)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     private func portalHalo(
