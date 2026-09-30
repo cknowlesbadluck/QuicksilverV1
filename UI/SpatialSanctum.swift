@@ -143,6 +143,7 @@ struct SpatialSanctum: View {
                 .fill(accent)
                 .frame(width: 7, height: 7)
                 .shadow(color: accent.opacity(0.8), radius: 4)
+                .accessibilityHidden(true)
 
             Text("SANCTUM")
                 .font(.caption.weight(.semibold))
@@ -161,12 +162,14 @@ struct SpatialSanctum: View {
 
             Button(action: onInvoke) {
                 Image(systemName: "bubble.left")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.72))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 48, height: 48)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
             .accessibilityLabel("Speak with Quicksilver")
         }
     }
@@ -288,8 +291,8 @@ private struct SpatialPortalButton: View {
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
+            .frame(minHeight: 72)
             .contentShape(Rectangle())
-            .accessibilityElement(children: .ignore)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(destination.title)

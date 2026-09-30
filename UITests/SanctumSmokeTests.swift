@@ -39,6 +39,12 @@ final class SanctumSmokeTests: XCTestCase {
 
     func testSanctumAccessibilityAudit() throws {
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 5))
-        try app.performAccessibilityAudit()
+        try app.performAccessibilityAudit { issue in
+            print(
+                "AUDIT compact=\(issue.compactDescription) "
+                    + "detail=\(issue.detailedDescription)"
+            )
+            return false
+        }
     }
 }
