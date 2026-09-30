@@ -134,7 +134,6 @@ struct SpatialSanctum: View {
         .animation(MotionTokens.spring(for: activeAspect.rawValue), value: activeAspect)
         .animation(MotionTokens.stabilization, value: visualState)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Quicksilver's Sanctum")
     }
 
     private var topPresence: some View {
@@ -148,6 +147,7 @@ struct SpatialSanctum: View {
                 .font(.caption.weight(.semibold))
                 .tracking(1.6)
                 .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
+                .accessibilityLabel("Quicksilver's Sanctum")
 
             Text("·")
                 .foregroundStyle(.tertiary)
@@ -213,7 +213,6 @@ struct SpatialSanctum: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Mercury realms")
     }
 
     private func spatialArchitecture(in size: CGSize) -> some View {
@@ -286,10 +285,11 @@ private struct SpatialPortalButton: View {
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+            .accessibilityElement(children: .ignore)
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(destination.title)
+        .accessibilityIdentifier(destination.title)
         .accessibilityHint(destination.subtitle + ". " + destination.quip)
     }
 }
