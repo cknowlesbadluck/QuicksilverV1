@@ -38,7 +38,9 @@ final class DependencyContainerTests: XCTestCase {
 
         await container.brain.remember("Keep the injection seam small.")
         let stored = try await memoryStore.loadAll()
-        XCTAssertTrue(stored.contains { $0.content == "Keep the injection seam small." })
+        XCTAssertTrue(stored.contains(where: { (item: MemoryItem) in
+            item.value == "Keep the injection seam small."
+        }))
     }
 }
 
