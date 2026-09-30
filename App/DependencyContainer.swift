@@ -25,10 +25,17 @@ final class DependencyContainer {
     /// for complex reasoning instead of reaching into individual services.
     let brain: MercuryBrain
 
-    init(environment: AppEnvironment = .current, configuration: AppConfiguration = .shared) {
+    init(
+        memoryStore: MemoryStore? = nil,
+        aiProvider: AIProvider? = nil,
+        nexus: NexusCoordinator? = nil,
+        defaults: UserDefaults = .standard,
+        environment: AppEnvironment = .current,
+        configuration: AppConfiguration = .shared
+    ) {
         self.environment = environment
         self.configuration = configuration
-        self.featureFlags = FeatureFlags()
+        self.featureFlags = FeatureFlags(defaults: defaults)
         self.logger = LoggerService()
         self.eventBus = EventBus()
 
@@ -37,40 +44,51 @@ final class DependencyContainer {
             logger: logger
         )
 
-        let memoryStore: MemoryStore
-        if let swiftDataStore = try? SwiftDataMemoryStore() {
-            memoryStore = swiftDataStore
+        let resolvedMemoryStore: MemoryStore
+        if let memoryStore {
+            resolvedMemoryStore = memoryStore
+            logger.info("Memory backend: injected", category: logger.memory)
+        } else if let swiftDataStore = try? SwiftDataMemoryStore() {
+            resolvedMemoryStore = swiftDataStore
             logger.info("Memory backend: SwiftData", category: logger.memory)
         } else {
-            memoryStore = KeychainMemoryStore()
+            resolvedMemoryStore = KeychainMemoryStore()
             logger.info("Memory backend: Keychain (SwiftData unavailable)", category: logger.memory)
         }
-        self.memoryManager = MemoryManager(store: memoryStore, eventBus: eventBus, logger: logger)
+        self.memoryManager = MemoryManager(store: resolvedMemoryStore, eventBus: eventBus, logger: logger)
 
-        self.aiService = AIService(eventBus: eventBus, logger: logger, featureFlags: featureFlags)
+        self.aiService = AIService(
+            provider: aiProvider,
+            eventBus: eventBus,
+            logger: logger,
+            featureFlags: featureFlags
+        )
 
-        self.nexus = NexusCoordinator(logger: logger, eventBus: eventBus)
+        self.nexus = nexus ?? NexusCoordinator(logger: logger, eventBus: eventBus)
 
-        // Mercury Brain sits above the individual services
+        // Mercury Brain sits above the individual services.
         self.brain = MercuryBrain(
             personaManager: personaManager,
             memoryManager: memoryManager,
             aiService: aiService,
-            nexus: nexus,
+            nexus: self.nexus,
             eventBus: eventBus,
             logger: logger
         )
 
         IntentDependencies.shared.configure(surface: brain)
 
-        nexus.updatePersonaContext(personaManager.activeConfiguration.id)
-        nexus.start()
+        self.nexus.updatePersonaContext(personaManager.activeConfiguration.id)
+        self.nexus.start()
 
         // SideStore first-run: warm memory so Ask / Intents / Home don't wait
         // for MemoryView to open. Failures are logged inside MemoryManager.
         Task { await memoryManager.load() }
 
-        logger.info("DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)", category: logger.general)
+        logger.info(
+            "DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)",
+            category: logger.general
+        )
     }
 
     var activeConfiguration: PersonaConfiguration {

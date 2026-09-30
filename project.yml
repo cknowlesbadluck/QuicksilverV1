@@ -162,9 +162,25 @@ targets:
       - path: AppTests
     dependencies:
       - target: Quicksilver
+      - target: Core
+      - target: Memory
+      - target: ServicesAI
+      - target: Nexus
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+
+  QuicksilverUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Quicksilver
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Quicksilver
 
 schemes:
   Quicksilver:
@@ -179,10 +195,12 @@ schemes:
         Quicksilver: all
         QuicksilverTests: [test]
         QuicksilverAppTests: [test]
+        QuicksilverUITests: [test]
     test:
       targets:
         - QuicksilverTests
         - QuicksilverAppTests
+        - QuicksilverUITests
     run:
       config: Debug
     archive:
