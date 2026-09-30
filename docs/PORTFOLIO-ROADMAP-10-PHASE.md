@@ -1,4 +1,4 @@
-# Portfolio 10-phase roadmap — 2026-09-29 21:00 EDT
+# Portfolio 10-phase roadmap — 2026-09-30 01:00 EDT
 
 1. Ready-or-refuse on Resonance main — DONE. Live `/api/ready` still 503.
 2. Owner SERVICE_ROLE: key exists on resonancenexus production context (secret, production only). Live process still reports missing because published production is `6ab8ea11`. Exit remains `/api/ready` 200 after a GitHub-backed **production** republish of current main. Do not invent secrets. Do not upload an empty sandbox over the site.
@@ -9,4 +9,10 @@
 7. Conduit #125 keyset pagination — DONE. HTTP `/diagnostics` — DONE live 200. #144 grant-admin memoize on main. #149 status sanitization on main. #154 diagnostics rate-limit + task_get scope on main.
 8. Resonance iOS I1 against a ready host. Blocked by phase 2 exit (`/api/ready` 200). #134 iOS app target is red and is not a substitute.
 9. Chamber form/work/dissolve with audit. Blocked by phase 2.
-10. Release surface: SideStore evidence, unskip production-smoke, owner prune leftover branches (`docs/hygiene-*`, `codex/*`, `bolt/*`, `counsel/*`, `develop`, `feature/ios-p4-compose-execute-evidence`, `release/0.8.0`). Archive stale `mcp`. No delete-ref tool on this connector.
+10. Release surface: SideStore evidence, unskip production-smoke, owner prune leftover branches (`docs/hygiene-*`, `codex/*`, `bolt/*`, `counsel/*`, `develop`, `feature/ios-p4-compose-execute-evidence`, `release/0.8.0`). Archive stale `mcp` and close leftover PRs on `cknowlesbadluck/Quicksilver` (not V1). No delete-ref tool on this connector.
+
+## Innovation (not started until a binding constraint moves)
+
+- Ready-identity stamp: `/api/ready` must emit git SHA + deploy id without leaking secrets, so hygiene stops confusing Netlify dashboard keys with the live process.
+- Hygiene freeze: stop 3-hour docs loops until CHR-54 (`/api/ready` 200) or CHR-55 (device IPA) changes. Further docs hours are process theater.
+- Simulator-failure isolation: one commit on #193 that makes iOS Simulator Build green without rewriting PersonaTheme.
