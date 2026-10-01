@@ -154,7 +154,7 @@ struct SpatialSanctum: View {
                 .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
                 .accessibilityLabel("Quicksilver's Sanctum")
 
-            Text("\u00b7")
+            Text("\u{00B7}")
                 .foregroundStyle(.tertiary)
                 .accessibilityHidden(true)
 
