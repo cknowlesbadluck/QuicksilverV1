@@ -221,7 +221,7 @@ extension MercuryBrain {
 
         personality.recomputeForTurn(aspect: aspect)
         nexus.updatePersonaContext(aspect.rawValue)
-        logger.info("Mercury Brain: aspect \u2192 \(aspect.rawValue) [\(reason)]", category: logger.persona)
+        logger.info("Mercury Brain: aspect \u{2192} \(aspect.rawValue) [\(reason)]", category: logger.persona)
 
         if visualState == .thinking || visualState == .idle || force {
             visualState = aspect.defaultVisualState
