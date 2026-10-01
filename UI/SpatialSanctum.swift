@@ -101,7 +101,10 @@ struct SpatialSanctum: View {
                         livingStatus: livingStatus,
                         visualState: visualState
                     )
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                     .onTapGesture { onInvoke() }
+                    .accessibilityElement(children: .ignore)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel("Speak with Quicksilver")
 
@@ -153,6 +156,7 @@ struct SpatialSanctum: View {
 
             Text("·")
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
 
             Text(visualState.rawValue.uppercased())
                 .font(.caption2.weight(.medium))
@@ -164,13 +168,15 @@ struct SpatialSanctum: View {
                 Image(systemName: "bubble.left")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.72))
-                    .frame(width: 48, height: 48)
+                    .frame(width: 44, height: 44)
+                    .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .ignore)
             .accessibilityAddTraits(.isButton)
-            .accessibilityLabel("Speak with Quicksilver")
+            .accessibilityLabel("Open conversation")
+            .accessibilityHint("Same action as Speak with Quicksilver")
         }
     }
 
