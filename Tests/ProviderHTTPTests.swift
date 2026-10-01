@@ -16,7 +16,7 @@ final class ProviderHTTPTests: XCTestCase {
             XCTAssertEqual(request.value(forHTTPHeaderField: "x-goog-api-key"), "gemini-test-key")
             XCTAssertNil(request.url?.query)
 
-            let body = try XCTUnwrap(request.httpBody)
+            let body = try Self.bodyData(from: request)
             let bodyText = try XCTUnwrap(String(data: body, encoding: .utf8))
             XCTAssertTrue(bodyText.contains("Mercury system"))
             XCTAssertTrue(bodyText.contains("Hello Gemini"))
@@ -60,7 +60,7 @@ final class ProviderHTTPTests: XCTestCase {
             XCTAssertEqual(request.url?.absoluteString, "https://api.x.ai/v1/chat/completions")
             XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer grok-test-key")
 
-            let body = try XCTUnwrap(request.httpBody)
+            let body = try Self.bodyData(from: request)
             let object = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
             XCTAssertEqual(object["model"] as? String, "grok-4.6")
             XCTAssertEqual(object["max_tokens"] as? Int, 321)
@@ -164,6 +164,33 @@ final class ProviderHTTPTests: XCTestCase {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
         return URLSession(configuration: configuration)
+    }
+
+    /// URLSession moves `httpBody` onto `httpBodyStream` before a custom
+    /// URLProtocol sees the request. Read whichever one is populated.
+    private static func bodyData(from request: URLRequest) throws -> Data {
+        if let body = request.httpBody, !body.isEmpty {
+            return body
+        }
+        guard let stream = request.httpBodyStream else {
+            throw URLError(.zeroByteResource)
+        }
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        let bufferSize = 4_096
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+        while true {
+            let count = stream.read(buffer, maxLength: bufferSize)
+            if count < 0 {
+                throw stream.streamError ?? URLError(.cannotDecodeRawData)
+            }
+            if count == 0 { break }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 
     private static func httpResponse(

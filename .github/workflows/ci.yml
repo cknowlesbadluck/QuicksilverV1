@@ -234,21 +234,6 @@ jobs:
             -only-testing:QuicksilverAppTests \
             2>&1 | tee app-tests.log
 
-      - name: Run UI smoke and accessibility tests
-        run: |
-          set -euo pipefail
-          set -o pipefail
-          xcodebuild \
-            -project Quicksilver.xcodeproj \
-            -scheme Quicksilver \
-            -destination "${{ steps.dest.outputs.destination }}" \
-            -derivedDataPath DerivedData \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            test \
-            -only-testing:QuicksilverUITests/SanctumSmokeTests \
-            2>&1 | tee ui-tests.log
-
       - name: Build diagnostics on failure
         if: failure()
         run: |
@@ -256,8 +241,6 @@ jobs:
           tail -80 xcodebuild.log || true
           echo "=== App test errors ==="
           grep -E "error:|warning:|FAILED|fatal|XCTAssert" app-tests.log | head -60 || true
-          echo "=== UI test errors ==="
-          grep -E "error:|warning:|FAILED|fatal|XCTAssert|Accessibility" ui-tests.log | head -80 || true
           echo "=== Compiler errors ==="
           grep -E "error:|warning:|FAILED|fatal" xcodebuild.log | head -60 || true
 
@@ -286,7 +269,6 @@ jobs:
           path: |
             xcodebuild.log
             app-tests.log
-            ui-tests.log
             DerivedData/Logs
           retention-days: 7
           if-no-files-found: ignore
@@ -298,4 +280,70 @@ jobs:
           name: generated-xcodeproj
           path: Quicksilver.xcodeproj
           retention-days: 3
+          if-no-files-found: ignore
+
+  ios-ui-smoke:
+    name: iOS UI Smoke
+    runs-on: macos-15
+    needs: [structure, lint]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install XcodeGen
+        run: |
+          set -euo pipefail
+          brew install xcodegen || true
+
+      - name: Generate Xcode project
+        run: |
+          set -euo pipefail
+          xcodegen generate
+          test -d Quicksilver.xcodeproj
+
+      - name: Resolve destination (iPhone simulator)
+        id: dest
+        run: |
+          set -euo pipefail
+          DEST=""
+          for name in "iPhone 16e" "iPhone 16" "iPhone 16 Pro" "iPhone 15" "iPhone 15 Pro" "iPhone 14"; do
+            if xcrun simctl list devices available | grep -F "$name ("; then
+              DEST="platform=iOS Simulator,name=$name"
+              break
+            fi
+          done
+          if [[ -z "$DEST" ]]; then
+            DEST="platform=iOS Simulator,name=iPhone 16e"
+          fi
+          echo "destination=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Run UI smoke and accessibility tests
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          xcodebuild \
+            -project Quicksilver.xcodeproj \
+            -scheme Quicksilver \
+            -destination "${{ steps.dest.outputs.destination }}" \
+            -derivedDataPath DerivedData \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            test \
+            -only-testing:QuicksilverUITests/SanctumSmokeTests \
+            2>&1 | tee ui-tests.log
+
+      - name: Upload UI smoke logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-ui-smoke-logs
+          path: |
+            ui-tests.log
+            DerivedData/Logs
+          retention-days: 7
           if-no-files-found: ignore

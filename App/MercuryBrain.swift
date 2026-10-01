@@ -162,7 +162,12 @@ extension MercuryBrain {
             personality.increase(nudge.dimension, by: nudge.amount)
         }
 
-        if visualState != .thinking && visualState != .speaking && visualState != .transitioning {
+        if visualState != .thinking
+            && visualState != .speaking
+            && visualState != .transitioning
+            && visualState != .listening
+            && visualState != .success
+            && visualState != .warning {
             visualState = environmentalBaseline()
         }
     }
@@ -241,14 +246,19 @@ extension MercuryBrain {
 
     private func completeRememberInteraction() {
         personality.noteInsight()
-        visualState = .processing
         refreshLivingStatus()
+        visualState = .processing
         stabilizeVisualStateAfterSuccess()
     }
 
     private func evaluateBrokerDecision(intent: Intent, tokens: Int) throws -> ResourcePlan {
         let decision = BrainComposition.brokerDecision(broker, intent: intent, aspect: activeAspect, tokens: tokens)
+        return try enforceBrokerDecision(decision)
+    }
 
+    /// Applies a broker decision. Internal so AppTests can force `.deny`
+    /// (the production broker degrades over-budget turns and never denies).
+    func enforceBrokerDecision(_ decision: IntelligenceBroker.Decision) throws -> ResourcePlan {
         switch decision {
         case .allow(let allowedPlan):
             return allowedPlan

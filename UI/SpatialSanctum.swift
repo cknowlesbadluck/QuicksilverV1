@@ -114,6 +114,7 @@ struct SpatialSanctum: View {
 
                 if showGreeting {
                     greeting
+                        .frame(maxWidth: proxy.size.width - 36)
                         .transition(
                             reduceMotion
                                 ? .opacity
@@ -134,7 +135,6 @@ struct SpatialSanctum: View {
         .animation(MotionTokens.spring(for: activeAspect.rawValue), value: activeAspect)
         .animation(MotionTokens.stabilization, value: visualState)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Quicksilver's Sanctum")
     }
 
     private var topPresence: some View {
@@ -143,11 +143,13 @@ struct SpatialSanctum: View {
                 .fill(accent)
                 .frame(width: 7, height: 7)
                 .shadow(color: accent.opacity(0.8), radius: 4)
+                .accessibilityHidden(true)
 
             Text("SANCTUM")
                 .font(.caption.weight(.semibold))
                 .tracking(1.6)
                 .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
+                .accessibilityLabel("Quicksilver's Sanctum")
 
             Text("·")
                 .foregroundStyle(.tertiary)
@@ -160,12 +162,14 @@ struct SpatialSanctum: View {
 
             Button(action: onInvoke) {
                 Image(systemName: "bubble.left")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.72))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 48, height: 48)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
             .accessibilityLabel("Speak with Quicksilver")
         }
     }
@@ -213,29 +217,31 @@ struct SpatialSanctum: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Mercury realms")
     }
 
     private func spatialArchitecture(in size: CGSize) -> some View {
-        ZStack {
-            Circle()
-                .stroke(
-                    PersonaTheme.mercurySilver.opacity(0.08),
-                    style: StrokeStyle(lineWidth: 1, dash: [3, 12])
-                )
-                .frame(
-                    width: min(size.width * 1.45, 650),
-                    height: min(size.width * 1.45, 650)
-                )
-                .rotationEffect(.degrees(orbit))
+        let diameter = min(size.width * 1.45, 650)
+        return Color.clear
+            .overlay {
+                ZStack {
+                    Circle()
+                        .stroke(
+                            PersonaTheme.mercurySilver.opacity(0.08),
+                            style: StrokeStyle(lineWidth: 1, dash: [3, 12])
+                        )
+                        .frame(width: diameter, height: diameter)
+                        .rotationEffect(.degrees(orbit))
 
-            portalHalo(.workshop, x: 0.12, y: 0.36, size: size)
-            portalHalo(.planetarium, x: 0.86, y: 0.29, size: size)
-            portalHalo(.archive, x: 0.88, y: 0.67, size: size)
-            portalHalo(.codex, x: 0.18, y: 0.72, size: size)
-            portalHalo(.diagnostics, x: 0.50, y: 0.17, size: size)
-        }
-        .allowsHitTesting(false)
+                    portalHalo(.workshop, x: 0.12, y: 0.36, size: size)
+                    portalHalo(.planetarium, x: 0.86, y: 0.29, size: size)
+                    portalHalo(.archive, x: 0.88, y: 0.67, size: size)
+                    portalHalo(.codex, x: 0.18, y: 0.72, size: size)
+                    portalHalo(.diagnostics, x: 0.50, y: 0.17, size: size)
+                }
+                .frame(width: size.width, height: size.height)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 
     private func portalHalo(
@@ -285,11 +291,12 @@ private struct SpatialPortalButton: View {
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
+            .frame(minHeight: 72)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel(destination.title)
+        .accessibilityIdentifier(destination.title)
         .accessibilityHint(destination.subtitle + ". " + destination.quip)
     }
 }
