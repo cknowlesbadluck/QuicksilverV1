@@ -154,7 +154,7 @@ struct SpatialSanctum: View {
                 .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
                 .accessibilityLabel("Quicksilver's Sanctum")
 
-            Text("·")
+            Text("\u00b7")
                 .foregroundStyle(.tertiary)
                 .accessibilityHidden(true)
 
@@ -283,18 +283,22 @@ private struct SpatialPortalButton: View {
                     Image(systemName: destination.symbol)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(destination.accent.opacity(0.92))
+                        .accessibilityHidden(true)
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption2.weight(.medium))
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.78))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 Text(destination.subtitle)
-                    .font(.caption2.weight(.medium))
+                    .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: 72)
