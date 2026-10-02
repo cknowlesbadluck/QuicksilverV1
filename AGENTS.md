@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: M2-T10 full-repo strict SwiftLint in CI (M2-T1..T9 and M2-T11 done; UI smoke + Sanctum a11y audit green under `-uitest`). Device HG CHR-55 stays owner-blocked. Quicksilver Dev owns merges to `main`.
+Current focus: M3-T15 Gateway scaffold (Cloudflare Worker in `gateway/` + Structure npm test). M2 complete including full-repo strict SwiftLint (M2-T10). Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 
