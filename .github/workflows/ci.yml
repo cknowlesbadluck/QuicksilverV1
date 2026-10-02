@@ -80,11 +80,16 @@ jobs:
           xcode-version: latest-stable
 
       - name: Install SwiftLint
-        run: brew install swiftlint || brew upgrade swiftlint || true
+        run: |
+          set -euo pipefail
+          brew list swiftlint >/dev/null 2>&1 || brew install swiftlint
+          command -v swiftlint
+          swiftlint version
 
       - name: Run SwiftLint on full repository
         run: |
           set -euo pipefail
+          # M2-T10: whole-repo --strict (Tests/ excluded via .swiftlint.yml).
           swiftlint lint --reporter github-actions-logging --strict
 
   spm-test:
