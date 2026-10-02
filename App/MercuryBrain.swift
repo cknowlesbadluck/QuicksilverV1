@@ -100,7 +100,7 @@ final class MercuryBrain {
             personality.enterPlainRegister()
         }
 
-        let relevantMemory = retrieveRelevantMemory()
+        let relevantMemory = retrieveRelevantMemory(matching: query)
         // Compose first so broker estimates include core identity, bias, and device context.
         let system = buildSystemPrompt(
             for: config,
@@ -137,11 +137,16 @@ final class MercuryBrain {
     }
 
     /// Ranked memory snapshot for capability reads and diagnostics.
-    func retrieveSnapshot(limit: Int = 5) -> [MemoryItem] {
+    /// Text queries drop the retention floor so a relevant low-importance note can surface.
+    /// Limit stays at 4 on the ask path. No vectors, no cloud.
+    func retrieveSnapshot(limit: Int = 5, text: String? = nil) -> [MemoryItem] {
         let policy = personaManager.activeMemoryPolicy
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasText = !(trimmed ?? "").isEmpty
         let memoryQuery = MemoryQuery(
             personaScope: nil,
-            minimumImportance: policy.retentionThreshold,
+            minimumImportance: hasText ? nil : policy.retentionThreshold,
+            text: hasText ? trimmed : nil,
             limit: limit
         )
         return memoryManager.items(matching: memoryQuery)
@@ -216,7 +221,7 @@ extension MercuryBrain {
 
         personality.recomputeForTurn(aspect: aspect)
         nexus.updatePersonaContext(aspect.rawValue)
-        logger.info("Mercury Brain: aspect → \(aspect.rawValue) [\(reason)]", category: logger.persona)
+        logger.info("Mercury Brain: aspect \u{2192} \(aspect.rawValue) [\(reason)]", category: logger.persona)
 
         if visualState == .thinking || visualState == .idle || force {
             visualState = aspect.defaultVisualState
@@ -312,8 +317,8 @@ extension MercuryBrain {
         }
     }
 
-    private func retrieveRelevantMemory() -> [MemoryItem] {
-        retrieveSnapshot(limit: 5)
+    private func retrieveRelevantMemory(matching text: String? = nil) -> [MemoryItem] {
+        retrieveSnapshot(limit: 4, text: text)
     }
 
     private func buildSystemPrompt(

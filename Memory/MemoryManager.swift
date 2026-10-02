@@ -85,6 +85,7 @@ public final class MemoryManager {
                 personaScope: query.personaScope,
                 minimumImportance: retentionThreshold,
                 keyPrefix: query.keyPrefix,
+                text: query.text,
                 limit: query.limit
             )
         }

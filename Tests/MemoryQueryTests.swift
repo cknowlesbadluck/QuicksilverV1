@@ -40,4 +40,20 @@ final class MemoryQueryTests: XCTestCase {
         XCTAssertEqual(result.count, 2)
         XCTAssertEqual(result[0].importance, 0.9, accuracy: 0.001)
     }
+
+    func testTextQueryRanksMatchingConversationAboveUnrelated() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let match = MemoryItem(key: "turn.side-store", category: .conversation, value: "SideStore refresh failed on device", createdAt: now, updatedAt: now, importance: 0.4)
+        let other = MemoryItem(key: "turn.weather", category: .conversation, value: "Clear skies tomorrow", createdAt: now, updatedAt: now, importance: 0.9)
+        let query = MemoryQuery(text: "SideStore refresh", limit: 1)
+        let ranked = query.apply(to: [other, match], now: now)
+        XCTAssertEqual(ranked.map(\.key), ["turn.side-store"])
+    }
+
+    func testTextQueryDropsZeroOverlap() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let item = MemoryItem(key: "pref.theme", category: .preference, value: "obsidian", createdAt: now, updatedAt: now, importance: 0.8)
+        let ranked = MemoryQuery(text: "sidestore").apply(to: [item], now: now)
+        XCTAssertTrue(ranked.isEmpty)
+    }
 }

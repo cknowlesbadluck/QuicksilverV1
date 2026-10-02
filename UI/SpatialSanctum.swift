@@ -101,7 +101,10 @@ struct SpatialSanctum: View {
                         livingStatus: livingStatus,
                         visualState: visualState
                     )
+                    .frame(minWidth: 44, minHeight: 44)
+                    .contentShape(Rectangle())
                     .onTapGesture { onInvoke() }
+                    .accessibilityElement(children: .ignore)
                     .accessibilityAddTraits(.isButton)
                     .accessibilityLabel("Speak with Quicksilver")
 
@@ -151,8 +154,9 @@ struct SpatialSanctum: View {
                 .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
                 .accessibilityLabel("Quicksilver's Sanctum")
 
-            Text("·")
+            Text("\u{00B7}")
                 .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
 
             Text(visualState.rawValue.uppercased())
                 .font(.caption2.weight(.medium))
@@ -164,13 +168,15 @@ struct SpatialSanctum: View {
                 Image(systemName: "bubble.left")
                     .font(.body.weight(.semibold))
                     .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.72))
-                    .frame(width: 48, height: 48)
+                    .frame(width: 44, height: 44)
+                    .frame(minWidth: 44, minHeight: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityElement(children: .combine)
+            .accessibilityElement(children: .ignore)
             .accessibilityAddTraits(.isButton)
-            .accessibilityLabel("Speak with Quicksilver")
+            .accessibilityLabel("Open conversation")
+            .accessibilityHint("Same action as Speak with Quicksilver")
         }
     }
 
@@ -277,26 +283,36 @@ private struct SpatialPortalButton: View {
                     Image(systemName: destination.symbol)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(destination.accent.opacity(0.92))
+                        .accessibilityHidden(true)
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption2.weight(.medium))
+                    .font(.caption)
                     .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.78))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
 
                 Text(destination.subtitle)
-                    .font(.caption2.weight(.medium))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 72)
+            .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // One control. Subtitle stays visual only. The 20:00 UTC audit failed
+        // because "Forge" was its own StaticText and Dynamic Type treated the
+        // line-limited caption2 as partially unsupported.
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(destination.title)
         .accessibilityIdentifier(destination.title)
-        .accessibilityHint(destination.subtitle + ". " + destination.quip)
+        .accessibilityValue(destination.subtitle)
+        .accessibilityHint(destination.quip)
     }
 }

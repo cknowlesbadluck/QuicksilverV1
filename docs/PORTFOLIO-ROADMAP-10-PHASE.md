@@ -1,18 +1,16 @@
-# Portfolio 10-phase roadmap — 2026-10-01 03:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-01 20:00 EDT
 
-1. Ready-or-refuse on Resonance main — DONE. Live `/api/ready` still 503 on production deploy `6ab8ea11`. `missingRequired` is exactly `SUPABASE_SERVICE_ROLE_KEY`. #139 locked that shape on main `d27ffb42`. Do not invent the secret. Do not Netlify-deploy from this sandbox.
-2. Owner sets / exposes `SUPABASE_SERVICE_ROLE_KEY` on resonancenexus only, then GitHub-backed production redeploy. Exit: `/api/ready` 200. Still open. CHR-54.
-3. Durable `github.repository.read` evidence with deny proofs. Code for bounded reads is on Resonance main after #131. Still needs live `GITHUB_TOKEN` + `GITHUB_WEBHOOK_SECRET`.
-4. Quicksilver device HG CHR-55 on iPhone 16e from green main `22d37ebc` or later. Simulator CI is not acceptance.
-5. Quicksilver code: #198 squashed. Next agent slice is M2-T6 (this branch): Memory load/clear/export, Forge awaken + captureNote, Eternal awaken + captureObservation. P-T4 stays behind M3.5-T4. #193 stays behind main, not merged.
-6. Conduit freeze; repair #119/#120 off current main (`b582429b`) only. Do not merge red. Do not merge #155 until Render TLS env is set.
-7. Conduit #125 keyset pagination — DONE. HTTP `/diagnostics` — DONE live 200. #152 path guard and #156 rate-limiter eviction are on main. `activity_prune` this pass removed 0 rows.
-8. Resonance iOS I1 against a ready host. Blocked by phase 2. #134 stays open, not merged ahead of ready.
-9. Chamber form/work/dissolve with audit. Blocked by phase 2.
-10. Release surface: SideStore evidence, unskip production-smoke, owner prune leftover branches (`docs/hygiene-*`, `codex/*`, `bolt/*`, `counsel/*`, `develop`, `feature/ios-p4-compose-execute-evidence`, `release/0.8.0`). Archive abandoned `cknowlesbadluck/Quicksilver`. No delete-ref tool on this connector.
+Evidence, not intent. Live probes at 20:01 EDT.
 
-## Innovative implementations this pass
+1. QuicksilverV1 is the only intelligence-platform repo. `cknowlesbadluck/Quicksilver` is a stale twin. `mcp` is archived. Do not implement there.
+2. M2-T6 view-model tests are on main. Squashed #200 at fde95967. Do not reopen.
+3. On-device text overlap on the ask path stays on #201. 20:00 UTC UI smoke passed destinations and failed `testSanctumAccessibilityAudit` on Forge StaticText (Dynamic Type partially unsupported). This commit collapses each portal to one button and drops line-limited caption2. Exit: UI smoke and required checks green on the new head, then squash. Do not merge the red head d3726845.
+4. Device HG: archive IPA on iPhone 16e from the commit that contains phase 3. CHR-55. Simulator CI is not acceptance.
+5. Owner sets SUPABASE_SERVICE_ROLE_KEY on resonancenexus only. Exit: GET /api/ready 200. Live at 2026-10-02T00:01:50Z is 503, production, authMode required, missing exactly that key. Do not invent it. Do not switch hosts.
+6. Conduit stays frozen. Live ready is 200, postgres, 0.8.0, boundAgent grok, no binding conflict. Do not merge #119, #120, #155, or #162 while deploy or TLS checks are red or the Render TLS env is unset.
+7. Resonance #141 and #142 stay open. web/ios/gemini are green. github-advanced-security is red on both. Do not squash red required security.
+8. Accessibility and reduced motion. CHR-12. Current slice is the Forge Dynamic Type node, not another portal hit-target tweak.
+9. SideStore install proof of the HG IPA. No proof exists in this pass.
+10. Prune `docs/hygiene-*` branches that are not open PR heads. Hourly audit files stay forbidden.
 
-A. Squashed #198. UI smoke is its own job and green. Main is no longer red.
-B. Squashed #139. Live 503 shape is a contract, not a comment.
-C. M2-T6: blank notes do not write; Forge/Eternal captures stay entity-wide (`personaScope == nil`); awaken is an aspect projection, not a second persona.
+Binding constraints that this pass cannot close: owner secret on Netlify, physical iPhone 16e, Render TLS env before #155/#162.
