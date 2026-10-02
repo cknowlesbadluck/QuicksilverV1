@@ -151,6 +151,19 @@ public final class AIService {
             maxTokens: maxTokens
         )
     }
+
+    /// Throws `.apiKeyMissing` / `.intelligenceDisabled` when a request would not hit the network.
+    /// Used by MercuryBrain offline fast-fail so unbound/disabled guidance wins over airplane mode.
+    public func ensureReadyForNetworkRequest() throws {
+        guard primaryProvider != nil else {
+            logger.info("AI request refused: intelligence unbound", category: logger.ai)
+            throw AppError.apiKeyMissing
+        }
+        guard featureFlags.isEnabled("aiServiceEnabled") else {
+            logger.info("AI request refused: intelligence disabled in the Codex", category: logger.ai)
+            throw AppError.intelligenceDisabled
+        }
+    }
     
     private func execute(
         prompt: String,
@@ -158,13 +171,10 @@ public final class AIService {
         temperature: Double,
         maxTokens: Int
     ) async throws -> AIResponse {
+        try ensureReadyForNetworkRequest()
         guard let provider = primaryProvider else {
-            logger.info("AI request refused: intelligence unbound", category: logger.ai)
+            // Unreachable after ensureReadyForNetworkRequest; keeps type narrowing.
             throw AppError.apiKeyMissing
-        }
-        guard featureFlags.isEnabled("aiServiceEnabled") else {
-            logger.info("AI request refused: intelligence disabled in the Codex", category: logger.ai)
-            throw AppError.intelligenceDisabled
         }
         
         let request = AIRequest(

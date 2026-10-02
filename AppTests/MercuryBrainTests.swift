@@ -63,6 +63,25 @@ final class MercuryBrainTests: XCTestCase {
         XCTAssertEqual(harness.container.brain.visualState, .warning)
     }
 
+    /// Offline must not mask unbound guidance — Ask still points at the Codex.
+    func testAskOfflinePreservesUnboundError() async throws {
+        let harness = try makeHarness(provider: CountingProvider())
+        // Drop any injected/Keychain providers so readiness fails as unbound.
+        _ = harness.container.aiService.configureGrokAPIKey(nil)
+        _ = harness.container.aiService.configureGeminiAPIKey(nil)
+        XCTAssertFalse(harness.container.aiService.isBound)
+        harness.container.nexus.noteNetworkCondition(isConnected: false)
+
+        do {
+            _ = try await harness.container.brain.ask("build a shelf")
+            XCTFail("Expected AppError.apiKeyMissing while unbound+offline")
+        } catch AppError.apiKeyMissing {
+            // expected — bind guidance wins over airplane-mode copy
+        } catch {
+            return XCTFail("Unexpected error: \(error)")
+        }
+    }
+
     func testRememberStoresEntityWideMemory() async throws {
         let harness = try makeHarness(provider: GatedProvider(gate: RequestGate(), reply: "unused"))
         await harness.container.brain.remember("Keep the injection seam small.")
