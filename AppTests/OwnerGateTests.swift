@@ -53,4 +53,47 @@ final class OwnerGateTests: XCTestCase {
         )
         XCTAssertFalse(witness.summary.contains("eyJ"))
     }
+
+    func testFreshWitnessIsStillNotProof() {
+        let observed = ProbeWitness.parse("2026-10-02T14:02:18Z")
+        XCTAssertNotNil(observed)
+        let thirtyMinutesLater = observed!.addingTimeInterval(30 * 60)
+        XCTAssertFalse(OwnerGateBoard.latestProbe.isStale(asOf: thirtyMinutesLater))
+        XCTAssertEqual(OwnerGateBoard.latestProbe.freshnessLabel(asOf: thirtyMinutesLater), "Fresh witness")
+        XCTAssertFalse(OwnerGateBoard.latestProbe.countsAsProof)
+        XCTAssertTrue(OwnerGateBoard.latestProbe.deployLag)
+        XCTAssertFalse(OwnerGateBoard.accepts(OwnerGateBoard.latestProbe.footer(asOf: thirtyMinutesLater)))
+    }
+
+    func testWitnessOlderThanWindowIsStaleAndStillNotProof() {
+        let witness = ProbeWitness(
+            probedAt: "2026-10-02T08:01:44Z",
+            resonanceStatus: "not_ready",
+            missingRequired: ["SUPABASE_SERVICE_ROLE_KEY"],
+            conduitStatus: "ready",
+            conduitVersion: "0.8.0",
+            missingContractFields: ["ownerActionRequired"]
+        )
+        let observed = ProbeWitness.parse(witness.probedAt)
+        XCTAssertNotNil(observed)
+        let pastWindow = observed!.addingTimeInterval(OwnerGateBoard.maxWitnessAge + 60)
+        XCTAssertTrue(witness.isStale(asOf: pastWindow))
+        XCTAssertEqual(witness.freshnessLabel(asOf: pastWindow), "Stale witness")
+        XCTAssertFalse(witness.countsAsProof)
+        XCTAssertFalse(OwnerGateBoard.accepts(witness.footer(asOf: pastWindow)))
+    }
+
+    func testUnparseableTimestampIsStale() {
+        let witness = ProbeWitness(
+            probedAt: "not-a-date",
+            resonanceStatus: "not_ready",
+            missingRequired: ["SUPABASE_SERVICE_ROLE_KEY"],
+            conduitStatus: "ready",
+            conduitVersion: "0.8.0",
+            missingContractFields: []
+        )
+        XCTAssertTrue(witness.isStale(asOf: Date()))
+        XCTAssertFalse(witness.deployLag)
+        XCTAssertFalse(witness.countsAsProof)
+    }
 }
