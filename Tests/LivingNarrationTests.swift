@@ -86,6 +86,19 @@ final class LivingNarrationTests: XCTestCase {
         assertNoAspectSpeaker(reading.text)
     }
 
+    func testOfflineReadingSaysSoEvenWithInsight() {
+        let reading = LivingNarration.reading(
+            insightTitle: "Network lost",
+            healthScore: 20,
+            lowPowerMode: false,
+            networkDisconnected: true
+        )
+        XCTAssertEqual(reading.text, LivingNarration.offlineStatus)
+        XCTAssertEqual(reading.insightTitle, "Network lost")
+        XCTAssertNil(reading.nudge)
+        assertNoAspectSpeaker(reading.text)
+    }
+
     func testIntentAnswerHasNoBracketPrefix() {
         let raw = "Use an actor for the Keychain."
         let presented = LivingNarration.presentIntentAnswer(raw)

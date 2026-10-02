@@ -4,6 +4,7 @@ import Core
 import Memory
 import ServicesAI
 import Nexus
+import Personas
 
 @MainActor
 final class MercuryBrainTests: XCTestCase {
@@ -37,6 +38,28 @@ final class MercuryBrainTests: XCTestCase {
             }
             XCTAssertEqual(reason, "budget exhausted")
         }
+        XCTAssertEqual(harness.container.brain.visualState, .warning)
+    }
+
+    /// M3-T7: when Nexus reports disconnected, ask skips the provider and living status says so.
+    func testAskOfflineFastFailsWithoutNetworkCall() async throws {
+        let probe = CountingProvider()
+        let harness = try makeHarness(provider: probe)
+        harness.container.featureFlags.set("aiServiceEnabled", enabled: true)
+        harness.container.nexus.noteNetworkCondition(isConnected: false)
+        XCTAssertEqual(harness.container.nexus.state.networkStatus, "disconnected")
+
+        do {
+            _ = try await harness.container.brain.ask("build a shelf")
+            XCTFail("Expected AppError.networkUnavailable while offline")
+        } catch AppError.networkUnavailable {
+            // expected
+        } catch {
+            return XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(probe.callCount, 0, "offline ask must not touch the AI provider")
+        XCTAssertEqual(harness.container.brain.livingStatus, LivingNarration.offlineStatus)
         XCTAssertEqual(harness.container.brain.visualState, .warning)
     }
 
@@ -149,6 +172,26 @@ private final class RequestGate: @unchecked Sendable {
         proceedWaiter = nil
         lock.unlock()
         continuation?.resume()
+    }
+}
+
+private final class CountingProvider: AIProvider, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _callCount = 0
+    var callCount: Int {
+        lock.lock(); defer { lock.unlock() }
+        return _callCount
+    }
+
+    let id = "counting"
+    let displayName = "Counting"
+    let isAvailable = true
+
+    func complete(_ request: AIRequest) async throws -> AIResponse {
+        lock.lock()
+        _callCount += 1
+        lock.unlock()
+        return AIResponse(requestID: request.id, content: "should-not-run")
     }
 }
 

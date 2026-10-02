@@ -111,6 +111,16 @@ public final class NexusCoordinator {
         currentPersonaID = personaID
     }
 
+    /// Fold a network condition into `state` (same path as the live monitor).
+    /// Used by AppTests for offline fast-fail (M3-T7) without racing `onChange` Tasks.
+    public func noteNetworkCondition(
+        isConnected: Bool,
+        isExpensive: Bool = false,
+        isConstrained: Bool = false
+    ) {
+        handleNetwork(connected: isConnected, expensive: isExpensive, constrained: isConstrained)
+    }
+
     // MARK: - Persona context sync
 
     /// Keep insight tags aligned with PersonaManager for *all* switch paths
