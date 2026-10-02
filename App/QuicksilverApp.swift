@@ -6,16 +6,11 @@ struct QuicksilverApp: App {
 
     @Environment(\.scenePhase) private var scenePhase
 
-    /// UI smoke launches with `-uitest`. Force Reduce Motion so decorative
-    /// TimelineViews (AmbientLayer, core fluid/chaos) freeze; otherwise
-    /// `performAccessibilityAudit` can hang until XCTest's ~167s timeout.
-    private var isUITesting: Bool {
-        ProcessInfo.processInfo.arguments.contains("-uitest")
-    }
-
     var body: some Scene {
         WindowGroup {
-            sanctumRoot
+            SanctumView()
+                .environment(container)
+                .preferredColorScheme(.dark)
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
                     case .active:
@@ -28,18 +23,6 @@ struct QuicksilverApp: App {
                         break
                     }
                 }
-        }
-    }
-
-    @ViewBuilder
-    private var sanctumRoot: some View {
-        let root = SanctumView()
-            .environment(container)
-            .preferredColorScheme(.dark)
-        if isUITesting {
-            root.environment(\.accessibilityReduceMotion, true)
-        } else {
-            root
         }
     }
 }

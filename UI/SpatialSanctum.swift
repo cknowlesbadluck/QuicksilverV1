@@ -74,6 +74,9 @@ struct SpatialSanctum: View {
     let onInvoke: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Freeze decorative time under Reduce Motion or `-uitest` (CI a11y audit).
+    private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
     @State private var showGreeting = false
     @State private var orbit: Double = 0
 
@@ -119,7 +122,7 @@ struct SpatialSanctum: View {
                     greeting
                         .frame(maxWidth: proxy.size.width - 36)
                         .transition(
-                            reduceMotion
+                            freezeMotion
                                 ? .opacity
                                 : .opacity.combined(with: .scale(scale: 0.96))
                         )
@@ -128,15 +131,15 @@ struct SpatialSanctum: View {
             }
             .onAppear {
                 showGreeting = true
-                if !reduceMotion {
+                if !freezeMotion {
                     withAnimation(MotionTokens.celestialOrbit) {
                         orbit = 360
                     }
                 }
             }
         }
-        .animation(MotionTokens.resolved(MotionTokens.spring(for: activeAspect.rawValue), reduceMotion: reduceMotion), value: activeAspect)
-        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion), value: visualState)
+        .animation(MotionTokens.resolved(MotionTokens.spring(for: activeAspect.rawValue), reduceMotion: freezeMotion), value: activeAspect)
+        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: freezeMotion), value: visualState)
         .accessibilityElement(children: .contain)
     }
 

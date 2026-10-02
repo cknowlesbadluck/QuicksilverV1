@@ -12,6 +12,9 @@ struct QuicksilverCoreView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Freeze decorative time under Reduce Motion or `-uitest` (CI a11y audit).
+    private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
+
     @State private var breath: CGFloat = 1.0
     @State private var orbit: Double = 0
     @State private var turbulence: CGFloat = 0
@@ -43,7 +46,7 @@ struct QuicksilverCoreView: View {
 
             // Controlled-chaos field: sparse orbital fragments establish a
             // spatial grammar without becoming decorative noise.
-            if !reduceMotion {
+            if !freezeMotion {
                 MercuryChaosField(
                     accent: accent,
                     secondary: secondary,
@@ -99,7 +102,7 @@ struct QuicksilverCoreView: View {
                 size: size,
                 brightness: brightness,
                 turbulence: turbulence,
-                reducedMotion: reduceMotion
+                reducedMotion: freezeMotion
             )
             .scaleEffect(breath)
 
@@ -131,7 +134,7 @@ struct QuicksilverCoreView: View {
     }
 
     private func startMotion() {
-        guard !reduceMotion else {
+        guard !freezeMotion else {
             breath = 1.0
             haloScale = 1.0
             turbulence = 0
