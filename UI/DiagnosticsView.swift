@@ -89,7 +89,8 @@ struct DiagnosticsView: View {
         } header: {
             Text("Owner gates")
         } footer: {
-            Text("None of these are proven on this device. A green simulator job is not an archive.")
+            Text(OwnerGateBoard.latestProbe.summary)
+                .accessibilityLabel(OwnerGateBoard.latestProbe.summary)
         }
     }
 
