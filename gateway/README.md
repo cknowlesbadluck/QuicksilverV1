@@ -6,6 +6,14 @@ gateway URL + device token only; provider keys live here (never in the iOS app).
 This directory is the **M3-T15 scaffold**: `GET /v1/health` and CI unit tests.
 Auth, budgets, streaming, and provider adapters land in M3-T16–T20.
 
+## Route policy (fail closed)
+
+- Only `GET /v1/health` is allowed.
+- Query string, fragment, and userinfo return 400. A device token must not ride in the URL.
+- Other methods on the health path return 405.
+- Every other path returns 404 and the body does not echo the path.
+- Workers Logs stay metadata-only. Do not log request or response bodies.
+
 ## Constraints (owner decisions)
 
 - **Free tier only.** No paid Cloudflare products. No payment method on the account.
@@ -42,7 +50,7 @@ Agents must not run these steps. Christopher:
    ```bash
    curl -sS "https://mercury-gateway.<subdomain>.workers.dev/v1/health"
    ```
-   Expect `{"ok":true,"service":"mercury-gateway"}`.
+   Expect `{"ok":true,"service":"mercury-gateway","route":"health"}`.
 
 Secrets (`DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, …) are **HG3**, not this gate.
 
@@ -50,7 +58,7 @@ Secrets (`DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, …) are **HG3**, not
 
 | Path | Role |
 |---|---|
-| `src/index.ts` | Fetch handler (`GET /v1/health`) |
+| `src/index.ts` | Fetch handler and fail-closed route policy |
 | `test/health.test.ts` | Vitest coverage (no network) |
 | `wrangler.toml` | Free-tier Worker config + metadata-only observability |
 | `package.json` | `npm test` → Vitest |
