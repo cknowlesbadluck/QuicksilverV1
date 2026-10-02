@@ -13,6 +13,10 @@ enum PersonaTheme {
     static let toxicGreen = Color(red: 0.220, green: 0.949, blue: 0.353)
     static let hazardGreen = Color(red: 0.086, green: 0.639, blue: 0.290)
     static let mercurySilver = Color(red: 0.784, green: 0.800, blue: 0.831)
+    /// Body copy on void. Full silver stays above WCAG AA for caption text.
+    static let readableText = mercurySilver
+    /// Secondary copy. Still above the 0.55 opacity that failed the Sanctum audit.
+    static let readableSecondary = Color(red: 0.910, green: 0.918, blue: 0.935)
 
     // Controlled-chaos material language.
     static let chaosBlack = Color(red: 0.006, green: 0.008, blue: 0.012)

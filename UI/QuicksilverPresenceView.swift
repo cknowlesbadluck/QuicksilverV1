@@ -19,6 +19,7 @@ struct QuicksilverPresenceView: View {
             )
             .frame(height: 246)
             .contentShape(Rectangle())
+            .accessibilityHidden(true)
 
             VStack(spacing: 6) {
                 Text(presenceTitle)
@@ -28,7 +29,7 @@ struct QuicksilverPresenceView: View {
 
                 Text(livingStatus)
                     .font(.subheadline)
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.62))
+                    .foregroundStyle(PersonaTheme.readableSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
             }
