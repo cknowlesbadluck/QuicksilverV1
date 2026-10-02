@@ -32,6 +32,8 @@ public enum LivingNarration {
 
     /// Default presence line before Nexus has spoken.
     public static let defaultStatus = "Mercury is here. Restless, as ever."
+    /// Presence line when Nexus reports disconnected (M3-T7).
+    public static let offlineStatus = "I'm offline — no network path right now."
 
     /// Formats an App Intent / Shortcuts ask result. Never prefixes `[Aspect]`.
     public static func presentIntentAnswer(_ answer: String) -> String {
@@ -42,8 +44,17 @@ public enum LivingNarration {
     public static func reading(
         insightTitle: String?,
         healthScore: Int,
-        lowPowerMode: Bool
+        lowPowerMode: Bool,
+        networkDisconnected: Bool = false
     ) -> Reading {
+        // Offline wins over insights so Ask / presence always say why the network path is closed.
+        if networkDisconnected {
+            return Reading(
+                text: offlineStatus,
+                insightTitle: insightTitle,
+                nudge: nil
+            )
+        }
         if let insightTitle, !insightTitle.isEmpty {
             return Reading(text: insightTitle, insightTitle: insightTitle, nudge: nil)
         }

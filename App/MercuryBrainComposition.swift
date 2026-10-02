@@ -19,7 +19,8 @@ enum BrainComposition {
         LivingNarration.reading(
             insightTitle: state.recentInsights.first?.title,
             healthScore: state.overallHealthScore,
-            lowPowerMode: state.lowPowerMode
+            lowPowerMode: state.lowPowerMode,
+            networkDisconnected: state.networkStatus == "disconnected"
         )
     }
 

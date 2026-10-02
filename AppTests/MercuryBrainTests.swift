@@ -4,6 +4,7 @@ import Core
 import Memory
 import ServicesAI
 import Nexus
+import Personas
 
 @MainActor
 final class MercuryBrainTests: XCTestCase {
@@ -38,6 +39,48 @@ final class MercuryBrainTests: XCTestCase {
             XCTAssertEqual(reason, "budget exhausted")
         }
         XCTAssertEqual(harness.container.brain.visualState, .warning)
+    }
+
+    /// M3-T7: when Nexus reports disconnected, ask skips the provider and living status says so.
+    func testAskOfflineFastFailsWithoutNetworkCall() async throws {
+        let probe = CountingProvider()
+        let harness = try makeHarness(provider: probe)
+        harness.container.featureFlags.set("aiServiceEnabled", enabled: true)
+        harness.container.nexus.noteNetworkCondition(isConnected: false)
+        XCTAssertEqual(harness.container.nexus.state.networkStatus, "disconnected")
+
+        do {
+            _ = try await harness.container.brain.ask("build a shelf")
+            XCTFail("Expected AppError.networkUnavailable while offline")
+        } catch AppError.networkUnavailable {
+            // expected
+        } catch {
+            return XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(probe.callCount, 0, "offline ask must not touch the AI provider")
+        XCTAssertEqual(harness.container.brain.livingStatus, LivingNarration.offlineStatus)
+        // Offline fast-fail does not enter `.thinking` / `.warning`.
+        XCTAssertNotEqual(harness.container.brain.visualState, .thinking)
+    }
+
+    /// Offline must not mask unbound guidance — Ask still points at the Codex.
+    func testAskOfflinePreservesUnboundError() async throws {
+        ViewModelTestSupport.isolateProviderKeychain(testCase: self)
+        let harness = try makeHarness(provider: CountingProvider())
+        // Clear injected providers without leaving Keychain unrestored (teardown restores).
+        harness.container.aiService.clearAllAPIKeys()
+        XCTAssertFalse(harness.container.aiService.isBound)
+        harness.container.nexus.noteNetworkCondition(isConnected: false)
+
+        do {
+            _ = try await harness.container.brain.ask("build a shelf")
+            XCTFail("Expected AppError.apiKeyMissing while unbound+offline")
+        } catch AppError.apiKeyMissing {
+            // expected — bind guidance wins over airplane-mode copy
+        } catch {
+            return XCTFail("Unexpected error: \(error)")
+        }
     }
 
     func testRememberStoresEntityWideMemory() async throws {
@@ -149,6 +192,27 @@ private final class RequestGate: @unchecked Sendable {
         proceedWaiter = nil
         lock.unlock()
         continuation?.resume()
+    }
+}
+
+private final class CountingProvider: AIProvider, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _callCount = 0
+    var callCount: Int {
+        lock.withLock { _callCount }
+    }
+
+    let id = "counting"
+    let displayName = "Counting"
+    let isAvailable = true
+
+    private func recordCall() {
+        lock.withLock { _callCount += 1 }
+    }
+
+    func complete(_ request: AIRequest) async throws -> AIResponse {
+        recordCall()
+        return AIResponse(requestID: request.id, content: "should-not-run")
     }
 }
 

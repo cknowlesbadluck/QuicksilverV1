@@ -65,6 +65,16 @@ final class MercuryBrain {
     func ask(_ query: String) async throws -> String {
         personaManager.recordInteraction()
 
+        // M3-T7: offline fast-fail — skip gateway/network entirely while disconnected.
+        // After M3.5-T3 this routes on-device; until then throw `.networkUnavailable`.
+        // Unbound / disabled still win so Ask keeps bind/wake guidance (no network needed).
+        // Living status carries the offline signal; no `.warning` latch / settle timer.
+        if nexus.state.networkStatus == "disconnected" {
+            try aiService.ensureReadyForNetworkRequest()
+            refreshLivingStatus()
+            throw AppError.networkUnavailable
+        }
+
         // Mask slip (P-T5): evaluate register from pre-turn VisualState + Nexus
         // severity BEFORE moving to `.thinking`, so `.critical` is still visible.
         let intent = intentEngine.classify(query)
