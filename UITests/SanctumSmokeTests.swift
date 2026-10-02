@@ -6,6 +6,8 @@ final class SanctumSmokeTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        // `-uitest` also forces Reduce Motion in QuicksilverApp so Sanctum
+        // TimelineViews freeze; otherwise performAccessibilityAudit can hang.
         app.launchArguments = ["-uitest"]
         // Xcode 26 launch() terminates the previous process first. After
         // testPrimarySanctumDestinationsOpenAndDismiss passed (87s), the next
@@ -58,6 +60,8 @@ final class SanctumSmokeTests: XCTestCase {
     func testSanctumAccessibilityAudit() throws {
         returnToSanctumIfNeeded()
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
+        // Sanctum portals and Speak with Quicksilver must be idle before audit.
+        // Decorative motion is frozen via -uitest → Reduce Motion in the app.
         try app.performAccessibilityAudit { issue in
             print(
                 "AUDIT compact=\(issue.compactDescription) "
