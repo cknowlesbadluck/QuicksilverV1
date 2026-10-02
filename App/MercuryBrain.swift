@@ -70,6 +70,9 @@ final class MercuryBrain {
         if nexus.state.networkStatus == "disconnected" {
             visualState = .warning
             refreshLivingStatus()
+            // Don't latch `.warning` forever — settle like a finished turn so a later
+            // reconnect / refreshLivingStatus isn't stuck behind the offline flash.
+            stabilizeVisualStateAfterOffline()
             throw AppError.networkUnavailable
         }
 
@@ -320,6 +323,16 @@ extension MercuryBrain {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(600))
             if visualState == .success || visualState == .processing {
+                visualState = environmentalBaseline()
+            }
+        }
+    }
+
+    /// Clears the brief offline `.warning` so reconnect / living refresh can take over.
+    private func stabilizeVisualStateAfterOffline() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            if visualState == .warning {
                 visualState = environmentalBaseline()
             }
         }

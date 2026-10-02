@@ -179,8 +179,7 @@ private final class CountingProvider: AIProvider, @unchecked Sendable {
     private let lock = NSLock()
     private var _callCount = 0
     var callCount: Int {
-        lock.lock(); defer { lock.unlock() }
-        return _callCount
+        lock.withLock { _callCount }
     }
 
     let id = "counting"
@@ -188,9 +187,7 @@ private final class CountingProvider: AIProvider, @unchecked Sendable {
     let isAvailable = true
 
     private func recordCall() {
-        lock.lock()
-        _callCount += 1
-        lock.unlock()
+        lock.withLock { _callCount += 1 }
     }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
