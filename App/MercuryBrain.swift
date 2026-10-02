@@ -37,8 +37,6 @@ final class MercuryBrain {
     /// Latched conversational register. Resets to `.playful` on a new Brain session.
     private(set) var activeRegister: Register = .playful
     private var lastAspectChangeAt: Date?
-    /// Bumped each offline settle so a stale timer cannot clear a newer `.warning`.
-    private var offlineStabilizeGeneration = 0
 
     init(
         personaManager: PersonaManager,
@@ -70,13 +68,10 @@ final class MercuryBrain {
         // M3-T7: offline fast-fail — skip gateway/network entirely while disconnected.
         // After M3.5-T3 this routes on-device; until then throw `.networkUnavailable`.
         // Unbound / disabled still win so Ask keeps bind/wake guidance (no network needed).
+        // Living status carries the offline signal; no `.warning` latch / settle timer.
         if nexus.state.networkStatus == "disconnected" {
             try aiService.ensureReadyForNetworkRequest()
-            visualState = .warning
             refreshLivingStatus()
-            // Don't latch `.warning` forever — settle like a finished turn so a later
-            // reconnect / refreshLivingStatus isn't stuck behind the offline flash.
-            stabilizeVisualStateAfterOffline()
             throw AppError.networkUnavailable
         }
 
@@ -327,19 +322,6 @@ extension MercuryBrain {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(600))
             if visualState == .success || visualState == .processing {
-                visualState = environmentalBaseline()
-            }
-        }
-    }
-
-    /// Clears the brief offline `.warning` so reconnect / living refresh can take over.
-    private func stabilizeVisualStateAfterOffline() {
-        offlineStabilizeGeneration += 1
-        let generation = offlineStabilizeGeneration
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(600))
-            guard generation == offlineStabilizeGeneration else { return }
-            if visualState == .warning {
                 visualState = environmentalBaseline()
             }
         }

@@ -60,15 +60,16 @@ final class MercuryBrainTests: XCTestCase {
 
         XCTAssertEqual(probe.callCount, 0, "offline ask must not touch the AI provider")
         XCTAssertEqual(harness.container.brain.livingStatus, LivingNarration.offlineStatus)
-        XCTAssertEqual(harness.container.brain.visualState, .warning)
+        // Offline fast-fail does not enter `.thinking` / `.warning`.
+        XCTAssertNotEqual(harness.container.brain.visualState, .thinking)
     }
 
     /// Offline must not mask unbound guidance — Ask still points at the Codex.
     func testAskOfflinePreservesUnboundError() async throws {
+        ViewModelTestSupport.isolateProviderKeychain(testCase: self)
         let harness = try makeHarness(provider: CountingProvider())
-        // Drop any injected/Keychain providers so readiness fails as unbound.
-        _ = harness.container.aiService.configureGrokAPIKey(nil)
-        _ = harness.container.aiService.configureGeminiAPIKey(nil)
+        // Clear injected providers without leaving Keychain unrestored (teardown restores).
+        harness.container.aiService.clearAllAPIKeys()
         XCTAssertFalse(harness.container.aiService.isBound)
         harness.container.nexus.noteNetworkCondition(isConnected: false)
 
