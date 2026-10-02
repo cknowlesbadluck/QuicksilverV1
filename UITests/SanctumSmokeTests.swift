@@ -6,12 +6,16 @@ final class SanctumSmokeTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        // `-uitest` freezes Sanctum decorative TimelineViews in-app;
+        // otherwise performAccessibilityAudit can hang (~167s timeout).
         app.launchArguments = ["-uitest"]
         // Xcode 26 launch() terminates the previous process first. After
         // testPrimarySanctumDestinationsOpenAndDismiss passed (87s), the next
         // launch failed with "Failed to terminate com.quicksilver.app:0" and
         // the job exited 65. The destinations themselves were fine.
         // Reuse the running process. The destination test returns to Sanctum.
+        // CI UI Smoke is an isolated job, so the first contact is always launch()
+        // with `-uitest` (launchArguments only apply to launch, not activate).
         if app.state == .notRunning {
             app.launch()
         } else {
@@ -58,6 +62,8 @@ final class SanctumSmokeTests: XCTestCase {
     func testSanctumAccessibilityAudit() throws {
         returnToSanctumIfNeeded()
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
+        // Sanctum portals and Speak with Quicksilver must be idle before audit.
+        // Decorative motion is frozen via -uitest in AmbientLayer/core/Sanctum.
         try app.performAccessibilityAudit { issue in
             print(
                 "AUDIT compact=\(issue.compactDescription) "

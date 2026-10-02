@@ -10,6 +10,9 @@ struct AmbientLayer: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Freeze decorative time under Reduce Motion or `-uitest` (CI a11y audit).
+    private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
+
     private var intensity: Double {
         PersonaTheme.ambientIntensity(for: personaID) * visualState.ambientEnergy
     }
@@ -17,9 +20,9 @@ struct AmbientLayer: View {
     var body: some View {
         // Decorative field. The accessibility audit samples it as an
         // AccessibilityNode and fails contrast on the low-opacity traces.
-        // Reduce Motion must also freeze time. An 8fps TimelineView is still motion.
+        // Reduce Motion / UITest must freeze time. An 8fps TimelineView is still motion.
         Group {
-            if reduceMotion {
+            if freezeMotion {
                 ambientCanvas(at: 0)
             } else {
                 TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
@@ -30,15 +33,15 @@ struct AmbientLayer: View {
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .animation(MotionTokens.resolved(MotionTokens.environmentalWake, reduceMotion: reduceMotion), value: personaID)
-        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion), value: visualState)
+        .animation(MotionTokens.resolved(MotionTokens.environmentalWake, reduceMotion: freezeMotion), value: personaID)
+        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: freezeMotion), value: visualState)
     }
 
     private func ambientCanvas(at time: TimeInterval) -> some View {
         let accent = PersonaTheme.accent(for: personaID)
         let secondary = PersonaTheme.secondaryAccent(for: personaID)
         let baseCount = Int(10 + intensity * 20)
-        let particleCount = reduceMotion
+        let particleCount = freezeMotion
             ? max(4, baseCount / 3)
             : Int(Double(baseCount) * visualState.particleMultiplier)
         return Canvas { context, size in

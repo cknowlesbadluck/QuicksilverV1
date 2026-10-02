@@ -10,6 +10,8 @@ struct QuicksilverPresenceView: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
+
     var body: some View {
         VStack(spacing: 14) {
             QuicksilverCoreView(
@@ -37,11 +39,11 @@ struct QuicksilverPresenceView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 2)
         .animation(
-            MotionTokens.resolved(PersonaTheme.spring(for: personaID), reduceMotion: reduceMotion),
+            MotionTokens.resolved(PersonaTheme.spring(for: personaID), reduceMotion: freezeMotion),
             value: personaID
         )
         .animation(
-            MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion),
+            MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: freezeMotion),
             value: visualState
         )
     }
