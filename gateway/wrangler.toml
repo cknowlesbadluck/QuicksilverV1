@@ -12,6 +12,8 @@ workers_dev = true
 [observability]
 enabled = true
 head_sampling_rate = 1
+# Strip query strings from logged request URLs (metadata-only contract).
+redact_query_string = true
 
 [observability.logs]
 invocation_logs = true
