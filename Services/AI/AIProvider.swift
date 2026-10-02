@@ -6,7 +6,7 @@ import Core
 //
 // MockAIProvider is for unit tests and SwiftUI previews only. AIService never selects it:
 // with no bound key, requests throw `AppError.apiKeyMissing` (the "Intelligence unbound" state, M1-T3).
-// Production code must not inject it.
+// Production code must not inject it. Streaming uses the AIProvider default (complete → meta/delta/done).
 
 public struct MockAIProvider: AIProvider {
     public let id = "mock"

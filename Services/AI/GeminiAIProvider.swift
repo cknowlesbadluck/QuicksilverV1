@@ -21,7 +21,10 @@ struct GeminiAIProvider: AIProvider {
     }
     
     var isAvailable: Bool { !apiKey.isEmpty }
-    
+    /// Free AI Studio / unpaid Gemini tier trains on prompts (Owner decision 8).
+    var modelIdentifier: String { model }
+    var trainsOnPrompts: Bool { true }
+
     func complete(_ request: AIRequest) async throws -> AIResponse {
         try Task.checkCancellation()
         let data = try await performRequest(request)

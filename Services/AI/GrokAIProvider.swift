@@ -31,7 +31,9 @@ struct GrokAIProvider: AIProvider {
     }
     
     var isAvailable: Bool { !apiKey.isEmpty }
-    
+    var modelIdentifier: String { model }
+    var trainsOnPrompts: Bool { false }
+
     func complete(_ request: AIRequest) async throws -> AIResponse {
         try Task.checkCancellation()
         let data = try await performRequest(request)

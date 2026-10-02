@@ -13,7 +13,7 @@ public struct AIResponse: Sendable, Identifiable {
         case stop, length, error, cancelled
     }
 
-    public struct Usage: Sendable {
+    public struct Usage: Sendable, Equatable {
         public let promptTokens: Int
         public let completionTokens: Int
         public var totalTokens: Int { promptTokens + completionTokens }
