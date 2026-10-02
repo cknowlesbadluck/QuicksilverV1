@@ -187,10 +187,14 @@ private final class CountingProvider: AIProvider, @unchecked Sendable {
     let displayName = "Counting"
     let isAvailable = true
 
-    func complete(_ request: AIRequest) async throws -> AIResponse {
+    private func recordCall() {
         lock.lock()
         _callCount += 1
         lock.unlock()
+    }
+
+    func complete(_ request: AIRequest) async throws -> AIResponse {
+        recordCall()
         return AIResponse(requestID: request.id, content: "should-not-run")
     }
 }
