@@ -50,7 +50,7 @@ Agents must not run these steps. Christopher:
    ```bash
    curl -sS "https://mercury-gateway.<subdomain>.workers.dev/v1/health"
    ```
-   Expect `{"ok":true,"service":"mercury-gateway","route":"health"}`.
+   Expect `{"ok":true,"service":"mercury-gateway"}`.
 
 Secrets (`DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, …) are **HG3**, not this gate.
 

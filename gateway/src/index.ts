@@ -49,7 +49,7 @@ export function handleRequest(request: Request): Response {
   }
 
   return Response.json(
-    { ok: true, service: "mercury-gateway", route: "health" },
+    { ok: true, service: "mercury-gateway" },
     {
       status: 200,
       headers: { "cache-control": "no-store" },

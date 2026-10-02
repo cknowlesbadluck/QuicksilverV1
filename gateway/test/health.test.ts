@@ -14,7 +14,6 @@ describe("GET /v1/health", () => {
     await expect(response.json()).resolves.toEqual({
       ok: true,
       service: "mercury-gateway",
-      route: "health",
     });
   });
 
@@ -46,19 +45,22 @@ describe("GET /v1/health", () => {
     expect(response.status).toBe(400);
   });
 
-  it("rejects fragments and userinfo", () => {
+  it("rejects fragments", () => {
     const fragment = handleRequest(
       new Request("https://mercury-gateway.example/v1/health#token", {
         method: "GET",
       }),
     );
     expect(fragment.status).toBe(400);
+  });
 
-    const userinfo = handleRequest(
-      new Request("https://device:token@mercury-gateway.example/v1/health", {
-        method: "GET",
-      }),
-    );
+  // Fetch Request forbids credentialed URLs (throws before the handler runs).
+  // Exercise the userinfo guard with a minimal { url, method } stand-in.
+  it("rejects userinfo", () => {
+    const userinfo = handleRequest({
+      url: "https://device:token@mercury-gateway.example/v1/health",
+      method: "GET",
+    } as Request);
     expect(userinfo.status).toBe(400);
   });
 });
