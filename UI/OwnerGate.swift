@@ -24,20 +24,48 @@ struct OwnerGate: Equatable, Identifiable, Sendable {
     }
 }
 
+/// A live probe snapshot. It names missing configuration. It is never proof.
+struct ProbeWitness: Equatable, Sendable {
+    let probedAt: String
+    let resonanceStatus: String
+    let missingRequired: [String]
+    let conduitStatus: String
+    let conduitVersion: String
+
+    var countsAsProof: Bool { false }
+
+    var summary: String {
+        let missing = missingRequired.isEmpty ? "none" : missingRequired.joined(separator: ", ")
+        return "Probe \(probedAt): Resonance \(resonanceStatus), missing \(missing). Conduit \(conduitVersion) \(conduitStatus). Not proof."
+    }
+}
+
 enum OwnerGateBoard {
     /// Tokens that must never count as ship proof. A green simulator job is not an archive.
     static let rejectedEvidenceTokens = [
         "simulator",
         "github actions",
         "ci green",
-        "not acceptance"
+        "not acceptance",
+        "not proof",
+        "probe "
     ]
+
+    /// 04:00 EDT 2026-10-02 live probes. Names only. No secret values.
+    static let latestProbe = ProbeWitness(
+        probedAt: "2026-10-02T08:01:44Z",
+        resonanceStatus: "not_ready",
+        missingRequired: ["SUPABASE_SERVICE_ROLE_KEY"],
+        conduitStatus: "ready",
+        conduitVersion: "0.8.0"
+    )
 
     static func accepts(_ raw: String?) -> Bool {
         guard let raw else { return false }
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty { return false }
         let lowered = trimmed.lowercased()
+        if lowered == latestProbe.summary.lowercased() { return false }
         return !rejectedEvidenceTokens.contains { lowered.contains($0) }
     }
 

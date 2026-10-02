@@ -39,4 +39,18 @@ final class OwnerGateTests: XCTestCase {
         XCTAssertEqual(board.first { $0.id == .conduitTls }?.proven, false)
         XCTAssertEqual(OwnerGateBoard.provenCount(evidence: evidence), 1)
     }
+
+    func testLiveProbeWitnessIsContextNotProof() {
+        let witness = OwnerGateBoard.latestProbe
+        XCTAssertFalse(witness.countsAsProof)
+        XCTAssertEqual(witness.resonanceStatus, "not_ready")
+        XCTAssertEqual(witness.missingRequired, ["SUPABASE_SERVICE_ROLE_KEY"])
+        XCTAssertEqual(witness.conduitVersion, "0.8.0")
+        XCTAssertFalse(OwnerGateBoard.accepts(witness.summary))
+        XCTAssertEqual(
+            OwnerGateBoard.provenCount(evidence: [.resonanceServiceRole: witness.summary]),
+            0
+        )
+        XCTAssertFalse(witness.summary.contains("eyJ"))
+    }
 }
