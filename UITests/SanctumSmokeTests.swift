@@ -3,7 +3,8 @@ import XCTest
 final class SanctumSmokeTests: XCTestCase {
     private var app: XCUIApplication!
     /// One cold `-uitest` launch per suite. Later tests reuse that process.
-    private static var suiteLaunched = false
+    /// XCTest runs these serially; nonisolated(unsafe) satisfies Swift 6.
+    private nonisolated(unsafe) static var suiteLaunched = false
 
     override func setUpWithError() throws {
         continueAfterFailure = false
