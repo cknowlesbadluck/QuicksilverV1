@@ -74,3 +74,9 @@ coverage.json
 # Local integration-plane state must never enter source control
 Quicksilver/Integration/tasks.json
 Quicksilver/Integration/events.json
+
+# Mercury Gateway (Cloudflare Worker)
+gateway/node_modules/
+gateway/.wrangler/
+gateway/dist/
+gateway/coverage/
