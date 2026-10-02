@@ -2,9 +2,6 @@ import XCTest
 
 final class SanctumSmokeTests: XCTestCase {
     private var app: XCUIApplication!
-    /// One cold `-uitest` launch per suite. Later tests reuse that process.
-    /// XCTest runs these serially; nonisolated(unsafe) satisfies Swift 6.
-    private nonisolated(unsafe) static var suiteLaunched = false
 
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -12,20 +9,16 @@ final class SanctumSmokeTests: XCTestCase {
         // `-uitest` freezes Sanctum decorative TimelineViews in-app;
         // otherwise performAccessibilityAudit can hang (~167s timeout).
         app.launchArguments = ["-uitest"]
-
-        if !Self.suiteLaunched {
-            // Ensure the process we audit was started with `-uitest`.
-            // launchArguments only apply to launch(), not activate().
-            if app.state != .notRunning {
-                app.terminate()
-            }
+        // Xcode 26 launch() terminates the previous process first. After
+        // testPrimarySanctumDestinationsOpenAndDismiss passed (87s), the next
+        // launch failed with "Failed to terminate com.quicksilver.app:0" and
+        // the job exited 65. The destinations themselves were fine.
+        // Reuse the running process. The destination test returns to Sanctum.
+        // CI UI Smoke is an isolated job, so the first contact is always launch()
+        // with `-uitest` (launchArguments only apply to launch, not activate).
+        if app.state == .notRunning {
             app.launch()
-            Self.suiteLaunched = true
         } else {
-            // Xcode 26 launch() terminates the previous process first. After
-            // the destination smoke passed, a second launch failed with
-            // "Failed to terminate com.quicksilver.app:0" and the job exited 65.
-            // Reuse the already-configured -uitest process.
             app.activate()
             returnToSanctumIfNeeded()
         }

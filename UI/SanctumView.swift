@@ -30,7 +30,11 @@ struct SanctumView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear { viewModel?.startLiveRefresh() }
+        .onAppear {
+            // Event-driven Nexus refresh churns the a11y tree under UI tests.
+            guard !UITestLaunch.isActive else { return }
+            viewModel?.startLiveRefresh()
+        }
         .onDisappear { viewModel?.stopLiveRefresh() }
         .sheet(isPresented: $showAsk) {
             NavigationStack { AskView() }
