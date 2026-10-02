@@ -15,16 +15,33 @@ struct AmbientLayer: View {
     }
 
     var body: some View {
+        // Decorative field. The accessibility audit samples it as an
+        // AccessibilityNode and fails contrast on the low-opacity traces.
+        // Reduce Motion must also freeze time. An 8fps TimelineView is still motion.
+        Group {
+            if reduceMotion {
+                ambientCanvas(at: 0)
+            } else {
+                TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
+                    ambientCanvas(at: timeline.date.timeIntervalSinceReferenceDate)
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .animation(MotionTokens.resolved(MotionTokens.environmentalWake, reduceMotion: reduceMotion), value: personaID)
+        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion), value: visualState)
+    }
+
+    private func ambientCanvas(at time: TimeInterval) -> some View {
         let accent = PersonaTheme.accent(for: personaID)
         let secondary = PersonaTheme.secondaryAccent(for: personaID)
         let baseCount = Int(10 + intensity * 20)
         let particleCount = reduceMotion
             ? max(4, baseCount / 3)
             : Int(Double(baseCount) * visualState.particleMultiplier)
-
-        TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
-            Canvas { context, size in
-                let time = timeline.date.timeIntervalSinceReferenceDate
+        return Canvas { context, size in
                 let center = CGPoint(x: size.width * 0.5, y: size.height * 0.42)
 
                 // Stable particle seeds make the chaos feel like a persistent environment.
@@ -91,11 +108,6 @@ struct AmbientLayer: View {
                         endRadius: glowRadius
                     )
                 )
-            }
         }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .animation(MotionTokens.environmentalWake, value: personaID)
-        .animation(MotionTokens.stabilization, value: visualState)
     }
 }

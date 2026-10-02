@@ -135,8 +135,8 @@ struct SpatialSanctum: View {
                 }
             }
         }
-        .animation(MotionTokens.spring(for: activeAspect.rawValue), value: activeAspect)
-        .animation(MotionTokens.stabilization, value: visualState)
+        .animation(MotionTokens.resolved(MotionTokens.spring(for: activeAspect.rawValue), reduceMotion: reduceMotion), value: activeAspect)
+        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion), value: visualState)
         .accessibilityElement(children: .contain)
     }
 
@@ -151,16 +151,17 @@ struct SpatialSanctum: View {
             Text("SANCTUM")
                 .font(.caption.weight(.semibold))
                 .tracking(1.6)
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.82))
+                .foregroundStyle(PersonaTheme.readableText)
                 .accessibilityLabel("Quicksilver's Sanctum")
 
             Text("\u{00B7}")
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(PersonaTheme.readableSecondary)
                 .accessibilityHidden(true)
 
             Text(visualState.rawValue.uppercased())
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.55))
+                .foregroundStyle(PersonaTheme.readableSecondary)
+                .accessibilityHidden(true)
 
             Spacer()
 
@@ -188,7 +189,7 @@ struct SpatialSanctum: View {
 
             Text(greetingPrompt)
                 .font(.subheadline)
-                .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.66))
+                .foregroundStyle(PersonaTheme.readableSecondary)
         }
         .multilineTextAlignment(.center)
         .padding(.horizontal, 30)

@@ -8,6 +8,8 @@ struct QuicksilverPresenceView: View {
     let livingStatus: String
     var visualState: VisualState = .idle
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         VStack(spacing: 14) {
             QuicksilverCoreView(
@@ -17,6 +19,7 @@ struct QuicksilverPresenceView: View {
             )
             .frame(height: 246)
             .contentShape(Rectangle())
+            .accessibilityHidden(true)
 
             VStack(spacing: 6) {
                 Text(presenceTitle)
@@ -26,15 +29,21 @@ struct QuicksilverPresenceView: View {
 
                 Text(livingStatus)
                     .font(.subheadline)
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.62))
+                    .foregroundStyle(PersonaTheme.readableSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 2)
-        .animation(PersonaTheme.spring(for: personaID), value: personaID)
-        .animation(MotionTokens.stabilization, value: visualState)
+        .animation(
+            MotionTokens.resolved(PersonaTheme.spring(for: personaID), reduceMotion: reduceMotion),
+            value: personaID
+        )
+        .animation(
+            MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion),
+            value: visualState
+        )
     }
 
     private var presenceTitle: String {
