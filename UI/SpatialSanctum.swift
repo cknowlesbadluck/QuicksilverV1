@@ -287,26 +287,32 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption.weight(.medium))
+                    .font(.caption)
                     .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.78))
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
 
                 Text(destination.subtitle)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 72)
+            .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // One control. Subtitle stays visual only. The 20:00 UTC audit failed
+        // because "Forge" was its own StaticText and Dynamic Type treated the
+        // line-limited caption2 as partially unsupported.
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
         .accessibilityLabel(destination.title)
         .accessibilityIdentifier(destination.title)
-        .accessibilityHint(destination.subtitle + ". " + destination.quip)
+        .accessibilityValue(destination.subtitle)
+        .accessibilityHint(destination.quip)
     }
 }
