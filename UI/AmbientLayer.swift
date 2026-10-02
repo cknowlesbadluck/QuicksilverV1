@@ -95,7 +95,7 @@ struct AmbientLayer: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-        .animation(MotionTokens.environmentalWake, value: personaID)
-        .animation(MotionTokens.stabilization, value: visualState)
+        .animation(MotionTokens.resolved(MotionTokens.environmentalWake, reduceMotion: reduceMotion), value: personaID)
+        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion), value: visualState)
     }
 }

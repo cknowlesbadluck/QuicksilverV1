@@ -59,8 +59,14 @@ enum MotionTokens {
 
     // MARK: - Reduce Motion fallbacks
 
-    /// When Reduce Motion is on, prefer cross-fade over spatial movement.
+    /// When Reduce Motion is on, prefer a short cross-fade over spatial or repeating motion.
+    /// Repeat-forever presets must not survive this path.
     static func reduced(_ preferred: Animation) -> Animation {
         .easeInOut(duration: 0.25)
+    }
+
+    /// Single policy for every call site. Reduced motion always wins over orbit, breath, and springs.
+    static func resolved(_ preferred: Animation, reduceMotion: Bool) -> Animation {
+        reduceMotion ? reduced(preferred) : preferred
     }
 }

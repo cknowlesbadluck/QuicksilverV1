@@ -135,8 +135,8 @@ struct SpatialSanctum: View {
                 }
             }
         }
-        .animation(MotionTokens.spring(for: activeAspect.rawValue), value: activeAspect)
-        .animation(MotionTokens.stabilization, value: visualState)
+        .animation(MotionTokens.resolved(MotionTokens.spring(for: activeAspect.rawValue), reduceMotion: reduceMotion), value: activeAspect)
+        .animation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion), value: visualState)
         .accessibilityElement(children: .contain)
     }
 
