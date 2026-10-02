@@ -132,4 +132,51 @@ final class FakeStreamingProviderTests: XCTestCase {
         XCTAssertEqual(response.content, "Hello")
         XCTAssertEqual(response.finishReason, .stop)
     }
+
+    func testFailureIndexOnDoneDoesNotEmitDone() async {
+        let provider = FakeStreamingProvider(
+            events: [
+                .meta(route: "fake", model: "fake-model", trainsOnPrompts: false),
+                .delta("partial"),
+                .done(usage: AIResponse.Usage(promptTokens: 1, completionTokens: 1))
+            ],
+            failureIndex: 3
+        )
+        var collected: [AIStreamEvent] = []
+        do {
+            for try await event in provider.stream(AIRequest(prompt: "x")) {
+                collected.append(event)
+            }
+            XCTFail("Expected failure instead of done")
+        } catch let error as AppError {
+            guard case .aiRequestFailed = error else {
+                return XCTFail("Unexpected AppError: \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+        XCTAssertEqual(collected.count, 2)
+        XCTAssertFalse(collected.contains { if case .done = $0 { return true }; return false })
+    }
+
+    func testGeminiDefaultStreamReportsTrainingAndModelId() async throws {
+        guard let provider = GeminiAIProvider.make(apiKey: "test-key") else {
+            return XCTFail("Expected Gemini provider")
+        }
+        XCTAssertEqual(provider.modelIdentifier, "gemini-3.7-flash")
+        XCTAssertTrue(provider.trainsOnPrompts)
+
+        // Use a stub that fails complete quickly — we only need meta from a custom stream path.
+        // Instead call stream meta via a one-shot wrapper: complete would hit the network.
+        // Assert protocol surface only here; FakeStreamingProvider covers stream mechanics.
+        XCTAssertEqual(provider.id, "gemini")
+    }
+
+    func testGrokDefaultStreamMetadataSurface() {
+        guard let provider = GrokAIProvider.make(apiKey: "test-key") else {
+            return XCTFail("Expected Grok provider")
+        }
+        XCTAssertEqual(provider.modelIdentifier, "grok-4.6")
+        XCTAssertFalse(provider.trainsOnPrompts)
+    }
 }

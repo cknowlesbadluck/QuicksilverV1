@@ -10,13 +10,15 @@ public struct FakeStreamingProvider: AIProvider {
     public let id: String
     public let displayName: String
     public let isAvailable: Bool
+    public let modelIdentifier: String
+    public let trainsOnPrompts: Bool
 
     /// Events to yield, in order. Typically starts with `meta` and ends with `done`.
     public let events: [AIStreamEvent]
     /// Sleep applied before each event (including the first).
     public let delayNanoseconds: UInt64
-    /// When non-`nil`, after yielding this many events the stream throws `failureError`
-    /// instead of continuing. Index is the count of already-yielded events (0 = fail before any).
+    /// When non-`nil`, fail after this many successful yields (0 = fail before any event).
+    /// A failure scheduled for the index of a `.done` event throws *instead of* yielding `.done`.
     public let failureIndex: Int?
     public let failureError: AppError
 
@@ -29,6 +31,8 @@ public struct FakeStreamingProvider: AIProvider {
         id: String = "fake-stream",
         displayName: String = "Fake Streaming Provider",
         isAvailable: Bool = true,
+        modelIdentifier: String = "fake-model",
+        trainsOnPrompts: Bool = false,
         events: [AIStreamEvent],
         delayNanoseconds: UInt64 = 0,
         failureIndex: Int? = nil,
@@ -37,6 +41,8 @@ public struct FakeStreamingProvider: AIProvider {
         self.id = id
         self.displayName = displayName
         self.isAvailable = isAvailable
+        self.modelIdentifier = modelIdentifier
+        self.trainsOnPrompts = trainsOnPrompts
         self.events = events
         self.delayNanoseconds = delayNanoseconds
         self.failureIndex = failureIndex
@@ -58,7 +64,12 @@ public struct FakeStreamingProvider: AIProvider {
         ]
         scripted.append(contentsOf: fragments.map { AIStreamEvent.delta($0) })
         scripted.append(.done(usage: usage))
-        return FakeStreamingProvider(events: scripted, delayNanoseconds: delayNanoseconds)
+        return FakeStreamingProvider(
+            modelIdentifier: model,
+            trainsOnPrompts: trainsOnPrompts,
+            events: scripted,
+            delayNanoseconds: delayNanoseconds
+        )
     }
 
     public func complete(_ request: AIRequest) async throws -> AIResponse {
@@ -66,7 +77,7 @@ public struct FakeStreamingProvider: AIProvider {
         var usage: AIResponse.Usage?
         var yielded = 0
         for event in events {
-            if let failureIndex, yielded == failureIndex {
+            if shouldFail(beforeYielding: event, yielded: yielded) {
                 throw failureError
             }
             switch event {
@@ -104,7 +115,7 @@ public struct FakeStreamingProvider: AIProvider {
                     var yielded = 0
                     for event in scriptedEvents {
                         try Task.checkCancellation()
-                        if let failAt, yielded == failAt {
+                        if Self.shouldFail(failureIndex: failAt, beforeYielding: event, yielded: yielded) {
                             throw failWith
                         }
                         if interEventDelay > 0 {
@@ -131,6 +142,23 @@ public struct FakeStreamingProvider: AIProvider {
                 }
             }
         }
+    }
+
+    private func shouldFail(beforeYielding event: AIStreamEvent, yielded: Int) -> Bool {
+        Self.shouldFail(failureIndex: failureIndex, beforeYielding: event, yielded: yielded)
+    }
+
+    /// Fail when `failureIndex` equals the current yield count, or when the next event would be
+    /// `.done` and failure is scheduled for immediately after that yield (never emit `.done` then throw).
+    private static func shouldFail(
+        failureIndex: Int?,
+        beforeYielding event: AIStreamEvent,
+        yielded: Int
+    ) -> Bool {
+        guard let failureIndex else { return false }
+        if yielded == failureIndex { return true }
+        if case .done = event, failureIndex == yielded + 1 { return true }
+        return false
     }
 }
 
