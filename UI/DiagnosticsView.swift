@@ -89,8 +89,8 @@ struct DiagnosticsView: View {
         } header: {
             Text("Owner gates")
         } footer: {
-            Text(OwnerGateBoard.latestProbe.summary)
-                .accessibilityLabel(OwnerGateBoard.latestProbe.summary)
+            Text(OwnerGateBoard.latestProbe.footer(asOf: Date()))
+                .accessibilityLabel(OwnerGateBoard.latestProbe.footer(asOf: Date()))
         }
     }
 
