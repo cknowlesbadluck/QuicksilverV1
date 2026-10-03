@@ -83,9 +83,9 @@ public final class RoutingConfigStore: @unchecked Sendable {
             }
             let config = try AIRoutingConfig.decodeAndValidate(data)
             let encoded = try config.encodeForCache()
-            guard isCurrentRefresh(generation) else { return false }
-            try writeCache(encoded)
-            return publishIfCurrent(generation, config)
+            // Write + publish under one generation check so an older refresh
+            // cannot clobber a newer cache after losing the publish race.
+            return try commitIfCurrent(generation, config: config, encoded: encoded)
         } catch {
             return false
         }
@@ -105,16 +105,21 @@ public final class RoutingConfigStore: @unchecked Sendable {
         return generation
     }
 
-    private func isCurrentRefresh(_ generation: Int) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return generation == refreshGeneration
-    }
-
-    private func publishIfCurrent(_ generation: Int, _ config: AIRoutingConfig) -> Bool {
+    private func commitIfCurrent(
+        _ generation: Int,
+        config: AIRoutingConfig,
+        encoded: Data
+    ) throws -> Bool {
         lock.lock()
         defer { lock.unlock() }
         guard generation == refreshGeneration else { return false }
+        if !fileManager.fileExists(atPath: cacheDirectoryURL.path) {
+            try fileManager.createDirectory(
+                at: cacheDirectoryURL,
+                withIntermediateDirectories: true
+            )
+        }
+        try encoded.write(to: cacheFileURL, options: [.atomic])
         effective = config
         return true
     }
@@ -152,15 +157,6 @@ public final class RoutingConfigStore: @unchecked Sendable {
         return config
     }
 
-    private func writeCache(_ data: Data) throws {
-        if !fileManager.fileExists(atPath: cacheDirectoryURL.path) {
-            try fileManager.createDirectory(
-                at: cacheDirectoryURL,
-                withIntermediateDirectories: true
-            )
-        }
-        try data.write(to: cacheFileURL, options: [.atomic])
-    }
 }
 
 extension AIRoutingConfig {
