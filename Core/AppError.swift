@@ -13,9 +13,26 @@ public enum AppError: Error, LocalizedError, Sendable {
     case intelligenceDisabled
     case aiRequestFailed(String)
     /// The provider rejected the bound API key (HTTP 401/403). The user must rebind it.
+    /// Legacy direct Grok/Gemini path; gateway uses `.unauthorized` (no provider name).
     case aiKeyRejected(provider: String)
     /// The provider is rate limiting requests (HTTP 429). Retrying later can succeed.
+    /// Legacy direct Grok/Gemini path; gateway uses `.rateLimited(retryAfter:)` (no provider name).
     case aiRateLimited(provider: String)
+
+    // MARK: Gateway / classified client errors (M3-T5)
+    // User-facing text must not name a provider.
+
+    /// HTTP 429 / wire `rate_limited`. `retryAfter` is seconds when the gateway supplied it.
+    case rateLimited(retryAfter: TimeInterval?)
+    /// HTTP 401/403 / wire `unauthorized`.
+    case unauthorized
+    /// HTTP 5xx / wire `upstream_unavailable`.
+    case providerUnavailable
+    /// Wire `budget_exhausted` — daily free-tier budget spent.
+    case budgetExhausted
+    /// Connect / first-event / idle / total timeout, or wire `timeout`.
+    case timedOut
+
     case unknown(String)
 
     public var errorDescription: String? {
@@ -40,6 +57,16 @@ public enum AppError: Error, LocalizedError, Sendable {
             return "\(provider) rejected the API key. Rebind it in the Codex."
         case .aiRateLimited(let provider):
             return "\(provider) is rate limiting requests. Try again in a moment."
+        case .rateLimited:
+            return "Too many requests. Try again in a moment."
+        case .unauthorized:
+            return "Authorization failed. Rebind credentials in the Codex."
+        case .providerUnavailable:
+            return "Intelligence is temporarily unavailable. Try again shortly."
+        case .budgetExhausted:
+            return "Daily intelligence budget is exhausted. Try again tomorrow."
+        case .timedOut:
+            return "The request timed out. Please try again."
         case .unknown(let message):
             return message
         }

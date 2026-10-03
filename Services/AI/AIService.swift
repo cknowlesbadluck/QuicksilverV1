@@ -7,7 +7,7 @@ import Core
 public final class AIService {
     public private(set) var isProcessing = false
     public private(set) var lastResponse: AIResponse?
-    
+
     /// `nil` means intelligence is unbound: no real provider has a key. Requests throw
     /// `AppError.apiKeyMissing`; no mock text is ever substituted (M1-T3).
     private var primaryProvider: AIProvider?
@@ -15,11 +15,25 @@ public final class AIService {
     private let eventBus: EventBus
     private let logger: LoggerService
     private let featureFlags: FeatureFlags
-    
+
+    /// Injected sleep for M3-T5 retry backoff (tests replace with a no-op).
+    var retrySleep: @Sendable (TimeInterval) async throws -> Void = { seconds in
+        guard seconds > 0 else { return }
+        try await Task.sleep(for: .seconds(seconds))
+    }
+
+    /// M3-T5 client retry: at most one bounded retry before the first delta.
+    var retryPolicy = AIStreamExecutor.RetryPolicy(maxRetries: 1, honorRetryAfter: true)
+
     public static let grokAPIKeyKeychainAccount = "xai.apiKey"
     public static let geminiAPIKeyKeychainAccount = "google.gemini.apiKey"
-    
-    public convenience init(provider: AIProvider? = nil, eventBus: EventBus, logger: LoggerService, featureFlags: FeatureFlags) {
+
+    public convenience init(
+        provider: AIProvider? = nil,
+        eventBus: EventBus,
+        logger: LoggerService,
+        featureFlags: FeatureFlags
+    ) {
         let configured: (primary: AIProvider?, secondary: AIProvider?)
         if let provider {
             configured = (provider, nil)
@@ -49,13 +63,13 @@ public final class AIService {
         self.primaryProvider = primary
         self.secondaryProvider = secondary
     }
-    
+
     private static func makeConfiguredProviders() -> (primary: AIProvider?, secondary: AIProvider?) {
         let grokKey = KeychainStore.string(forKey: grokAPIKeyKeychainAccount)
         let geminiKey = KeychainStore.string(forKey: geminiAPIKeyKeychainAccount)
         let grok = grokKey.flatMap { $0.isEmpty ? nil : GrokAIProvider.make(apiKey: $0) }
         let gemini = geminiKey.flatMap { $0.isEmpty ? nil : GeminiAIProvider.make(apiKey: $0) }
-        
+
         if let grok {
             return (grok, gemini)
         }
@@ -64,7 +78,7 @@ public final class AIService {
         }
         return (nil, nil)
     }
-    
+
     public func configureGrokAPIKey(_ key: String?) -> Bool {
         let normalized = key?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let normalized, !normalized.isEmpty {
@@ -78,7 +92,7 @@ public final class AIService {
         rebuildProviders()
         return true
     }
-    
+
     public func configureGeminiAPIKey(_ key: String?) -> Bool {
         let normalized = key?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let normalized, !normalized.isEmpty {
@@ -92,7 +106,7 @@ public final class AIService {
         rebuildProviders()
         return true
     }
-    
+
     private func rebuildProviders() {
         let configured = Self.makeConfiguredProviders()
         primaryProvider = configured.primary
@@ -103,13 +117,13 @@ public final class AIService {
             category: logger.ai
         )
     }
-    
+
     public func setProvider(_ newProvider: AIProvider) {
         primaryProvider = newProvider
         secondaryProvider = nil
         logger.info("AI provider switched to \(newProvider.displayName)", category: logger.ai)
     }
-    
+
     public static let unboundProviderID = "unbound"
     public static let unboundProviderName = "Unbound"
 
@@ -124,12 +138,12 @@ public final class AIService {
     public var hasGeminiKey: Bool {
         !(KeychainStore.string(forKey: Self.geminiAPIKeyKeychainAccount)?.isEmpty ?? true)
     }
-    
+
     @discardableResult
     public func configureAPIKey(_ key: String?) -> Bool {
         configureGrokAPIKey(key)
     }
-    
+
     public func clearAllAPIKeys() {
         KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
         KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
@@ -137,7 +151,8 @@ public final class AIService {
         secondaryProvider = nil
         logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
     }
-    
+
+    @discardableResult
     public func complete(
         prompt: String,
         systemPrompt: String? = nil,
@@ -164,7 +179,7 @@ public final class AIService {
             throw AppError.intelligenceDisabled
         }
     }
-    
+
     private func execute(
         prompt: String,
         systemPrompt: String?,
@@ -176,7 +191,7 @@ public final class AIService {
             // Unreachable after ensureReadyForNetworkRequest; keeps type narrowing.
             throw AppError.apiKeyMissing
         }
-        
+
         let request = AIRequest(
             prompt: prompt,
             systemPrompt: systemPrompt,
@@ -187,9 +202,15 @@ public final class AIService {
         await eventBus.publish(.aiRequestStarted(requestID: request.id.uuidString))
         logger.debug("AI request started: \(request.id)", category: logger.ai)
         defer { isProcessing = false }
-        
+
         do {
             let raw = try await performProviderRequest(request, primary: provider)
+            if raw.finishReason == .incomplete {
+                lastResponse = raw
+                await eventBus.publish(.aiRequestCompleted(requestID: request.id.uuidString))
+                logger.info("AI request incomplete (partial kept): \(raw.id)", category: logger.ai)
+                return raw
+            }
             switch ResponseValidator.validate(raw) {
             case .accept(let response):
                 lastResponse = response
@@ -201,21 +222,54 @@ public final class AIService {
                 throw AppError.aiRequestFailed(reason)
             }
         } catch {
+            if AIClientClassifier.isCancellation(error) {
+                throw CancellationError()
+            }
             logger.error("AI request failed: \(error.localizedDescription)", category: logger.ai)
             throw error
         }
     }
-    
+
     private func performProviderRequest(_ request: AIRequest, primary: AIProvider) async throws -> AIResponse {
         do {
-            return try await primary.complete(request)
+            return try await AIStreamExecutor.collect(
+                request: request,
+                provider: primary,
+                policy: retryPolicy,
+                sleep: retrySleep
+            )
         } catch {
+            if AIClientClassifier.isCancellation(error) {
+                throw CancellationError()
+            }
+            // Classified gateway/client errors: typed surface (on-device comes in M3.5-T3).
+            // Cancellation never falls back. Incomplete partials never reach here (returned above).
+            if Self.isClassifiedClientError(error) {
+                throw error
+            }
+            // Interim Grok→Gemini secondary for legacy direct-provider failures only.
             guard let fallback = secondaryProvider, fallback.isAvailable else { throw error }
             logger.info(
                 "Primary AI provider failed; attempting fallback: \(fallback.displayName)",
                 category: logger.ai
             )
-            return try await fallback.complete(request)
+            return try await AIStreamExecutor.collect(
+                request: request,
+                provider: fallback,
+                policy: retryPolicy,
+                sleep: retrySleep
+            )
+        }
+    }
+
+    private static func isClassifiedClientError(_ error: Error) -> Bool {
+        guard let appError = error as? AppError else { return false }
+        switch appError {
+        case .rateLimited, .unauthorized, .providerUnavailable, .budgetExhausted, .timedOut,
+             .networkUnavailable:
+            return true
+        default:
+            return false
         }
     }
 }

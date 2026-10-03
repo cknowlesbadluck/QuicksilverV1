@@ -205,11 +205,14 @@ private enum GatewayAIStreamEngine {
     }
 
     private static func throwIfHTTPFailed(_ statusCode: Int) throws {
-        if statusCode == 401 {
-            throw AppError.aiKeyRejected(provider: "Gateway")
+        if statusCode == 401 || statusCode == 403 {
+            throw AppError.unauthorized
         }
         if statusCode == 429 {
-            throw AppError.aiRateLimited(provider: "Gateway")
+            throw AppError.rateLimited(retryAfter: nil)
+        }
+        if (500...599).contains(statusCode) {
+            throw AppError.providerUnavailable
         }
         guard (200...299).contains(statusCode) else {
             throw ProviderHTTPError.error(provider: "Gateway", status: statusCode)
@@ -292,13 +295,19 @@ private enum GatewayAIStreamEngine {
     }
 
     private static func mapWireError(_ code: GatewayErrorCode, retryAfter: Int?) -> AppError {
-        _ = retryAfter // M3-T5 surfaces retryAfter on a typed case; keep existing AppError surface.
         switch code {
         case .unauthorized:
-            return .aiKeyRejected(provider: "Gateway")
+            return .unauthorized
         case .rateLimited:
-            return .aiRateLimited(provider: "Gateway")
-        case .budgetExhausted, .upstreamUnavailable, .badRequest, .timeout:
+            let seconds = retryAfter.map { TimeInterval($0) }
+            return .rateLimited(retryAfter: seconds)
+        case .budgetExhausted:
+            return .budgetExhausted
+        case .upstreamUnavailable:
+            return .providerUnavailable
+        case .timeout:
+            return .timedOut
+        case .badRequest:
             return .aiRequestFailed("Gateway request failed")
         }
     }
@@ -349,18 +358,18 @@ private final class StreamTimeoutClock: @unchecked Sendable {
 
         let now = ContinuousClock.now
         if now - start > .seconds(timeouts.total) {
-            throw AppError.aiRequestFailed("Gateway timed out")
+            throw AppError.timedOut
         }
         // Before headers: enforce connect. After headers: firstEvent / idle.
         if responseStart == nil, now - start > .seconds(timeouts.connect) {
-            throw AppError.aiRequestFailed("Gateway timed out connecting")
+            throw AppError.timedOut
         }
         if !gotFirst, let responseStart,
            now - responseStart > .seconds(timeouts.firstEvent) {
-            throw AppError.aiRequestFailed("Gateway timed out waiting for the first event")
+            throw AppError.timedOut
         }
         if gotFirst, now - lastEvent > .seconds(timeouts.idle) {
-            throw AppError.aiRequestFailed("Gateway stream went idle")
+            throw AppError.timedOut
         }
     }
 
