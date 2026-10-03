@@ -1,0 +1,8 @@
+event: meta
+data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
+
+event: delta
+data: {"text":"Forge"}
+
+event: done
+data: {"usage":{"promptTokens":12,"completionTokens":1}}

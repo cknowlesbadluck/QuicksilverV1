@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: M3-T2 Gateway wire protocol v1 + shared fixtures (after M3-T1 streaming). Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
+Current focus: M3-T2 Gateway wire protocol v1 is opened, not merged. Do not start M3-T3 until that PR is green and squash-merged. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 
