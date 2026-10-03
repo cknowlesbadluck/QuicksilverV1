@@ -9,7 +9,8 @@ extension AIService {
         guard let url = KeychainStore.string(forKey: Self.gatewayBaseURLKeychainAccount),
               !url.isEmpty,
               let token = KeychainStore.string(forKey: GatewayAIProvider.deviceTokenKeychainAccount),
-              !token.isEmpty else {
+              !token.isEmpty,
+              !token.contains(where: \.isWhitespace) else {
             return false
         }
         return (try? GatewayEndpoint(raw: url)) != nil
@@ -27,6 +28,8 @@ extension AIService {
         let trimmedURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedToken = deviceToken.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedToken.isEmpty else { return .emptyToken }
+        // Match GatewayEndpoint.authorizedRequest: reject internal whitespace.
+        guard !trimmedToken.contains(where: \.isWhitespace) else { return .invalidToken }
         do {
             _ = try GatewayEndpoint(raw: trimmedURL)
         } catch let error as GatewayEndpointError {
@@ -34,12 +37,24 @@ extension AIService {
         } catch {
             return .invalidURL(.invalid)
         }
+
+        let previousURL = KeychainStore.string(forKey: Self.gatewayBaseURLKeychainAccount)
+        let previousToken = KeychainStore.string(forKey: GatewayAIProvider.deviceTokenKeychainAccount)
+
         guard KeychainStore.set(trimmedURL, forKey: Self.gatewayBaseURLKeychainAccount) else {
             logger.error("Keychain write failed for gateway base URL", category: logger.ai)
             return .keychainWriteFailed
         }
         guard KeychainStore.set(trimmedToken, forKey: GatewayAIProvider.deviceTokenKeychainAccount) else {
-            KeychainStore.delete(forKey: Self.gatewayBaseURLKeychainAccount)
+            // Restore prior pair so a failed rebind does not destroy a working binding.
+            if let previousURL {
+                _ = KeychainStore.set(previousURL, forKey: Self.gatewayBaseURLKeychainAccount)
+            } else {
+                KeychainStore.delete(forKey: Self.gatewayBaseURLKeychainAccount)
+            }
+            if let previousToken {
+                _ = KeychainStore.set(previousToken, forKey: GatewayAIProvider.deviceTokenKeychainAccount)
+            }
             logger.error("Keychain write failed for gateway device token", category: logger.ai)
             return .keychainWriteFailed
         }
@@ -89,13 +104,21 @@ extension AIService {
     }
 
     /// Builds a gateway provider when both Keychain values are present and valid.
-    static func makeGatewayProvider() -> GatewayAIProvider? {
-        guard let raw = KeychainStore.string(forKey: gatewayBaseURLKeychainAccount),
+    func makeGatewayProvider() -> GatewayAIProvider? {
+        guard let raw = KeychainStore.string(forKey: Self.gatewayBaseURLKeychainAccount),
               !raw.isEmpty,
-              let endpoint = try? GatewayEndpoint(raw: raw) else {
+              let endpoint = try? GatewayEndpoint(raw: raw),
+              let token = KeychainStore.string(forKey: GatewayAIProvider.deviceTokenKeychainAccount),
+              !token.isEmpty,
+              !token.contains(where: \.isWhitespace) else {
             return nil
         }
-        return GatewayAIProvider.make(endpoint: endpoint)
+        let timeouts = routingConfigStore?.loadValidated().gatewayTimeouts ?? .defaults
+        return try? GatewayAIProvider(
+            endpoint: endpoint,
+            deviceToken: token,
+            timeouts: timeouts
+        )
     }
 
     public func clearAllAPIKeys() {
@@ -126,6 +149,7 @@ extension AIService {
 public enum GatewayBindError: Error, Equatable, Sendable {
     case invalidURL(GatewayEndpointError)
     case emptyToken
+    case invalidToken
     case keychainWriteFailed
     case healthFailed(status: Int?)
     case notMercury
@@ -142,6 +166,8 @@ public enum GatewayBindError: Error, Equatable, Sendable {
             return "Gateway URL must be an https origin with no credentials or query."
         case .emptyToken:
             return "Enter a non-empty device token."
+        case .invalidToken:
+            return "Device token must not contain spaces."
         case .keychainWriteFailed:
             return "Could not save the gateway binding to the Keychain."
         case .healthFailed(let status):

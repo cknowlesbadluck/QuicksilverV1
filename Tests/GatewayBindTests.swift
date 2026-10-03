@@ -9,6 +9,8 @@ final class GatewayBindTests: XCTestCase {
     private let tokenKey = GatewayAIProvider.deviceTokenKeychainAccount
     private var previousURL: String?
     private var previousToken: String?
+    private var defaultsSuiteName: String = ""
+    private var defaults: UserDefaults!
 
     override func setUp() async throws {
         try await super.setUp()
@@ -16,6 +18,8 @@ final class GatewayBindTests: XCTestCase {
         previousToken = KeychainStore.string(forKey: tokenKey)
         KeychainStore.delete(forKey: urlKey)
         KeychainStore.delete(forKey: tokenKey)
+        defaultsSuiteName = "GatewayBindTests.\(UUID().uuidString)"
+        defaults = UserDefaults(suiteName: defaultsSuiteName)
     }
 
     override func tearDown() async throws {
@@ -26,6 +30,9 @@ final class GatewayBindTests: XCTestCase {
         }
         if let previousToken {
             _ = KeychainStore.set(previousToken, forKey: tokenKey)
+        }
+        if let defaults {
+            defaults.removePersistentDomain(forName: defaultsSuiteName)
         }
         try await super.tearDown()
     }
@@ -39,7 +46,7 @@ final class GatewayBindTests: XCTestCase {
     }
 
     private func makeService() -> AIService {
-        let flags = FeatureFlags()
+        let flags = FeatureFlags(defaults: defaults)
         flags.set("aiServiceEnabled", enabled: false)
         return AIService(
             primary: nil,
@@ -57,6 +64,16 @@ final class GatewayBindTests: XCTestCase {
             deviceToken: "token"
         )
         XCTAssertEqual(error, .invalidURL(.notHTTPS))
+        XCTAssertFalse(service.hasGatewayBinding)
+    }
+
+    func testConfigureGatewayRejectsWhitespaceToken() {
+        let service = makeService()
+        let error = service.configureGateway(
+            baseURL: "https://mercury.example.workers.dev",
+            deviceToken: "abc def"
+        )
+        XCTAssertEqual(error, .invalidToken)
         XCTAssertFalse(service.hasGatewayBinding)
     }
 

@@ -15,7 +15,7 @@ public final class AIService {
     private let eventBus: EventBus
     let logger: LoggerService
     let featureFlags: FeatureFlags
-    private let routingConfigStore: RoutingConfigStore?
+    let routingConfigStore: RoutingConfigStore?
 
     /// Injected sleep for M3-T5 retry backoff (tests replace with a no-op).
     var retrySleep: @Sendable (TimeInterval) async throws -> Void = { seconds in
@@ -42,20 +42,18 @@ public final class AIService {
         featureFlags: FeatureFlags,
         routingConfigStore: RoutingConfigStore? = nil
     ) {
-        let configured: (primary: AIProvider?, secondary: AIProvider?)
-        if let provider {
-            configured = (provider, nil)
-        } else {
-            configured = Self.makeConfiguredProviders()
-        }
         self.init(
-            primary: configured.primary,
-            secondary: configured.secondary,
+            primary: provider,
+            secondary: nil,
             eventBus: eventBus,
             logger: logger,
             featureFlags: featureFlags,
             routingConfigStore: routingConfigStore
         )
+        // When no injected provider, rebuild from Keychain (gateway / Gemini / Grok).
+        if provider == nil {
+            rebuildProviders()
+        }
     }
 
     /// Explicit routing (tests). `primary == nil` is the unbound state; the Keychain is not read.
@@ -75,13 +73,13 @@ public final class AIService {
         self.secondaryProvider = secondary
     }
 
-    private static func makeConfiguredProviders() -> (primary: AIProvider?, secondary: AIProvider?) {
+    private func makeConfiguredProviders() -> (primary: AIProvider?, secondary: AIProvider?) {
         // Gateway bind (M3-T6) wins when URL + device token are present.
         if let gateway = makeGatewayProvider() {
             return (gateway, nil)
         }
-        let grokKey = KeychainStore.string(forKey: grokAPIKeyKeychainAccount)
-        let geminiKey = KeychainStore.string(forKey: geminiAPIKeyKeychainAccount)
+        let grokKey = KeychainStore.string(forKey: Self.grokAPIKeyKeychainAccount)
+        let geminiKey = KeychainStore.string(forKey: Self.geminiAPIKeyKeychainAccount)
         let grok = grokKey.flatMap { $0.isEmpty ? nil : GrokAIProvider.make(apiKey: $0) }
         let gemini = geminiKey.flatMap { $0.isEmpty ? nil : GeminiAIProvider.make(apiKey: $0) }
 
@@ -123,7 +121,7 @@ public final class AIService {
     }
 
     func rebuildProviders() {
-        let configured = Self.makeConfiguredProviders()
+        let configured = makeConfiguredProviders()
         primaryProvider = configured.primary
         secondaryProvider = configured.secondary
         logger.info(

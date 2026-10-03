@@ -26,10 +26,14 @@ final class CodexViewModel {
     private(set) var activeModelLabel: String = "Gemini Flash"
 
     private let container: DependencyContainer
+    /// Cancels in-flight `/v1/config` refresh on unbind / rebind.
+    @ObservationIgnored private var routingRefreshTask: Task<Void, Never>?
+    @ObservationIgnored private var didScheduleLaunchRefresh = false
 
     init(container: DependencyContainer) {
         self.container = container
         refresh()
+        schedulePersistedGatewayRefreshIfNeeded()
     }
 
     func refresh() {
@@ -89,10 +93,12 @@ final class CodexViewModel {
         // Keep URL draft filled so the operator can re-test; display comes from Keychain.
         gatewayURLDraft = url
         finishSuccessfulBind(savedMessage: "Gateway bound. Intelligence can use the Mercury Gateway.")
-        Task { await refreshRoutingAfterBind(url: url, token: token) }
+        startRoutingRefresh(url: url, token: token)
     }
 
     func unbindGateway() {
+        routingRefreshTask?.cancel()
+        routingRefreshTask = nil
         container.aiService.clearGateway()
         gatewayURLDraft = ""
         gatewayTokenDraft = ""
@@ -158,16 +164,45 @@ final class CodexViewModel {
         let geminiKey = KeychainStore.string(forKey: AIService.geminiAPIKeyKeychainAccount)
         _ = container.aiService.configureGrokAPIKey(grokKey)
         _ = container.aiService.configureGeminiAPIKey(geminiKey)
-        // Gateway rebuilds from Keychain inside configure* / rebuildProviders when present.
-        container.aiService.rebuildProviders()
+        // configure* rebuilds providers; gateway wins from Keychain when bound.
         refresh()
         statusMessage = "AI Service enabled."
         statusIsError = false
     }
 
-    private func refreshRoutingAfterBind(url: String, token: String) async {
-        guard let endpoint = try? GatewayEndpoint(raw: url) else { return }
-        _ = await container.routingConfigStore.refresh(from: endpoint, deviceToken: token)
-        refresh()
+    /// One-shot refresh after relaunch when a gateway binding is already in Keychain.
+    private func schedulePersistedGatewayRefreshIfNeeded() {
+        guard !didScheduleLaunchRefresh else { return }
+        didScheduleLaunchRefresh = true
+        guard container.aiService.hasGatewayBinding,
+              let url = container.aiService.gatewayBaseURLDisplay,
+              let token = KeychainStore.string(forKey: GatewayAIProvider.deviceTokenKeychainAccount),
+              !token.isEmpty else {
+            return
+        }
+        startRoutingRefresh(url: url, token: token)
+    }
+
+    private func startRoutingRefresh(url: String, token: String) {
+        routingRefreshTask?.cancel()
+        let generationURL = url
+        let generationToken = token
+        routingRefreshTask = Task { [weak self] in
+            guard let self else { return }
+            guard let endpoint = try? GatewayEndpoint(raw: generationURL) else { return }
+            let ok = await self.container.routingConfigStore.refresh(
+                from: endpoint,
+                deviceToken: generationToken
+            )
+            guard !Task.isCancelled else { return }
+            // Drop stale results if the user unbound or rebound meanwhile.
+            guard self.container.aiService.hasGatewayBinding,
+                  self.container.aiService.gatewayBaseURLDisplay == generationURL else {
+                return
+            }
+            if ok {
+                self.refresh()
+            }
+        }
     }
 }
