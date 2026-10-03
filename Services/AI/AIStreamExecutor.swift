@@ -82,6 +82,7 @@ enum AIStreamExecutor {
     ) async -> AttemptOutcome {
         var content = ""
         var usage: AIResponse.Usage?
+        var finishReason: AIResponse.FinishReason = .stop
         var sawDelta = false
         do {
             for try await event in provider.stream(request) {
@@ -92,8 +93,9 @@ enum AIStreamExecutor {
                 case .delta(let fragment):
                     sawDelta = true
                     content += fragment
-                case .done(let doneUsage):
+                case .done(let doneUsage, let doneReason):
                     usage = doneUsage
+                    finishReason = doneReason
                 }
             }
             try Task.checkCancellation()
@@ -101,7 +103,7 @@ enum AIStreamExecutor {
                 AIResponse(
                     requestID: request.id,
                     content: content,
-                    finishReason: .stop,
+                    finishReason: finishReason,
                     usage: usage
                 )
             )

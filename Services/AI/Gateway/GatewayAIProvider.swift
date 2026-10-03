@@ -77,21 +77,23 @@ public struct GatewayAIProvider: AIProvider {
     public func complete(_ request: AIRequest) async throws -> AIResponse {
         var content = ""
         var usage: AIResponse.Usage?
+        var finishReason: AIResponse.FinishReason = .stop
         for try await event in stream(request) {
             switch event {
             case .meta:
                 break
             case .delta(let fragment):
                 content += fragment
-            case .done(let doneUsage):
+            case .done(let doneUsage, let doneReason):
                 usage = doneUsage
+                finishReason = doneReason
             }
         }
         try Task.checkCancellation()
         return AIResponse(
             requestID: request.id,
             content: content,
-            finishReason: .stop,
+            finishReason: finishReason,
             usage: usage
         )
     }
@@ -271,7 +273,7 @@ private enum GatewayAIStreamEngine {
         case .delta(let text):
             continuation.yield(.delta(text))
         case .done(let usage):
-            continuation.yield(.done(usage: usage))
+            continuation.yield(.done(usage: usage, finishReason: .stop))
             sawTerminal = true
         case .error(let code, let retryAfter):
             sawTerminal = true

@@ -23,7 +23,7 @@ final class FakeStreamingProviderTests: XCTestCase {
         XCTAssertEqual(collected[1], .delta("Hello"))
         XCTAssertEqual(collected[2], .delta(", "))
         XCTAssertEqual(collected[3], .delta("world"))
-        guard case .done(let usage) = collected[4] else {
+        guard case .done(let usage, _) = collected[4] else {
             return XCTFail("Expected done last")
         }
         XCTAssertEqual(usage?.promptTokens, 1)
@@ -36,7 +36,7 @@ final class FakeStreamingProviderTests: XCTestCase {
                 .meta(route: "fake", model: "fake-model", trainsOnPrompts: false),
                 .delta("partial"),
                 .delta("should-not-arrive"),
-                .done(usage: nil)
+                .done(usage: nil, finishReason: .stop)
             ],
             failureIndex: 2,
             failureError: .aiRequestFailed("boom")
@@ -119,7 +119,7 @@ final class FakeStreamingProviderTests: XCTestCase {
             return XCTFail("Expected delta")
         }
         XCTAssertTrue(text.contains("[Mock response]"))
-        guard case .done(let usage) = collected[2] else {
+        guard case .done(let usage, _) = collected[2] else {
             return XCTFail("Expected done")
         }
         XCTAssertEqual(usage?.promptTokens, 42)
@@ -138,7 +138,7 @@ final class FakeStreamingProviderTests: XCTestCase {
             events: [
                 .meta(route: "fake", model: "fake-model", trainsOnPrompts: false),
                 .delta("partial"),
-                .done(usage: AIResponse.Usage(promptTokens: 1, completionTokens: 1))
+                .done(usage: AIResponse.Usage(promptTokens: 1, completionTokens: 1), finishReason: .stop)
             ],
             failureIndex: 3
         )

@@ -40,7 +40,7 @@ extension AIProvider {
                     if !response.content.isEmpty {
                         continuation.yield(.delta(response.content))
                     }
-                    continuation.yield(.done(usage: response.usage))
+                    continuation.yield(.done(usage: response.usage, finishReason: response.finishReason))
                     continuation.finish()
                 } catch is CancellationError {
                     continuation.finish(throwing: CancellationError())

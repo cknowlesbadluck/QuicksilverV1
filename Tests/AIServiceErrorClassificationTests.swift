@@ -204,7 +204,7 @@ final class AIServiceErrorClassificationTests: XCTestCase {
                 .meta(route: "fake", model: "fake-model", trainsOnPrompts: false),
                 .delta("hello"),
                 .delta(" world"),
-                .done(usage: nil)
+                .done(usage: nil, finishReason: .stop)
             ],
             failureIndex: 2,
             failureError: .timedOut
@@ -235,6 +235,42 @@ final class AIServiceErrorClassificationTests: XCTestCase {
             }
         }
         XCTAssertEqual(provider.attemptCount, 2)
+    }
+
+
+    func testEmptyIncompleteIsRejected() async {
+        let provider = AttemptScriptProvider(scripts: [
+            .failAfterDelta(text: "   \n", error: .providerUnavailable)
+        ])
+        let service = makeService(primary: provider)
+        service.retrySleep = { _ in }
+        do {
+            _ = try await service.complete(prompt: "blank partial")
+            XCTFail("Expected empty incomplete rejection")
+        } catch let error as AppError {
+            guard case .aiRequestFailed(let reason) = error else {
+                return XCTFail("Unexpected AppError: \(error)")
+            }
+            XCTAssertTrue(reason.contains("Empty"))
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+
+    func testNetworkUnavailableStillFallsBackToSecondary() async throws {
+        let primary = AttemptScriptProvider(scripts: [
+            .fail(.networkUnavailable),
+            .fail(.networkUnavailable)
+        ])
+        let secondary = AttemptScriptProvider(scripts: [
+            .succeed(deltas: ["from-secondary"])
+        ])
+        let service = makeService(primary: primary, secondary: secondary)
+        service.retrySleep = { _ in }
+        let response = try await service.complete(prompt: "failover")
+        XCTAssertEqual(response.content, "from-secondary")
+        XCTAssertEqual(primary.attemptCount, 2)
+        XCTAssertEqual(secondary.attemptCount, 1)
     }
 
     // MARK: - Helpers
@@ -307,17 +343,19 @@ private struct AttemptScriptProvider: AIProvider {
     func complete(_ request: AIRequest) async throws -> AIResponse {
         var content = ""
         var usage: AIResponse.Usage?
+        var finishReason: AIResponse.FinishReason = .stop
         for try await event in stream(request) {
             switch event {
             case .meta:
                 break
             case .delta(let fragment):
                 content += fragment
-            case .done(let doneUsage):
+            case .done(let doneUsage, let doneReason):
                 usage = doneUsage
+                finishReason = doneReason
             }
         }
-        return AIResponse(requestID: request.id, content: content, finishReason: .stop, usage: usage)
+        return AIResponse(requestID: request.id, content: content, finishReason: finishReason, usage: usage)
     }
 
     func stream(_ request: AIRequest) -> AsyncThrowingStream<AIStreamEvent, Error> {
@@ -339,7 +377,7 @@ private struct AttemptScriptProvider: AIProvider {
                 for delta in deltas {
                     continuation.yield(.delta(delta))
                 }
-                continuation.yield(.done(usage: AIResponse.Usage(promptTokens: 1, completionTokens: 1)))
+                continuation.yield(.done(usage: AIResponse.Usage(promptTokens: 1, completionTokens: 1), finishReason: .stop))
                 continuation.finish()
             case .fail(let error):
                 continuation.finish(throwing: error)

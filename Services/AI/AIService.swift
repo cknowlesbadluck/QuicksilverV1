@@ -205,17 +205,15 @@ public final class AIService {
 
         do {
             let raw = try await performProviderRequest(request, primary: provider)
-            if raw.finishReason == .incomplete {
-                lastResponse = raw
-                await eventBus.publish(.aiRequestCompleted(requestID: request.id.uuidString))
-                logger.info("AI request incomplete (partial kept): \(raw.id)", category: logger.ai)
-                return raw
-            }
-            switch ResponseValidator.validate(raw) {
+            switch ResponseValidator.validate(raw, preserveIncomplete: true) {
             case .accept(let response):
                 lastResponse = response
                 await eventBus.publish(.aiRequestCompleted(requestID: request.id.uuidString))
-                logger.info("AI request completed: \(response.id)", category: logger.ai)
+                if response.finishReason == .incomplete {
+                    logger.info("AI request incomplete (partial kept): \(response.id)", category: logger.ai)
+                } else {
+                    logger.info("AI request completed: \(response.id)", category: logger.ai)
+                }
                 return response
             case .reject(let reason):
                 logger.error("AI response rejected: \(reason)", category: logger.ai)
@@ -265,8 +263,9 @@ public final class AIService {
     private static func isClassifiedClientError(_ error: Error) -> Bool {
         guard let appError = error as? AppError else { return false }
         switch appError {
-        case .rateLimited, .unauthorized, .providerUnavailable, .budgetExhausted, .timedOut,
-             .networkUnavailable:
+        // Keep `.networkUnavailable` out: legacy Grok→Gemini secondary must still run
+        // when a direct-provider transport fails (Codex P1). Gateway has no secondary.
+        case .rateLimited, .unauthorized, .providerUnavailable, .budgetExhausted, .timedOut:
             return true
         default:
             return false

@@ -17,7 +17,7 @@ final class GatewayAIProviderTests: XCTestCase {
         XCTAssertEqual(collected, [
             .meta(route: "on-device", model: "fake", trainsOnPrompts: false),
             .delta("Forge"),
-            .done(usage: AIResponse.Usage(promptTokens: 12, completionTokens: 1))
+            .done(usage: AIResponse.Usage(promptTokens: 12, completionTokens: 1), finishReason: .stop)
         ])
     }
 
@@ -200,7 +200,7 @@ final class GatewayAIProviderTests: XCTestCase {
         let events = collected.snapshot()
         XCTAssertTrue(cancelled.value, "Transport should observe cancellation")
         XCTAssertFalse(events.contains(.delta("two")), "No further deltas after cancel")
-        XCTAssertFalse(events.contains(.done(usage: nil)), "Should not emit done after cancel")
+        XCTAssertFalse(events.contains(.done(usage: nil, finishReason: .stop)), "Should not emit done after cancel")
     }
 
     func testSSEParserDecodesIncrementally() throws {
