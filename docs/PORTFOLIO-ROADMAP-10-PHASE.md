@@ -1,16 +1,14 @@
-# Portfolio 10-phase roadmap — 2026-10-02 04:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-02 14:02 EDT
 
-Evidence from this pass. Live probes at 2026-10-02T08:01:44Z.
+Observed, not assumed. Conduit `/health` and `/ready` 200, postgres, 0.8.0. Diagnostics ok. Bound agent `grok`, no binding conflict. Resonance `/api/ready` 503 at 2026-10-02T18:04:01Z missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body has no `ownerActionRequired`. Quicksilver main `a1da2b3`.
 
-1. QuicksilverV1 is the only intelligence-platform repo. `cknowlesbadluck/Quicksilver` is a stale Studio twin. `mcp` is archived. Do not implement on either.
-2. Main is 5cd560d7 after #202 (Reduce Motion + contrast). UI smoke was green on 0015d46. Owner-gate board plus probe witness is on `feat/owner-gate-board`. Do not merge until required checks and UI smoke are green. Simulator text is not proof.
-3. Device HG remains the product gate. Archive IPA on iPhone 16e from the commit that contains phase 2. CHR-55. Simulator CI is not acceptance.
-4. Owner sets SUPABASE_SERVICE_ROLE_KEY on resonancenexus only. Live ready is 503, production, missing exactly that key. Do not invent it. Do not switch hosts.
-5. Conduit stays frozen on #119, #120, #155, and #162. Live ready is 200, postgres, 0.8.0, boundAgent grok, no binding conflict. #164 Workers Builds failed; do not merge.
-6. Resonance readiness posture is #144. Do not squash #141 or #142 while they still overlap #144. Do not merge a red required check.
-7. Accessibility is not done at merge. Device VoiceOver on the HG IPA is the proof.
-8. SideStore install proof of the HG IPA. No proof exists.
-9. Prune only branches that are not open PR heads. Hourly PORTFOLIO-AUDIT files stay forbidden.
-10. Post-deploy hardening: signed Conduit cursors only after Render TLS env is set; then close the red drafts.
-
-Binding constraints this pass cannot close: owner secret on Netlify, physical iPhone 16e, Render TLS env before #155/#162.
+1. Owner sets `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus`. Exit: `/api/ready` 200. Do not invent the secret. Do not switch hosts.
+2. Apply Resonance migrations and set scoped GitHub adapter secrets. Exit: persistence and adapter configured on the same host.
+3. Merge Resonance deploy-lag classifier only if CI is green (#145). Do not treat a 503 probe as a code defect.
+4. Quicksilver device HG on iPhone 16e from current main. Simulator CI is not acceptance.
+5. Land fail-closed Mercury endpoint policy (this branch) before any gateway worker calls a URL. #207 stays a scaffold until this gate is on main.
+6. Conduit freeze: do not merge #119, #120, #155, #162 until the named env or migration proof exists.
+7. Close superseded docs PRs (#163, Resonance #143) after this hygiene note lands. Do not delete PR head branches.
+8. Resonance iOS I1 stays blocked by phase 1. #134 is not a substitute for a ready host.
+9. Chamber lifecycle stays blocked by phase 1.
+10. Release surface: owner prune of leftover non-PR refs. This connector has no delete-ref tool. `feat/witness-1501` is the same SHA as Quicksilver main.
