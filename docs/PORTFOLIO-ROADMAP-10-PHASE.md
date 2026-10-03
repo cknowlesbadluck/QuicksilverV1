@@ -1,53 +1,52 @@
-# Portfolio 10-phase roadmap — 2026-10-03 16:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-03 18:03 EDT
 
-Live probes at 2026-10-03T20:01:23Z. No secrets invented. A classifier unit test is not production proof.
+Live probes at 2026-10-03T22:03:28Z. No secrets invented. A classifier is not production proof. A Vercel alias is not the public gate.
 
 Evidence:
-- Resonance `GET /api/ready` returned 503. Body: `status=not_ready`, `missingRequired=[SUPABASE_SERVICE_ROLE_KEY]`, `authMode=required`, `authModeOk=true`, `persistenceConfigured=false`, `githubAdapterConfigured=false`. Body omitted `ownerActionRequired` and `contractRevision`.
-- Resonance `GET /api/health` returned 200.
-- Conduit `GET /health` and `GET /ready` both returned 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, ready `persistence=postgres`. Phase 3 exit is satisfied ahead. It does not unlock Phase 1.
-- Conduit diagnostics: health, PRM, AS, JWKS, scope parity ok. `activity_prune` removed 0.
-- QuicksilverV1 main `9b08845`. Open: #219 error classification, #218 this roadmap, #209 dependabot. Device HG is CHR-55. Simulator CI is not device acceptance.
-- Do not merge #119, #120, #155, #162, #164, #168, #209. Legacy `cknowlesbadluck/Quicksilver` archive remains an owner action (prior integration close returned 403).
+- Resonance `GET https://resonancenexus.netlify.app/api/ready` returned 503. Body omitted `ownerActionRequired` and `contractRevision`. `missingRequired` is exactly `SUPABASE_SERVICE_ROLE_KEY`. Auth mode required and ok. Persistence and GitHub adapter not configured. `/api/health` returned 200.
+- GitHub production deployment success against a Vercel alias is not this gate. `classifyResonanceReady` now returns `wrong_host` for that alias and `owner_blocked` for this public 503. That classifier is on Conduit `#174`, not merged, and is not proof.
+- Conduit `GET /health` and `GET /ready` both returned 200 with `version=0.8.0` and `contractRevision=2026-10-03-ready-surface`. Ready persistence is postgres. Diagnostics ok. Bound agent `grok`, no binding conflict. `activity_prune` removed 0.
+- QuicksilverV1 `#218` is this refresh. `#209` (checkout 4 to 7) is open and UI smoke failed on contrast in `SanctumSmokeTests`. Do not merge it. Device HG remains the product gate.
+- Legacy `cknowlesbadluck/Quicksilver` has no open issues visible to this token. Do not merge Conduit `#119`, `#120`, `#155`.
 
 ## Phase 1 — Owner gate
 
-Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus` only. Do not invent it. Exit: `GET /api/ready` is 200 and `missingRequired` is empty.
+Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus` only. Do not invent it. Exit: public `GET /api/ready` is 200 and `ownerActionRequired` is false.
 
-## Phase 2 — Deploy lag kill
+## Phase 2 — Kill the split-brain deploy
 
-Public ready body must carry the current `contractRevision`. A GitHub deployment on a Vercel alias is not this exit. Exit: production ready body contains the contract stamp and omits no required owner field.
+Public Netlify still omits `contractRevision`. Exit: public ready body contains `contractRevision` equal to `2026-10-03-owner-gate`, and no alias host is accepted as proof.
 
-## Phase 3 — Conduit header and health parity
+## Phase 3 — Conduit contract parity
 
-Satisfied on the live host at 20:01Z. Both surfaces return version 0.8.0 and the same contract revision. Keep it; do not reopen a second health contract.
+Met on the live host at 22:03Z. Exit already held: `/health` and `/ready` share version 0.8.0 and `2026-10-03-ready-surface`. Do not reopen this as an outage.
 
-## Phase 4 — Quicksilver fail-closed posture
+## Phase 4 — Quicksilver smoke
 
-Posture parse is on main. Exit still open for product: CHR-55 device HG on iPhone 16e. Simulator green is not this exit.
+`#209` stays open while UI smoke is red. Exit: contrast audit green, or the bump is closed. Device HG still open.
 
 ## Phase 5 — Persistence proof
 
-After Phase 1, run production smoke against the real 200 body. Exit: smoke passes on `resonancenexus`, not a preview.
+After Phase 1, run production smoke against the real 200 body on `resonancenexus`. Exit: smoke passes on that host, not on a Vercel alias.
 
 ## Phase 6 — Chamber fail-closed stays
 
-No new provider. Execution stays denied when a capability is not executable. Exit: chamber tests stay red-free on main.
+No new provider. Execution stays denied when a capability is not executable. Exit: chamber tests stay red-free.
 
 ## Phase 7 — Hygiene prune
 
-One roadmap file per repo. No hourly audit files. Open PR load is the debt: Conduit 7, Resonance 4, QuicksilverV1 3. Close or rebase overlaps before adding scope. Do not merge the kept-red drafts.
+No hourly audit files. One roadmap file, refreshed in place. Do not merge red drafts. Open feature/harden count is over the entropy cap; next code change replaces a pull request, it does not add one.
 
-## Phase 8 — iOS cockpit only after the app target is green
+## Phase 8 — One iOS target
 
-Resonance #134 stays open until it builds or is closed. Do not start a second client. Exit: one iOS target, not two.
+`#134` is diverged from current main. Do not start a second client. Exit: `#134` builds on current main, or it is closed.
 
-## Phase 9 — Grant and bridge audit
+## Phase 9 — Grants stay deny-by-default
 
-Conduit grants stay deny-by-default. Exit: grant tests green and no resource record holds a secret. #162 and #155 stay unmerged until Render TLS env is set.
+Conduit resource records hold no secrets. Exit: grant tests green.
 
 ## Phase 10 — Cross-plane acceptance
 
-One live probe covers Conduit ready, Resonance ready, and Quicksilver device HG. Exit: all three green on production. `planPhases` recording a later exit as `satisfiedAhead` is not that proof.
+One probe covers Conduit ready, public Resonance ready, and Quicksilver posture. Exit: all three green on their public hosts. A unit test is not that proof.
 
-Binding constraint: owner secret on Netlify. Agent work cannot close Phase 1.
+Binding constraint: owner secret on Netlify, plus a deploy that actually reaches that host. Agent work cannot close Phase 1.
