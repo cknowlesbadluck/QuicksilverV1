@@ -17,7 +17,7 @@ final class GatewayAIProviderTests: XCTestCase {
         XCTAssertEqual(collected, [
             .meta(route: "on-device", model: "fake", trainsOnPrompts: false),
             .delta("Forge"),
-            .done(usage: AIResponse.Usage(promptTokens: 12, completionTokens: 1))
+            .done(usage: AIResponse.Usage(promptTokens: 12, completionTokens: 1), finishReason: .stop)
         ])
     }
 
@@ -51,7 +51,7 @@ final class GatewayAIProviderTests: XCTestCase {
             }
             XCTFail("Expected upstream failure")
         } catch let error as AppError {
-            guard case .aiRequestFailed = error else {
+            guard case .providerUnavailable = error else {
                 return XCTFail("Unexpected AppError: \(error)")
             }
         }
@@ -73,7 +73,7 @@ final class GatewayAIProviderTests: XCTestCase {
             }
             XCTFail("Expected first-event timeout")
         } catch let error as AppError {
-            guard case .aiRequestFailed = error else {
+            guard case .timedOut = error else {
                 return XCTFail("Unexpected AppError: \(error)")
             }
         }
@@ -87,24 +87,24 @@ final class GatewayAIProviderTests: XCTestCase {
             for try await _ in provider.stream(AIRequest(prompt: "nope")) {}
             XCTFail("Expected unauthorized")
         } catch let error as AppError {
-            guard case .aiKeyRejected(let name) = error else {
+            guard case .unauthorized = error else {
                 return XCTFail("Unexpected AppError: \(error)")
             }
-            XCTAssertEqual(name, "Gateway")
+            XCTAssertFalse(error.localizedDescription.contains("Gateway"))
         }
     }
 
-    func testUnauthorizedFixtureMapsToKeyRejected() async throws {
+    func testUnauthorizedFixtureMapsToUnauthorized() async throws {
         let sse = try fixtureText("unauthorized.sse")
         let provider = try makeProvider(transport: lineTransport(status: 200, body: sse))
         do {
             for try await _ in provider.stream(AIRequest(prompt: "nope")) {}
             XCTFail("Expected unauthorized")
         } catch let error as AppError {
-            guard case .aiKeyRejected(let name) = error else {
+            guard case .unauthorized = error else {
                 return XCTFail("Unexpected AppError: \(error)")
             }
-            XCTAssertEqual(name, "Gateway")
+            XCTAssertFalse(error.localizedDescription.contains("Gateway"))
         }
     }
 
@@ -115,10 +115,11 @@ final class GatewayAIProviderTests: XCTestCase {
             for try await _ in provider.stream(AIRequest(prompt: "slow down")) {}
             XCTFail("Expected rate limit")
         } catch let error as AppError {
-            guard case .aiRateLimited(let name) = error else {
+            guard case .rateLimited(let retryAfter) = error else {
                 return XCTFail("Unexpected AppError: \(error)")
             }
-            XCTAssertEqual(name, "Gateway")
+            XCTAssertEqual(retryAfter, 2)
+            XCTAssertFalse(error.localizedDescription.contains("Gateway"))
         }
     }
 
@@ -128,10 +129,52 @@ final class GatewayAIProviderTests: XCTestCase {
             for try await _ in provider.stream(AIRequest(prompt: "slow down")) {}
             XCTFail("Expected rate limit")
         } catch let error as AppError {
-            guard case .aiRateLimited(let name) = error else {
+            guard case .rateLimited = error else {
                 return XCTFail("Unexpected AppError: \(error)")
             }
-            XCTAssertEqual(name, "Gateway")
+            XCTAssertFalse(error.localizedDescription.contains("Gateway"))
+        }
+    }
+
+    func testHTTP429PreservesRetryAfterHeader() async throws {
+        let provider = try makeProvider(
+            transport: lineTransport(status: 429, body: "{}", retryAfter: 3)
+        )
+        do {
+            for try await _ in provider.stream(AIRequest(prompt: "slow down")) {}
+            XCTFail("Expected rate limit")
+        } catch let error as AppError {
+            guard case .rateLimited(let retryAfter) = error else {
+                return XCTFail("Unexpected AppError: \(error)")
+            }
+            XCTAssertEqual(retryAfter, 3)
+        }
+    }
+
+    func testHTTP503MapsToProviderUnavailable() async throws {
+        let provider = try makeProvider(transport: lineTransport(status: 503, body: "{}"))
+        do {
+            for try await _ in provider.stream(AIRequest(prompt: "down")) {}
+            XCTFail("Expected provider unavailable")
+        } catch let error as AppError {
+            guard case .providerUnavailable = error else {
+                return XCTFail("Unexpected AppError: \(error)")
+            }
+            XCTAssertFalse(error.localizedDescription.contains("Gateway"))
+        }
+    }
+
+    func testBudgetExhaustedFixture() async throws {
+        let sse = try fixtureText("budget-exhausted.sse")
+        let provider = try makeProvider(transport: lineTransport(status: 200, body: sse))
+        do {
+            for try await _ in provider.stream(AIRequest(prompt: "budget")) {}
+            XCTFail("Expected budget exhausted")
+        } catch let error as AppError {
+            guard case .budgetExhausted = error else {
+                return XCTFail("Unexpected AppError: \(error)")
+            }
+            XCTAssertFalse(error.localizedDescription.contains("Gateway"))
         }
     }
 
@@ -172,7 +215,7 @@ final class GatewayAIProviderTests: XCTestCase {
         let events = collected.snapshot()
         XCTAssertTrue(cancelled.value, "Transport should observe cancellation")
         XCTAssertFalse(events.contains(.delta("two")), "No further deltas after cancel")
-        XCTAssertFalse(events.contains(.done(usage: nil)), "Should not emit done after cancel")
+        XCTAssertFalse(events.contains(.done(usage: nil, finishReason: .stop)), "Should not emit done after cancel")
     }
 
     func testSSEParserDecodesIncrementally() throws {
@@ -289,7 +332,8 @@ final class GatewayAIProviderTests: XCTestCase {
     private func lineTransport(
         status: Int,
         body: String,
-        captured: LockedArray<URLRequest>? = nil
+        captured: LockedArray<URLRequest>? = nil,
+        retryAfter: TimeInterval? = nil
     ) -> GatewayStreamTransport {
         GatewayStreamTransport { request in
             captured?.append(request)
@@ -300,7 +344,7 @@ final class GatewayAIProviderTests: XCTestCase {
                 }
                 continuation.finish()
             }
-            return GatewayOpenedStream(statusCode: status, lines: stream)
+            return GatewayOpenedStream(statusCode: status, lines: stream, retryAfter: retryAfter)
         }
     }
 

@@ -63,7 +63,7 @@ public struct FakeStreamingProvider: AIProvider {
             .meta(route: route, model: model, trainsOnPrompts: trainsOnPrompts)
         ]
         scripted.append(contentsOf: fragments.map { AIStreamEvent.delta($0) })
-        scripted.append(.done(usage: usage))
+        scripted.append(.done(usage: usage, finishReason: .stop))
         return FakeStreamingProvider(
             modelIdentifier: model,
             trainsOnPrompts: trainsOnPrompts,
@@ -75,6 +75,7 @@ public struct FakeStreamingProvider: AIProvider {
     public func complete(_ request: AIRequest) async throws -> AIResponse {
         var content = ""
         var usage: AIResponse.Usage?
+        var finishReason: AIResponse.FinishReason = .stop
         var yielded = 0
         for event in events {
             if shouldFail(beforeYielding: event, yielded: yielded) {
@@ -85,8 +86,9 @@ public struct FakeStreamingProvider: AIProvider {
                 break
             case .delta(let fragment):
                 content += fragment
-            case .done(let doneUsage):
+            case .done(let doneUsage, let doneReason):
                 usage = doneUsage
+                finishReason = doneReason
             }
             yielded += 1
         }
@@ -96,7 +98,7 @@ public struct FakeStreamingProvider: AIProvider {
         return AIResponse(
             requestID: request.id,
             content: content,
-            finishReason: .stop,
+            finishReason: finishReason,
             usage: usage
         )
     }

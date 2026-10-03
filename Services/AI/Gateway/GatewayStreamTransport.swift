@@ -6,10 +6,17 @@ import Core
 /// One opened gateway response. Lines are already split; the SSE blank line is an empty string.
 public struct GatewayOpenedStream: Sendable {
     public var statusCode: Int
+    /// Parsed from the `Retry-After` response header when present (seconds).
+    public var retryAfter: TimeInterval?
     public var lines: AsyncThrowingStream<String, Error>
 
-    public init(statusCode: Int, lines: AsyncThrowingStream<String, Error>) {
+    public init(
+        statusCode: Int,
+        lines: AsyncThrowingStream<String, Error>,
+        retryAfter: TimeInterval? = nil
+    ) {
         self.statusCode = statusCode
+        self.retryAfter = retryAfter
         self.lines = lines
     }
 }
@@ -51,8 +58,24 @@ public struct GatewayStreamTransport: Sendable {
                 }
                 continuation.onTermination = { @Sendable _ in task.cancel() }
             }
-            return GatewayOpenedStream(statusCode: http.statusCode, lines: lines)
+            return GatewayOpenedStream(
+                statusCode: http.statusCode,
+                lines: lines,
+                retryAfter: Self.parseRetryAfter(http)
+            )
         }
+    }
+
+    /// Integer-second `Retry-After` only (gateway contract). HTTP-date forms are ignored.
+    public static func parseRetryAfter(_ response: HTTPURLResponse) -> TimeInterval? {
+        guard let raw = response.value(forHTTPHeaderField: "Retry-After")?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty,
+              let seconds = TimeInterval(raw),
+              seconds >= 0 else {
+            return nil
+        }
+        return seconds
     }
 }
 

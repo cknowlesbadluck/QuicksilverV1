@@ -77,21 +77,23 @@ public struct GatewayAIProvider: AIProvider {
     public func complete(_ request: AIRequest) async throws -> AIResponse {
         var content = ""
         var usage: AIResponse.Usage?
+        var finishReason: AIResponse.FinishReason = .stop
         for try await event in stream(request) {
             switch event {
             case .meta:
                 break
             case .delta(let fragment):
                 content += fragment
-            case .done(let doneUsage):
+            case .done(let doneUsage, let doneReason):
                 usage = doneUsage
+                finishReason = doneReason
             }
         }
         try Task.checkCancellation()
         return AIResponse(
             requestID: request.id,
             content: content,
-            finishReason: .stop,
+            finishReason: finishReason,
             usage: usage
         )
     }
@@ -184,7 +186,7 @@ private enum GatewayAIStreamEngine {
     ) async throws {
         let opened = try await openTransport(transport, urlRequest: urlRequest)
         try Task.checkCancellation()
-        try throwIfHTTPFailed(opened.statusCode)
+        try throwIfHTTPFailed(opened.statusCode, retryAfter: opened.retryAfter)
         clock.markResponseStarted()
         try await readEvents(
             lines: opened.lines,
@@ -204,12 +206,15 @@ private enum GatewayAIStreamEngine {
         }
     }
 
-    private static func throwIfHTTPFailed(_ statusCode: Int) throws {
-        if statusCode == 401 {
-            throw AppError.aiKeyRejected(provider: "Gateway")
+    private static func throwIfHTTPFailed(_ statusCode: Int, retryAfter: TimeInterval?) throws {
+        if statusCode == 401 || statusCode == 403 {
+            throw AppError.unauthorized
         }
         if statusCode == 429 {
-            throw AppError.aiRateLimited(provider: "Gateway")
+            throw AppError.rateLimited(retryAfter: retryAfter)
+        }
+        if (500...599).contains(statusCode) {
+            throw AppError.providerUnavailable
         }
         guard (200...299).contains(statusCode) else {
             throw ProviderHTTPError.error(provider: "Gateway", status: statusCode)
@@ -268,7 +273,7 @@ private enum GatewayAIStreamEngine {
         case .delta(let text):
             continuation.yield(.delta(text))
         case .done(let usage):
-            continuation.yield(.done(usage: usage))
+            continuation.yield(.done(usage: usage, finishReason: .stop))
             sawTerminal = true
         case .error(let code, let retryAfter):
             sawTerminal = true
@@ -292,13 +297,19 @@ private enum GatewayAIStreamEngine {
     }
 
     private static func mapWireError(_ code: GatewayErrorCode, retryAfter: Int?) -> AppError {
-        _ = retryAfter // M3-T5 surfaces retryAfter on a typed case; keep existing AppError surface.
         switch code {
         case .unauthorized:
-            return .aiKeyRejected(provider: "Gateway")
+            return .unauthorized
         case .rateLimited:
-            return .aiRateLimited(provider: "Gateway")
-        case .budgetExhausted, .upstreamUnavailable, .badRequest, .timeout:
+            let seconds = retryAfter.map { TimeInterval($0) }
+            return .rateLimited(retryAfter: seconds)
+        case .budgetExhausted:
+            return .budgetExhausted
+        case .upstreamUnavailable:
+            return .providerUnavailable
+        case .timeout:
+            return .timedOut
+        case .badRequest:
             return .aiRequestFailed("Gateway request failed")
         }
     }
@@ -349,18 +360,18 @@ private final class StreamTimeoutClock: @unchecked Sendable {
 
         let now = ContinuousClock.now
         if now - start > .seconds(timeouts.total) {
-            throw AppError.aiRequestFailed("Gateway timed out")
+            throw AppError.timedOut
         }
         // Before headers: enforce connect. After headers: firstEvent / idle.
         if responseStart == nil, now - start > .seconds(timeouts.connect) {
-            throw AppError.aiRequestFailed("Gateway timed out connecting")
+            throw AppError.timedOut
         }
         if !gotFirst, let responseStart,
            now - responseStart > .seconds(timeouts.firstEvent) {
-            throw AppError.aiRequestFailed("Gateway timed out waiting for the first event")
+            throw AppError.timedOut
         }
         if gotFirst, now - lastEvent > .seconds(timeouts.idle) {
-            throw AppError.aiRequestFailed("Gateway stream went idle")
+            throw AppError.timedOut
         }
     }
 

@@ -9,6 +9,6 @@ public enum AIStreamEvent: Sendable, Equatable {
     case meta(route: String, model: String, trainsOnPrompts: Bool)
     /// Incremental text fragment.
     case delta(String)
-    /// Successful terminal event with optional token usage.
-    case done(usage: AIResponse.Usage?)
+    /// Successful terminal event with optional token usage and the provider finish reason.
+    case done(usage: AIResponse.Usage?, finishReason: AIResponse.FinishReason)
 }

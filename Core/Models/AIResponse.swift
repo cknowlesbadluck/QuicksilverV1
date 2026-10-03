@@ -11,6 +11,8 @@ public struct AIResponse: Sendable, Identifiable {
 
     public enum FinishReason: String, Sendable {
         case stop, length, error, cancelled
+        /// Stream failed after at least one delta; partial text was kept (M3-T5).
+        case incomplete
     }
 
     public struct Usage: Sendable, Equatable {
