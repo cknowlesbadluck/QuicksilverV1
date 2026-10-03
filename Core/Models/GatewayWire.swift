@@ -111,6 +111,12 @@ public enum GatewayWireDecoder {
         return false
     }
 
+    /// Decode a single SSE event name + data payload (no stream-sequence validation).
+    /// Used by the incremental `SSEParser`; full streams still go through `decodeSSE`.
+    public static func decodeEvent(name: String, data: String) throws -> GatewayWireEvent {
+        try decode(name: name, payload: data)
+    }
+
     public static func decodeRequest(_ data: Data) throws -> GatewayChatRequest {
         let decoder = JSONDecoder()
         guard let request = try? decoder.decode(GatewayChatRequest.self, from: data) else {

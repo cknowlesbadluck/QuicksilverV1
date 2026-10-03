@@ -1,6 +1,6 @@
 # Mercury Gateway wire protocol v1
 
-Status: contract + fixtures. The Worker still serves only `GET /v1/health`. `GatewayAIProvider` is M3-T3 and is not in this cut.
+Status: contract + fixtures + client (`GatewayAIProvider`, M3-T3). The Worker still serves only `GET /v1/health`. Routing config is M3-T4.
 
 ## Auth
 
