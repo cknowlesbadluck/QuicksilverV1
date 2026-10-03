@@ -96,8 +96,7 @@ struct GatewayProtocolTests {
 
         event: done
         data: {"usage":{"promptTokens":1.5,"completionTokens":2}}
-
-        """
+        """ + "\n"
         #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
@@ -110,8 +109,7 @@ struct GatewayProtocolTests {
 
         event: done
         data: {"usage":null}
-
-        """
+        """ + "\n"
         #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
@@ -124,8 +122,7 @@ struct GatewayProtocolTests {
 
         event: done
         data: {"usage":{"promptTokens":\(Int.max),"completionTokens":0}}
-
-        """
+        """ + "\n"
         let events = try GatewayWireDecoder.decodeSSE(body)
         #expect(events == [
             .meta(route: "on-device", model: "fake", trainsOnPrompts: false),
@@ -141,8 +138,7 @@ struct GatewayProtocolTests {
 
         event: done
         data: {"usage":{"promptTokens":9223372036854775808,"completionTokens":0}}
-
-        """
+        """ + "\n"
         #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
