@@ -142,8 +142,13 @@ public enum GatewayWireDecoder {
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
 
-        for line in normalized.split(separator: "\n", omittingEmptySubsequences: false) {
-            let row = String(line)
+        // Split on LF, then drop the single trailing empty element created by a final
+        // newline so only a true blank line (`\n\n`) dispatches an event.
+        var rows = normalized.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        if normalized.hasSuffix("\n"), rows.last == "" {
+            rows.removeLast()
+        }
+        for row in rows {
             if row.isEmpty {
                 try flush()
                 continue
