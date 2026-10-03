@@ -28,7 +28,7 @@ public final class AIService {
 
     /// Injectable `GET /v1/health` for Codex test-connection (AppTests stub this).
     public typealias GatewayHealthFetcher = @Sendable (URLRequest) async throws -> (Data, URLResponse)
-    var gatewayHealthFetcher: GatewayHealthFetcher = { request in
+    public var gatewayHealthFetcher: GatewayHealthFetcher = { request in
         try await URLSession.shared.data(for: request)
     }
 
