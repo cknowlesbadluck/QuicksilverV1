@@ -14,13 +14,29 @@ public struct GatewayAIProvider: AIProvider {
 
     private let endpoint: GatewayEndpoint
     private let deviceToken: String
-    private let session: URLSession
+    private let transport: GatewayStreamTransport
     private let timeouts: GatewayTimeouts
 
     public init(
         endpoint: GatewayEndpoint,
         deviceToken: String,
         session: URLSession = .shared,
+        timeouts: GatewayTimeouts = .defaults
+    ) throws {
+        try self.init(
+            endpoint: endpoint,
+            deviceToken: deviceToken,
+            transport: .urlSession(session),
+            timeouts: timeouts
+        )
+    }
+
+    /// Test and adapter seam. Production uses `urlSession`; unit tests feed lines directly.
+    /// `URLSession.bytes(for:)` drops `URLProtocol` bodies on CI, which was failing M3-T3 as incompleteStream.
+    public init(
+        endpoint: GatewayEndpoint,
+        deviceToken: String,
+        transport: GatewayStreamTransport,
         timeouts: GatewayTimeouts = .defaults
     ) throws {
         let trimmed = deviceToken.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -30,7 +46,7 @@ public struct GatewayAIProvider: AIProvider {
         }
         self.endpoint = endpoint
         self.deviceToken = trimmed
-        self.session = session
+        self.transport = transport
         self.timeouts = timeouts
     }
 
@@ -47,7 +63,7 @@ public struct GatewayAIProvider: AIProvider {
         return try? GatewayAIProvider(
             endpoint: endpoint,
             deviceToken: token,
-            session: session,
+            transport: .urlSession(session),
             timeouts: timeouts
         )
     }
@@ -82,7 +98,7 @@ public struct GatewayAIProvider: AIProvider {
         let deps = StreamDeps(
             endpoint: endpoint,
             deviceToken: deviceToken,
-            session: session,
+            transport: transport,
             timeouts: timeouts
         )
 
@@ -108,7 +124,7 @@ public struct GatewayAIProvider: AIProvider {
     private struct StreamDeps: Sendable {
         let endpoint: GatewayEndpoint
         let deviceToken: String
-        let session: URLSession
+        let transport: GatewayStreamTransport
         let timeouts: GatewayTimeouts
     }
 
@@ -136,12 +152,12 @@ public struct GatewayAIProvider: AIProvider {
         }
 
         let clock = StreamTimeoutClock(timeouts: deps.timeouts)
-        let session = deps.session
+        let transport = deps.transport
         try await withThrowingTaskGroup(of: Void.self) { group in
             defer { group.cancelAll() }
             group.addTask {
-                try await consumeBytes(
-                    session: session,
+                try await consumeLines(
+                    transport: transport,
                     urlRequest: urlRequest,
                     clock: clock,
                     continuation: continuation
@@ -155,16 +171,15 @@ public struct GatewayAIProvider: AIProvider {
         }
     }
 
-    private static func consumeBytes(
-        session: URLSession,
+    private static func consumeLines(
+        transport: GatewayStreamTransport,
         urlRequest: URLRequest,
         clock: StreamTimeoutClock,
         continuation: AsyncThrowingStream<AIStreamEvent, Error>.Continuation
     ) async throws {
-        let bytes: URLSession.AsyncBytes
-        let response: URLResponse
+        let opened: GatewayOpenedStream
         do {
-            (bytes, response) = try await session.bytes(for: urlRequest)
+            opened = try await transport.open(urlRequest)
         } catch is CancellationError {
             throw CancellationError()
         } catch let urlError as URLError where urlError.code == .cancelled {
@@ -175,17 +190,20 @@ public struct GatewayAIProvider: AIProvider {
         }
 
         try Task.checkCancellation()
-        guard let http = response as? HTTPURLResponse else {
-            throw AppError.networkUnavailable
+        if opened.statusCode == 401 {
+            throw AppError.aiKeyRejected(provider: "Gateway")
         }
-        guard (200...299).contains(http.statusCode) else {
-            throw ProviderHTTPError.error(provider: "Gateway", status: http.statusCode)
+        if opened.statusCode == 429 {
+            throw AppError.aiRateLimited(provider: "Gateway")
+        }
+        guard (200...299).contains(opened.statusCode) else {
+            throw ProviderHTTPError.error(provider: "Gateway", status: opened.statusCode)
         }
 
         var parser = SSEParser()
         var sawTerminal = false
 
-        for try await line in bytes.lines {
+        for try await line in opened.lines {
             try Task.checkCancellation()
             try clock.check()
             if let wire = try parser.pushLine(line) {
@@ -245,6 +263,51 @@ public struct GatewayAIProvider: AIProvider {
             return .aiRateLimited(provider: "Gateway")
         case .budgetExhausted, .upstreamUnavailable, .badRequest, .timeout:
             return .aiRequestFailed("Gateway request failed")
+        }
+    }
+}
+
+// MARK: - Stream transport
+
+/// One opened gateway response. Lines are already split; the SSE blank line is an empty string.
+public struct GatewayOpenedStream: Sendable {
+    public var statusCode: Int
+    public var lines: AsyncThrowingStream<String, Error>
+
+    public init(statusCode: Int, lines: AsyncThrowingStream<String, Error>) {
+        self.statusCode = statusCode
+        self.lines = lines
+    }
+}
+
+/// Production uses URLSession. Tests inject lines so CI does not depend on URLProtocol byte delivery.
+public struct GatewayStreamTransport: Sendable {
+    public var open: @Sendable (URLRequest) async throws -> GatewayOpenedStream
+
+    public init(open: @escaping @Sendable (URLRequest) async throws -> GatewayOpenedStream) {
+        self.open = open
+    }
+
+    public static func urlSession(_ session: URLSession) -> GatewayStreamTransport {
+        GatewayStreamTransport { request in
+            let (bytes, response) = try await session.bytes(for: request)
+            guard let http = response as? HTTPURLResponse else {
+                throw AppError.networkUnavailable
+            }
+            let lines = AsyncThrowingStream<String, Error> { continuation in
+                let task = Task {
+                    do {
+                        for try await line in bytes.lines {
+                            continuation.yield(line)
+                        }
+                        continuation.finish()
+                    } catch {
+                        continuation.finish(throwing: error)
+                    }
+                }
+                continuation.onTermination = { @Sendable _ in task.cancel() }
+            }
+            return GatewayOpenedStream(statusCode: http.statusCode, lines: lines)
         }
     }
 }
