@@ -10,15 +10,15 @@ final class GatewayBindTests: XCTestCase {
     private var previousURL: String?
     private var previousToken: String?
 
-    override func setUp() {
-        super.setUp()
+    override func setUp() async throws {
+        try await super.setUp()
         previousURL = KeychainStore.string(forKey: urlKey)
         previousToken = KeychainStore.string(forKey: tokenKey)
         KeychainStore.delete(forKey: urlKey)
         KeychainStore.delete(forKey: tokenKey)
     }
 
-    override func tearDown() {
+    override func tearDown() async throws {
         KeychainStore.delete(forKey: urlKey)
         KeychainStore.delete(forKey: tokenKey)
         if let previousURL {
@@ -27,7 +27,7 @@ final class GatewayBindTests: XCTestCase {
         if let previousToken {
             _ = KeychainStore.set(previousToken, forKey: tokenKey)
         }
-        super.tearDown()
+        try await super.tearDown()
     }
 
     private func requireKeychain() throws {
@@ -50,24 +50,24 @@ final class GatewayBindTests: XCTestCase {
         )
     }
 
-    func testConfigureGatewayRejectsNonHTTPS() throws {
+    func testConfigureGatewayRejectsNonHTTPS() {
         let service = makeService()
-        let result = service.configureGateway(
+        let error = service.configureGateway(
             baseURL: "http://evil.example.com",
             deviceToken: "token"
         )
-        XCTAssertEqual(result, .failure(.invalidURL(.notHTTPS)))
+        XCTAssertEqual(error, .invalidURL(.notHTTPS))
         XCTAssertFalse(service.hasGatewayBinding)
     }
 
     func testConfigureGatewayBindAndClear() throws {
         try requireKeychain()
         let service = makeService()
-        let result = service.configureGateway(
+        let error = service.configureGateway(
             baseURL: " https://mercury.example.workers.dev ",
             deviceToken: "  device-token  "
         )
-        XCTAssertEqual(result, .success(()))
+        XCTAssertNil(error)
         XCTAssertTrue(service.hasGatewayBinding)
         XCTAssertEqual(service.currentProviderName, "Mercury Gateway")
         XCTAssertEqual(
@@ -86,13 +86,15 @@ final class GatewayBindTests: XCTestCase {
     func testHealthFailureSurfacesStatus() async {
         let service = makeService()
         service.gatewayHealthFetcher = { request in
-            let url = request.url ?? URL(string: "https://mercury.example.workers.dev/v1/health")!
-            let response = HTTPURLResponse(
-                url: url,
-                statusCode: 503,
-                httpVersion: nil,
-                headerFields: nil
-            )!
+            guard let url = request.url ?? URL(string: "https://mercury.example.workers.dev/v1/health"),
+                  let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 503,
+                    httpVersion: nil,
+                    headerFields: nil
+                  ) else {
+                throw URLError(.badServerResponse)
+            }
             return (Data(), response)
         }
         let result = await service.testGatewayHealth(baseURL: "https://mercury.example.workers.dev")
@@ -105,14 +107,16 @@ final class GatewayBindTests: XCTestCase {
             XCTAssertEqual(request.httpMethod, "GET")
             XCTAssertEqual(request.url?.path, "/v1/health")
             XCTAssertNil(request.value(forHTTPHeaderField: "Authorization"))
-            let url = request.url ?? URL(string: "https://mercury.example.workers.dev/v1/health")!
             let body = Data(#"{"ok":true,"service":"mercury-gateway"}"#.utf8)
-            let response = HTTPURLResponse(
-                url: url,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )!
+            guard let url = request.url ?? URL(string: "https://mercury.example.workers.dev/v1/health"),
+                  let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                  ) else {
+                throw URLError(.badServerResponse)
+            }
             return (body, response)
         }
         let result = await service.testGatewayHealth(baseURL: "https://mercury.example.workers.dev")
@@ -127,14 +131,16 @@ final class GatewayBindTests: XCTestCase {
     func testHealthRejectsNonMercuryService() async {
         let service = makeService()
         service.gatewayHealthFetcher = { request in
-            let url = request.url ?? URL(string: "https://mercury.example.workers.dev/v1/health")!
             let body = Data(#"{"ok":true,"service":"other"}"#.utf8)
-            let response = HTTPURLResponse(
-                url: url,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )!
+            guard let url = request.url ?? URL(string: "https://mercury.example.workers.dev/v1/health"),
+                  let response = HTTPURLResponse(
+                    url: url,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                  ) else {
+                throw URLError(.badServerResponse)
+            }
             return (body, response)
         }
         let result = await service.testGatewayHealth(baseURL: "https://mercury.example.workers.dev")
@@ -143,10 +149,10 @@ final class GatewayBindTests: XCTestCase {
 
     func testEmptyTokenRejected() {
         let service = makeService()
-        let result = service.configureGateway(
+        let error = service.configureGateway(
             baseURL: "https://mercury.example.workers.dev",
             deviceToken: "   "
         )
-        XCTAssertEqual(result, .failure(.emptyToken))
+        XCTAssertEqual(error, .emptyToken)
     }
 }

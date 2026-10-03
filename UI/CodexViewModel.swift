@@ -80,17 +80,16 @@ final class CodexViewModel {
     func bindGateway() {
         let url = gatewayURLDraft.trimmingCharacters(in: .whitespacesAndNewlines)
         let token = gatewayTokenDraft.trimmingCharacters(in: .whitespacesAndNewlines)
-        switch container.aiService.configureGateway(baseURL: url, deviceToken: token) {
-        case .success:
-            gatewayTokenDraft = ""
-            // Keep URL draft filled so the operator can re-test; display comes from Keychain.
-            gatewayURLDraft = url
-            finishSuccessfulBind(savedMessage: "Gateway bound. Intelligence can use the Mercury Gateway.")
-            Task { await refreshRoutingAfterBind(url: url, token: token) }
-        case .failure(let error):
+        if let error = container.aiService.configureGateway(baseURL: url, deviceToken: token) {
             statusMessage = error.userMessage
             statusIsError = true
+            return
         }
+        gatewayTokenDraft = ""
+        // Keep URL draft filled so the operator can re-test; display comes from Keychain.
+        gatewayURLDraft = url
+        finishSuccessfulBind(savedMessage: "Gateway bound. Intelligence can use the Mercury Gateway.")
+        Task { await refreshRoutingAfterBind(url: url, token: token) }
     }
 
     func unbindGateway() {

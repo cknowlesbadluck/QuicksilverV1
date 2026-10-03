@@ -21,29 +21,30 @@ extension AIService {
     }
 
     /// Validates https (or local http), writes URL + device token to Keychain, rebuilds routing.
+    /// Returns `nil` on success, or a `GatewayBindError` describing the failure.
     @discardableResult
-    public func configureGateway(baseURL: String, deviceToken: String) -> Result<Void, GatewayBindError> {
+    public func configureGateway(baseURL: String, deviceToken: String) -> GatewayBindError? {
         let trimmedURL = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedToken = deviceToken.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedToken.isEmpty else { return .failure(.emptyToken) }
+        guard !trimmedToken.isEmpty else { return .emptyToken }
         do {
             _ = try GatewayEndpoint(raw: trimmedURL)
         } catch let error as GatewayEndpointError {
-            return .failure(.invalidURL(error))
+            return .invalidURL(error)
         } catch {
-            return .failure(.invalidURL(.invalid))
+            return .invalidURL(.invalid)
         }
         guard KeychainStore.set(trimmedURL, forKey: Self.gatewayBaseURLKeychainAccount) else {
             logger.error("Keychain write failed for gateway base URL", category: logger.ai)
-            return .failure(.keychainWriteFailed)
+            return .keychainWriteFailed
         }
         guard KeychainStore.set(trimmedToken, forKey: GatewayAIProvider.deviceTokenKeychainAccount) else {
             KeychainStore.delete(forKey: Self.gatewayBaseURLKeychainAccount)
             logger.error("Keychain write failed for gateway device token", category: logger.ai)
-            return .failure(.keychainWriteFailed)
+            return .keychainWriteFailed
         }
         rebuildProviders()
-        return .success(())
+        return nil
     }
 
     public func clearGateway() {
@@ -95,6 +96,29 @@ extension AIService {
             return nil
         }
         return GatewayAIProvider.make(endpoint: endpoint)
+    }
+
+    public func clearAllAPIKeys() {
+        KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
+        KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
+        KeychainStore.delete(forKey: Self.gatewayBaseURLKeychainAccount)
+        KeychainStore.delete(forKey: GatewayAIProvider.deviceTokenKeychainAccount)
+        primaryProvider = nil
+        secondaryProvider = nil
+        logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
+    }
+
+    /// Throws `.apiKeyMissing` / `.intelligenceDisabled` when a request would not hit the network.
+    /// Used by MercuryBrain offline fast-fail so unbound/disabled guidance wins over airplane mode.
+    public func ensureReadyForNetworkRequest() throws {
+        guard primaryProvider != nil else {
+            logger.info("AI request refused: intelligence unbound", category: logger.ai)
+            throw AppError.apiKeyMissing
+        }
+        guard featureFlags.isEnabled("aiServiceEnabled") else {
+            logger.info("AI request refused: intelligence disabled in the Codex", category: logger.ai)
+            throw AppError.intelligenceDisabled
+        }
     }
 }
 
