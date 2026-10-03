@@ -76,71 +76,99 @@ enum AIStreamExecutor {
         case failed(Error, sawDelta: Bool)
     }
 
-    private static func runAttempt(
-        request: AIRequest,
-        provider: AIProvider
-    ) async -> AttemptOutcome {
+    private struct StreamAccumulation {
         var content = ""
         var usage: AIResponse.Usage?
         var finishReason: AIResponse.FinishReason = .stop
         var sawDelta = false
         var sawDone = false
+    }
+
+    private static func runAttempt(
+        request: AIRequest,
+        provider: AIProvider
+    ) async -> AttemptOutcome {
         do {
-            for try await event in provider.stream(request) {
-                try Task.checkCancellation()
-                switch event {
-                case .meta:
-                    break
-                case .delta(let fragment):
-                    sawDelta = true
-                    content += fragment
-                case .done(let doneUsage, let doneReason):
-                    usage = doneUsage
-                    finishReason = doneReason
-                    sawDone = true
-                }
-            }
-            try Task.checkCancellation()
-            if !sawDone {
-                // Truncated stream closed without a terminal done.
-                if sawDelta {
-                    return .incomplete(
-                        AIResponse(
-                            requestID: request.id,
-                            content: content,
-                            finishReason: .incomplete,
-                            usage: usage
-                        )
-                    )
-                }
-                return .failed(AppError.providerUnavailable, sawDelta: false)
-            }
-            return .success(
-                AIResponse(
-                    requestID: request.id,
-                    content: content,
-                    finishReason: finishReason,
-                    usage: usage
-                )
-            )
+            let accumulated = try await consumeStream(request: request, provider: provider)
+            return outcome(from: accumulated, requestID: request.id)
         } catch is CancellationError {
             return .cancelled
         } catch {
             if AIClientClassifier.isCancellation(error) {
                 return .cancelled
             }
-            if sawDelta {
-                return .incomplete(
-                    AIResponse(
-                        requestID: request.id,
-                        content: content,
-                        finishReason: .incomplete,
-                        usage: usage
-                    )
-                )
-            }
+            // Mid-stream throw: incomplete if any delta was already consumed — handled inside consume.
             return .failed(error, sawDelta: false)
         }
+    }
+
+    private static func consumeStream(
+        request: AIRequest,
+        provider: AIProvider
+    ) async throws -> StreamAccumulation {
+        var state = StreamAccumulation()
+        do {
+            for try await event in provider.stream(request) {
+                try Task.checkCancellation()
+                apply(event, to: &state)
+            }
+            try Task.checkCancellation()
+            return state
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            if AIClientClassifier.isCancellation(error) {
+                throw CancellationError()
+            }
+            if state.sawDelta {
+                // Signal incomplete via a dedicated path: return state marked without done.
+                state.sawDone = false
+                state.finishReason = .incomplete
+                return state
+            }
+            throw error
+        }
+    }
+
+    private static func apply(_ event: AIStreamEvent, to state: inout StreamAccumulation) {
+        switch event {
+        case .meta:
+            break
+        case .delta(let fragment):
+            state.sawDelta = true
+            state.content += fragment
+        case .done(let doneUsage, let doneReason):
+            state.usage = doneUsage
+            state.finishReason = doneReason
+            state.sawDone = true
+        }
+    }
+
+    private static func outcome(
+        from state: StreamAccumulation,
+        requestID: UUID
+    ) -> AttemptOutcome {
+        if state.finishReason == .incomplete || (state.sawDelta && !state.sawDone) {
+            return .incomplete(
+                AIResponse(
+                    requestID: requestID,
+                    content: state.content,
+                    finishReason: .incomplete,
+                    usage: state.usage
+                )
+            )
+        }
+        if !state.sawDone {
+            return .failed(AppError.providerUnavailable, sawDelta: false)
+        }
+        return .success(
+            AIResponse(
+                requestID: requestID,
+                content: state.content,
+                finishReason: state.finishReason,
+                usage: state.usage
+            )
+        )
     }
 
     private static func defaultSleep(_ seconds: TimeInterval) async throws {
