@@ -1,13 +1,11 @@
-# Portfolio 10-phase roadmap — 2026-10-03 14:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-03 15:00 EDT
 
-Live probes at 2026-10-03T18:00:51Z (Conduit) and 2026-10-03T18:00:54.156Z (Resonance). No secrets invented. A classifier test is not production proof. An open roadmap pull request is not production proof.
+Live probes at 2026-10-03T19:01:37Z. No secrets invented. Refreshed in place on #218. No new roadmap PR.
 
 Evidence:
-- Conduit `GET /health` and `GET /ready` both returned 200 with `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, ready `persistence=postgres`. Diagnostics ok. `boundAgentId=grok`, `bindingConflict=false`.
-- Resonance `GET https://resonancenexus.netlify.app/api/ready` returned 503. `missingRequired` is exactly `["SUPABASE_SERVICE_ROLE_KEY"]`. Body omitted `ownerActionRequired` and `contractRevision`. Owner gate plus deploy lag.
-- This PR base is `5eb30beb`. Branch list at audit showed main `9b08845e`, so this roadmap branch may be behind. #209 UI smoke failed and stays unmerged. CHR-55 device HG on iPhone 16e is unobservable from this host. Simulator CI is not that gate.
-- Conduit #172 carries `splitPortfolioActions` and is not merged. #218 is this in-place roadmap PR. Do not open another.
-- `activity_prune` removed 0. Legacy `cknowlesbadluck/Quicksilver` is still unarchived. `cknowlesbadluck/mcp` is already archived.
+- Resonance `GET /api/ready` returned 503 at `2026-10-03T19:01:37.226Z`. `missingRequired` is exactly `SUPABASE_SERVICE_ROLE_KEY`. Body omitted `ownerActionRequired` and `contractRevision`. `/api/health` was 200. Owner gate plus deploy lag.
+- Conduit `GET /health` and `GET /ready` both returned 200 `version=0.8.0` `contractRevision=2026-10-03-ready-surface` ready `persistence=postgres`.
+- QuicksilverV1 main is `9b08845e` after #217 (M3-T4 routing config). This PR may be behind main. #209 UI smoke failed. CHR-55 device HG is unobservable here. Simulator CI is not that gate.
 
 ## Phase 1 — Owner gate
 
