@@ -70,4 +70,3 @@ private final class GatewayRedirectRejector: NSObject, URLSessionTaskDelegate, @
         completionHandler(nil)
     }
 }
-
