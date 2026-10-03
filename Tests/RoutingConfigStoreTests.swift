@@ -130,7 +130,7 @@ final class RoutingConfigStoreTests: XCTestCase {
 
     func testSecretKeyInConfigIsRejected() {
         let json = """
-        {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"answer":{"route":"onDevice"}},"tiers":{},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false},"apiKey":"secret"}
+        {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"answer":{"route":"onDevice"},"plan":{"route":"onDevice"},"tools":{"route":"onDevice"},"memory":{"route":"onDevice"},"summaries":{"route":"onDevice"}},"tiers":{},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false},"apiKey":"secret"}
         """
         XCTAssertThrowsError(try AIRoutingConfig.decodeAndValidate(Data(json.utf8))) { error in
             guard case AIRoutingConfigError.containsSecretKey = error else {
@@ -141,11 +141,33 @@ final class RoutingConfigStoreTests: XCTestCase {
 
     func testTrainsOnPromptsRequiresMinimal() {
         let json = """
-        {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"answer":{"route":"cloud","tier":"main"}},"tiers":{"main":{"displayModel":"X","trainsOnPrompts":true,"contextLevel":"standard"}},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false}}
+        {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"answer":{"route":"cloud","tier":"main"},"plan":{"route":"onDevice"},"tools":{"route":"onDevice"},"memory":{"route":"onDevice"},"summaries":{"route":"onDevice"}},"tiers":{"main":{"displayModel":"X","trainsOnPrompts":true,"contextLevel":"standard"}},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false}}
         """
         XCTAssertThrowsError(try AIRoutingConfig.decodeAndValidate(Data(json.utf8))) { error in
             guard case AIRoutingConfigError.trainsRequiresMinimal = error else {
                 return XCTFail("Expected trainsRequiresMinimal, got \(error)")
+            }
+        }
+    }
+
+    func testMissingRequiredTasksRejected() {
+        let json = """
+        {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"foo":{"route":"onDevice"}},"tiers":{},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false}}
+        """
+        XCTAssertThrowsError(try AIRoutingConfig.decodeAndValidate(Data(json.utf8))) { error in
+            guard case AIRoutingConfigError.missingRequiredTasks = error else {
+                return XCTFail("Expected missingRequiredTasks, got \(error)")
+            }
+        }
+    }
+
+    func testCamelCaseSecretKeyRejected() {
+        let json = """
+        {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"answer":{"route":"onDevice"},"plan":{"route":"onDevice"},"tools":{"route":"onDevice"},"memory":{"route":"onDevice"},"summaries":{"route":"onDevice"}},"tiers":{},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false},"geminiApiKey":"nope"}
+        """
+        XCTAssertThrowsError(try AIRoutingConfig.decodeAndValidate(Data(json.utf8))) { error in
+            guard case AIRoutingConfigError.containsSecretKey = error else {
+                return XCTFail("Expected containsSecretKey, got \(error)")
             }
         }
     }

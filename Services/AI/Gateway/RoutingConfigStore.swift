@@ -5,7 +5,8 @@ import Core
 ///
 /// Order: valid Application Support cache → bundled default → in-code fallback.
 /// `refresh` GETs `/v1/config`; any failure keeps the previous effective config.
-/// Never stores or decodes API keys.
+/// Never stores or decodes API keys. Cache writes re-encode the validated model
+/// so unknown JSON fields (including misspelled secrets) are not persisted.
 public final class RoutingConfigStore: @unchecked Sendable {
     public static let cacheFileName = "ai-routing.cache.json"
     public static let bundledResourceName = "ai-routing.default"
@@ -15,6 +16,8 @@ public final class RoutingConfigStore: @unchecked Sendable {
 
     private let lock = NSLock()
     private var effective: AIRoutingConfig
+    /// Monotonic generation so overlapping refreshes cannot roll back a newer policy.
+    private var refreshGeneration = 0
     private let bundledLoader: BundledLoader
     private let fileManager: FileManager
     private let cacheDirectoryURL: URL
@@ -64,6 +67,7 @@ public final class RoutingConfigStore: @unchecked Sendable {
     /// On any error keeps the previous effective config (never throws to callers).
     @discardableResult
     public func refresh(from endpoint: GatewayEndpoint, deviceToken: String) async -> Bool {
+        let generation = beginRefresh()
         do {
             var request = try endpoint.authorizedRequest(
                 path: "v1/config",
@@ -78,9 +82,10 @@ public final class RoutingConfigStore: @unchecked Sendable {
                 return false
             }
             let config = try AIRoutingConfig.decodeAndValidate(data)
-            try writeCache(data)
-            publish(config)
-            return true
+            let encoded = try config.encodeForCache()
+            guard isCurrentRefresh(generation) else { return false }
+            try writeCache(encoded)
+            return publishIfCurrent(generation, config)
         } catch {
             return false
         }
@@ -90,11 +95,28 @@ public final class RoutingConfigStore: @unchecked Sendable {
         cacheDirectoryURL.appendingPathComponent(Self.cacheFileName)
     }
 
-    /// Sync helper so `NSLock` is never touched directly from an `async` function body.
-    private func publish(_ config: AIRoutingConfig) {
+    // MARK: - Sync lock helpers (never call NSLock from an async function body)
+
+    private func beginRefresh() -> Int {
         lock.lock()
-        effective = config
+        refreshGeneration += 1
+        let generation = refreshGeneration
         lock.unlock()
+        return generation
+    }
+
+    private func isCurrentRefresh(_ generation: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return generation == refreshGeneration
+    }
+
+    private func publishIfCurrent(_ generation: Int, _ config: AIRoutingConfig) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        guard generation == refreshGeneration else { return false }
+        effective = config
+        return true
     }
 
     // MARK: - Loaders

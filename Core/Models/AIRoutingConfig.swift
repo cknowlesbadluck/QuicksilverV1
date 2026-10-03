@@ -17,6 +17,11 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
         case stream, tasks, tiers, timeouts, retry
     }
 
+    /// Task kinds every valid config must route.
+    public static let requiredTaskKinds: Set<String> = [
+        "answer", "plan", "tools", "memory", "summaries"
+    ]
+
     public init(
         protocolVersion: String,
         stream: [String],
@@ -54,6 +59,11 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
         return config
     }
 
+    /// Encode a validated config for the Application Support cache (strips unknown fields).
+    public func encodeForCache() throws -> Data {
+        try JSONEncoder().encode(self)
+    }
+
     public func validate() throws {
         guard protocolVersion == "v1" else {
             throw AIRoutingConfigError.invalidProtocol(protocolVersion)
@@ -62,8 +72,10 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
         guard requiredEvents.isSubset(of: Set(stream)) else {
             throw AIRoutingConfigError.invalidStream(stream)
         }
-        guard !tasks.isEmpty else {
-            throw AIRoutingConfigError.emptyTasks
+        let taskKeys = Set(tasks.keys)
+        guard Self.requiredTaskKinds.isSubset(of: taskKeys) else {
+            let missing = Self.requiredTaskKinds.subtracting(taskKeys).sorted()
+            throw AIRoutingConfigError.missingRequiredTasks(missing)
         }
         for (kind, routing) in tasks {
             try routing.validate(taskKind: kind, knownTiers: Set(tiers.keys))
@@ -75,7 +87,7 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
         try retry.validate()
     }
 
-    /// Read-only Codex summary for the primary `answer` task.
+    /// Read-only Codex summary for the primary `answer` task (routing policy, not live vessel).
     public func answerDisplay() -> (route: String, model: String) {
         guard let routing = tasks["answer"] else {
             return ("unknown", "—")
@@ -126,13 +138,9 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
         )
     }
 
-    /// Forbidden key names — config must never carry secrets.
-    private static let forbiddenKeys: Set<String> = [
-        "apikey", "api_key",
-        "secret", "password", "token", "accesstoken", "access_token",
-        "bearer", "authorization",
-        "gemini_api_key", "groq_api_key", "xai_api_key", "device_token",
-        "devicetoken"
+    /// Forbidden key fragments after lowercasing and stripping `_` / `-`.
+    private static let forbiddenFragments = [
+        "apikey", "secret", "password", "token", "authorization", "bearer"
     ]
 
     private static func rejectSecretKeys(in data: Data) throws {
@@ -145,8 +153,9 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
                 for (key, value) in dict {
                     let normalized = key
                         .lowercased()
-                        .replacingOccurrences(of: "-", with: "_")
-                    if Self.forbiddenKeys.contains(normalized) {
+                        .replacingOccurrences(of: "_", with: "")
+                        .replacingOccurrences(of: "-", with: "")
+                    if forbiddenFragments.contains(where: { normalized.contains($0) }) {
                         throw AIRoutingConfigError.containsSecretKey(key)
                     }
                     stack.append(value)
@@ -264,7 +273,7 @@ public enum AIRoutingConfigError: Error, Equatable, Sendable {
     case malformed
     case invalidProtocol(String)
     case invalidStream([String])
-    case emptyTasks
+    case missingRequiredTasks([String])
     case cloudMissingTier(String)
     case unknownTier(String)
     case emptyDisplayModel(String)
