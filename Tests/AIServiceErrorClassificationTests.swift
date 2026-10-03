@@ -273,6 +273,41 @@ final class AIServiceErrorClassificationTests: XCTestCase {
         XCTAssertEqual(secondary.attemptCount, 1)
     }
 
+
+    func testStreamEOFWithoutDoneKeepsIncompletePartial() async throws {
+        let provider = FakeStreamingProvider(
+            events: [
+                .meta(route: "fake", model: "fake-model", trainsOnPrompts: false),
+                .delta("truncated")
+                // no done
+            ]
+        )
+        let service = makeService(primary: provider)
+        service.retrySleep = { _ in }
+        let response = try await service.complete(prompt: "eof")
+        XCTAssertEqual(response.content, "truncated")
+        XCTAssertEqual(response.finishReason, .incomplete)
+    }
+
+    func testRoutingMaxAttemptsZeroDisablesRetry() async throws {
+        let provider = AttemptScriptProvider(scripts: [
+            .fail(.rateLimited(retryAfter: 0)),
+            .succeed(deltas: ["should-not-run"])
+        ])
+        let service = makeService(primary: provider)
+        service.retrySleep = { _ in }
+        service.retryPolicyOverride = AIStreamExecutor.RetryPolicy(maxRetries: 0, honorRetryAfter: true)
+        do {
+            _ = try await service.complete(prompt: "no-retry")
+            XCTFail("Expected rateLimited")
+        } catch let error as AppError {
+            guard case .rateLimited = error else {
+                return XCTFail("Unexpected AppError: \(error)")
+            }
+        }
+        XCTAssertEqual(provider.attemptCount, 1)
+    }
+
     // MARK: - Helpers
 
     private func makeService(

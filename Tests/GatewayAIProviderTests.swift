@@ -136,6 +136,21 @@ final class GatewayAIProviderTests: XCTestCase {
         }
     }
 
+    func testHTTP429PreservesRetryAfterHeader() async throws {
+        let provider = try makeProvider(
+            transport: lineTransport(status: 429, body: "{}", retryAfter: 3)
+        )
+        do {
+            for try await _ in provider.stream(AIRequest(prompt: "slow down")) {}
+            XCTFail("Expected rate limit")
+        } catch let error as AppError {
+            guard case .rateLimited(let retryAfter) = error else {
+                return XCTFail("Unexpected AppError: \(error)")
+            }
+            XCTAssertEqual(retryAfter, 3)
+        }
+    }
+
     func testHTTP503MapsToProviderUnavailable() async throws {
         let provider = try makeProvider(transport: lineTransport(status: 503, body: "{}"))
         do {
@@ -317,7 +332,8 @@ final class GatewayAIProviderTests: XCTestCase {
     private func lineTransport(
         status: Int,
         body: String,
-        captured: LockedArray<URLRequest>? = nil
+        captured: LockedArray<URLRequest>? = nil,
+        retryAfter: TimeInterval? = nil
     ) -> GatewayStreamTransport {
         GatewayStreamTransport { request in
             captured?.append(request)
@@ -328,7 +344,7 @@ final class GatewayAIProviderTests: XCTestCase {
                 }
                 continuation.finish()
             }
-            return GatewayOpenedStream(statusCode: status, lines: stream)
+            return GatewayOpenedStream(statusCode: status, lines: stream, retryAfter: retryAfter)
         }
     }
 

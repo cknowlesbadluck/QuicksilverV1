@@ -186,7 +186,7 @@ private enum GatewayAIStreamEngine {
     ) async throws {
         let opened = try await openTransport(transport, urlRequest: urlRequest)
         try Task.checkCancellation()
-        try throwIfHTTPFailed(opened.statusCode)
+        try throwIfHTTPFailed(opened.statusCode, retryAfter: opened.retryAfter)
         clock.markResponseStarted()
         try await readEvents(
             lines: opened.lines,
@@ -206,12 +206,12 @@ private enum GatewayAIStreamEngine {
         }
     }
 
-    private static func throwIfHTTPFailed(_ statusCode: Int) throws {
+    private static func throwIfHTTPFailed(_ statusCode: Int, retryAfter: TimeInterval?) throws {
         if statusCode == 401 || statusCode == 403 {
             throw AppError.unauthorized
         }
         if statusCode == 429 {
-            throw AppError.rateLimited(retryAfter: nil)
+            throw AppError.rateLimited(retryAfter: retryAfter)
         }
         if (500...599).contains(statusCode) {
             throw AppError.providerUnavailable

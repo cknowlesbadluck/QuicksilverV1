@@ -59,14 +59,15 @@ final class DependencyContainer {
         }
         self.memoryManager = MemoryManager(store: resolvedMemoryStore, eventBus: eventBus, logger: logger)
 
+        self.routingConfigStore = routingConfigStore ?? RoutingConfigStore()
+
         self.aiService = AIService(
             provider: aiProvider,
             eventBus: eventBus,
             logger: logger,
-            featureFlags: featureFlags
+            featureFlags: featureFlags,
+            routingConfigStore: self.routingConfigStore
         )
-
-        self.routingConfigStore = routingConfigStore ?? RoutingConfigStore()
 
         self.nexus = nexus ?? NexusCoordinator(logger: logger, eventBus: eventBus)
 

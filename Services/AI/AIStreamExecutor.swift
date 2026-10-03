@@ -84,6 +84,7 @@ enum AIStreamExecutor {
         var usage: AIResponse.Usage?
         var finishReason: AIResponse.FinishReason = .stop
         var sawDelta = false
+        var sawDone = false
         do {
             for try await event in provider.stream(request) {
                 try Task.checkCancellation()
@@ -96,9 +97,24 @@ enum AIStreamExecutor {
                 case .done(let doneUsage, let doneReason):
                     usage = doneUsage
                     finishReason = doneReason
+                    sawDone = true
                 }
             }
             try Task.checkCancellation()
+            if !sawDone {
+                // Truncated stream closed without a terminal done.
+                if sawDelta {
+                    return .incomplete(
+                        AIResponse(
+                            requestID: request.id,
+                            content: content,
+                            finishReason: .incomplete,
+                            usage: usage
+                        )
+                    )
+                }
+                return .failed(AppError.providerUnavailable, sawDelta: false)
+            }
             return .success(
                 AIResponse(
                     requestID: request.id,

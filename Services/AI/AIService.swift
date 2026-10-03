@@ -15,6 +15,7 @@ public final class AIService {
     private let eventBus: EventBus
     private let logger: LoggerService
     private let featureFlags: FeatureFlags
+    private let routingConfigStore: RoutingConfigStore?
 
     /// Injected sleep for M3-T5 retry backoff (tests replace with a no-op).
     var retrySleep: @Sendable (TimeInterval) async throws -> Void = { seconds in
@@ -22,8 +23,8 @@ public final class AIService {
         try await Task.sleep(for: .seconds(seconds))
     }
 
-    /// M3-T5 client retry: at most one bounded retry before the first delta.
-    var retryPolicy = AIStreamExecutor.RetryPolicy(maxRetries: 1, honorRetryAfter: true)
+    /// Override for tests. When nil, reads `retry` from `routingConfigStore` (bundled default: 1).
+    var retryPolicyOverride: AIStreamExecutor.RetryPolicy?
 
     public static let grokAPIKeyKeychainAccount = "xai.apiKey"
     public static let geminiAPIKeyKeychainAccount = "google.gemini.apiKey"
@@ -32,7 +33,8 @@ public final class AIService {
         provider: AIProvider? = nil,
         eventBus: EventBus,
         logger: LoggerService,
-        featureFlags: FeatureFlags
+        featureFlags: FeatureFlags,
+        routingConfigStore: RoutingConfigStore? = nil
     ) {
         let configured: (primary: AIProvider?, secondary: AIProvider?)
         if let provider {
@@ -45,7 +47,8 @@ public final class AIService {
             secondary: configured.secondary,
             eventBus: eventBus,
             logger: logger,
-            featureFlags: featureFlags
+            featureFlags: featureFlags,
+            routingConfigStore: routingConfigStore
         )
     }
 
@@ -55,11 +58,13 @@ public final class AIService {
         secondary: AIProvider?,
         eventBus: EventBus,
         logger: LoggerService,
-        featureFlags: FeatureFlags
+        featureFlags: FeatureFlags,
+        routingConfigStore: RoutingConfigStore? = nil
     ) {
         self.eventBus = eventBus
         self.logger = logger
         self.featureFlags = featureFlags
+        self.routingConfigStore = routingConfigStore
         self.primaryProvider = primary
         self.secondaryProvider = secondary
     }
@@ -233,7 +238,7 @@ public final class AIService {
             return try await AIStreamExecutor.collect(
                 request: request,
                 provider: primary,
-                policy: retryPolicy,
+                policy: effectiveRetryPolicy(),
                 sleep: retrySleep
             )
         } catch {
@@ -254,10 +259,20 @@ public final class AIService {
             return try await AIStreamExecutor.collect(
                 request: request,
                 provider: fallback,
-                policy: retryPolicy,
+                policy: effectiveRetryPolicy(),
                 sleep: retrySleep
             )
         }
+    }
+
+    private func effectiveRetryPolicy() -> AIStreamExecutor.RetryPolicy {
+        if let retryPolicyOverride { return retryPolicyOverride }
+        let retry = routingConfigStore?.loadValidated().retry
+            ?? AIRoutingConfig.bundledDefault.retry
+        return AIStreamExecutor.RetryPolicy(
+            maxRetries: retry.maxAttempts,
+            honorRetryAfter: retry.honorRetryAfter
+        )
     }
 
     private static func isClassifiedClientError(_ error: Error) -> Bool {
