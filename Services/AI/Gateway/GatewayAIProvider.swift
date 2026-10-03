@@ -97,17 +97,16 @@ public struct GatewayAIProvider: AIProvider {
     }
 
     public func stream(_ request: AIRequest) -> AsyncThrowingStream<AIStreamEvent, Error> {
-        let deps = StreamDeps(
+        let deps = GatewayAIStreamEngine.Deps(
             endpoint: endpoint,
             deviceToken: deviceToken,
             transport: transport,
             timeouts: timeouts
         )
-
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    try await Self.runStream(request, deps: deps, continuation: continuation)
+                    try await GatewayAIStreamEngine.run(request, deps: deps, continuation: continuation)
                     continuation.finish()
                 } catch is CancellationError {
                     continuation.finish(throwing: CancellationError())
@@ -120,19 +119,21 @@ public struct GatewayAIProvider: AIProvider {
             }
         }
     }
+}
 
-    // MARK: - Stream execution
+// MARK: - Stream engine (kept outside the provider type for SwiftLint type_body_length)
 
-    private struct StreamDeps: Sendable {
+private enum GatewayAIStreamEngine {
+    struct Deps: Sendable {
         let endpoint: GatewayEndpoint
         let deviceToken: String
         let transport: GatewayStreamTransport
         let timeouts: GatewayTimeouts
     }
 
-    private static func runStream(
+    static func run(
         _ request: AIRequest,
-        deps: StreamDeps,
+        deps: Deps,
         continuation: AsyncThrowingStream<AIStreamEvent, Error>.Continuation
     ) async throws {
         try Task.checkCancellation()
