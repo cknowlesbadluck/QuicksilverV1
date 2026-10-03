@@ -187,6 +187,37 @@ final class GatewayAIProviderTests: XCTestCase {
         XCTAssertEqual(third, [.delta("Hi")])
     }
 
+    func testSSEParserHandlesCRLFAndBareCR() throws {
+        var parser = SSEParser()
+        let crlf = try parser.append(
+            "event: meta\r\ndata: {\"route\":\"on-device\",\"model\":\"fake\",\"trainsOnPrompts\":false}\r\n\r\n"
+        )
+        XCTAssertEqual(crlf, [
+            .meta(route: "on-device", model: "fake", trainsOnPrompts: false)
+        ])
+
+        parser.finish()
+        let bare = try parser.append(
+            "event: delta\rdata: {\"text\":\"Hi\"}\r\r"
+        )
+        XCTAssertEqual(bare, [.delta("Hi")])
+    }
+
+    func testSSEParserPreservesCrossChunkCRLF() throws {
+        var parser = SSEParser()
+        let first = try parser.append(
+            "event: delta\rdata: {\"text\":\"A\"}\r"
+        )
+        XCTAssertTrue(first.isEmpty)
+        let second = try parser.append("\n\r\n")
+        XCTAssertEqual(second, [.delta("A")])
+    }
+
+    func testTrainsOnPromptsDefaultsRestrictive() throws {
+        let provider = try makeProvider(transport: lineTransport(status: 200, body: ""))
+        XCTAssertTrue(provider.trainsOnPrompts)
+    }
+
     // MARK: - Token-in-URL reject
 
     func testRejectsEmptyDeviceToken() throws {

@@ -20,7 +20,7 @@ public struct GatewayAIProvider: AIProvider {
     public init(
         endpoint: GatewayEndpoint,
         deviceToken: String,
-        session: URLSession = .shared,
+        session: URLSession = GatewayStreamTransport.makeSecureSession(),
         timeouts: GatewayTimeouts = .defaults
     ) throws {
         try self.init(
@@ -53,7 +53,7 @@ public struct GatewayAIProvider: AIProvider {
     /// Production-style factory: reads the device token from Keychain.
     public static func make(
         endpoint: GatewayEndpoint,
-        session: URLSession = .shared,
+        session: URLSession = GatewayStreamTransport.makeSecureSession(),
         timeouts: GatewayTimeouts = .defaults
     ) -> GatewayAIProvider? {
         guard let token = KeychainStore.string(forKey: deviceTokenKeychainAccount),
@@ -70,8 +70,9 @@ public struct GatewayAIProvider: AIProvider {
 
     public var isAvailable: Bool { !deviceToken.isEmpty }
     public var modelIdentifier: String { "gateway" }
-    /// The gateway advertises training policy per stream via `meta`; default is conservative.
-    public var trainsOnPrompts: Bool { false }
+    /// Until M3-T4 routing config supplies the tier policy before send, assume training
+    /// so callers force minimal context (privacy rule / Gemini free tier).
+    public var trainsOnPrompts: Bool { true }
 
     public func complete(_ request: AIRequest) async throws -> AIResponse {
         var content = ""
@@ -86,6 +87,7 @@ public struct GatewayAIProvider: AIProvider {
                 usage = doneUsage
             }
         }
+        try Task.checkCancellation()
         return AIResponse(
             requestID: request.id,
             content: content,
@@ -142,7 +144,9 @@ public struct GatewayAIProvider: AIProvider {
             path: "v1/chat",
             deviceToken: deps.deviceToken
         )
-        mutableRequest.timeoutInterval = deps.timeouts.connect
+        // Do not undercut first-event / idle / total budgets with the connect-only value.
+        // StreamTimeoutClock enforces the finer deadlines after the response opens.
+        mutableRequest.timeoutInterval = deps.timeouts.total
         mutableRequest.setValue("text/event-stream", forHTTPHeaderField: "Accept")
         mutableRequest.httpBody = try JSONEncoder().encode(makeChatBody(request))
 
@@ -177,40 +181,63 @@ public struct GatewayAIProvider: AIProvider {
         clock: StreamTimeoutClock,
         continuation: AsyncThrowingStream<AIStreamEvent, Error>.Continuation
     ) async throws {
-        let opened: GatewayOpenedStream
-        do {
-            opened = try await transport.open(urlRequest)
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch let urlError as URLError where urlError.code == .cancelled {
-            throw CancellationError()
-        } catch {
-            if Task.isCancelled { throw CancellationError() }
-            throw AppError.networkUnavailable
-        }
-
+        let opened = try await openTransport(transport, urlRequest: urlRequest)
         try Task.checkCancellation()
-        if opened.statusCode == 401 {
+        try throwIfHTTPFailed(opened.statusCode)
+        clock.markResponseStarted()
+        try await readEvents(
+            lines: opened.lines,
+            clock: clock,
+            continuation: continuation
+        )
+    }
+
+    private static func openTransport(
+        _ transport: GatewayStreamTransport,
+        urlRequest: URLRequest
+    ) async throws -> GatewayOpenedStream {
+        do {
+            return try await transport.open(urlRequest)
+        } catch {
+            throw mapTransportFailure(error)
+        }
+    }
+
+    private static func throwIfHTTPFailed(_ statusCode: Int) throws {
+        if statusCode == 401 {
             throw AppError.aiKeyRejected(provider: "Gateway")
         }
-        if opened.statusCode == 429 {
+        if statusCode == 429 {
             throw AppError.aiRateLimited(provider: "Gateway")
         }
-        guard (200...299).contains(opened.statusCode) else {
-            throw ProviderHTTPError.error(provider: "Gateway", status: opened.statusCode)
+        guard (200...299).contains(statusCode) else {
+            throw ProviderHTTPError.error(provider: "Gateway", status: statusCode)
         }
+    }
 
+    private static func readEvents(
+        lines: AsyncThrowingStream<String, Error>,
+        clock: StreamTimeoutClock,
+        continuation: AsyncThrowingStream<AIStreamEvent, Error>.Continuation
+    ) async throws {
         var parser = SSEParser()
         var sawTerminal = false
-
-        for try await line in opened.lines {
-            try Task.checkCancellation()
-            try clock.check()
-            if let wire = try parser.pushLine(line) {
-                clock.markEvent()
-                try handleWire(wire, continuation: continuation, sawTerminal: &sawTerminal)
-                if sawTerminal { break }
+        do {
+            for try await line in lines {
+                try Task.checkCancellation()
+                try clock.check()
+                if let wire = try parser.pushLine(line) {
+                    clock.markEvent()
+                    try handleWire(wire, continuation: continuation, sawTerminal: &sawTerminal)
+                    if sawTerminal { break }
+                }
             }
+        } catch let error as AppError {
+            throw error
+        } catch let error as GatewayWireDecodeError {
+            throw error
+        } catch {
+            throw mapTransportFailure(error)
         }
 
         parser.finish()
@@ -218,6 +245,15 @@ public struct GatewayAIProvider: AIProvider {
         if !sawTerminal {
             throw GatewayWireDecodeError.incompleteStream
         }
+    }
+
+    private static func mapTransportFailure(_ error: Error) -> Error {
+        if error is CancellationError { return CancellationError() }
+        if let urlError = error as? URLError, urlError.code == .cancelled {
+            return CancellationError()
+        }
+        if Task.isCancelled { return CancellationError() }
+        return AppError.networkUnavailable
     }
 
     private static func handleWire(
@@ -288,6 +324,16 @@ public struct GatewayStreamTransport: Sendable {
         self.open = open
     }
 
+    /// Ephemeral session that refuses HTTP redirects (keeps prompt body on the validated endpoint).
+    public static func makeSecureSession() -> URLSession {
+        let config = URLSessionConfiguration.ephemeral
+        return URLSession(
+            configuration: config,
+            delegate: GatewayRedirectRejector.shared,
+            delegateQueue: nil
+        )
+    }
+
     public static func urlSession(_ session: URLSession) -> GatewayStreamTransport {
         GatewayStreamTransport { request in
             let (bytes, response) = try await session.bytes(for: request)
@@ -312,6 +358,21 @@ public struct GatewayStreamTransport: Sendable {
     }
 }
 
+/// Rejects every HTTP redirect so POSTed prompts never leave the validated gateway URL.
+private final class GatewayRedirectRejector: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    static let shared = GatewayRedirectRejector()
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest,
+        completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+}
+
 // MARK: - Timeout watchdog
 
 /// Shared first-event / idle / total deadline checks for the stream + watchdog tasks.
@@ -319,6 +380,7 @@ private final class StreamTimeoutClock: @unchecked Sendable {
     private let lock = NSLock()
     private let timeouts: GatewayTimeouts
     private let startedAt: ContinuousClock.Instant
+    private var responseStartedAt: ContinuousClock.Instant?
     private var gotFirstEvent = false
     private var lastEventAt: ContinuousClock.Instant
 
@@ -327,6 +389,15 @@ private final class StreamTimeoutClock: @unchecked Sendable {
         let now = ContinuousClock.now
         self.startedAt = now
         self.lastEventAt = now
+    }
+
+    /// Call after response headers / stream open so first-event excludes connect time.
+    func markResponseStarted() {
+        lock.lock()
+        let now = ContinuousClock.now
+        responseStartedAt = now
+        lastEventAt = now
+        lock.unlock()
     }
 
     func markEvent() {
@@ -341,6 +412,7 @@ private final class StreamTimeoutClock: @unchecked Sendable {
         let gotFirst = gotFirstEvent
         let lastEvent = lastEventAt
         let start = startedAt
+        let responseStart = responseStartedAt
         let timeouts = self.timeouts
         lock.unlock()
 
@@ -348,7 +420,9 @@ private final class StreamTimeoutClock: @unchecked Sendable {
         if now - start > .seconds(timeouts.total) {
             throw AppError.aiRequestFailed("Gateway timed out")
         }
-        if !gotFirst, now - start > .seconds(timeouts.firstEvent) {
+        // firstEvent starts after headers; before that only `total` applies.
+        if !gotFirst, let responseStart,
+           now - responseStart > .seconds(timeouts.firstEvent) {
             throw AppError.aiRequestFailed("Gateway timed out waiting for the first event")
         }
         if gotFirst, now - lastEvent > .seconds(timeouts.idle) {

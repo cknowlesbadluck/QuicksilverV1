@@ -9,6 +9,8 @@ public struct SSEParser: Sendable {
     private var eventName: String?
     private var dataLines: [String] = []
     private var carry = ""
+    /// When a chunk ends on bare CR, the next chunk's leading LF (if any) completes CRLF.
+    private var skipLeadingLF = false
 
     public init() {}
 
@@ -16,18 +18,39 @@ public struct SSEParser: Sendable {
     public mutating func append(_ chunk: String) throws -> [GatewayWireEvent] {
         carry += chunk
         var events: [GatewayWireEvent] = []
-        // Normalize CRLF / bare CR into LF while scanning.
-        while let newline = carry.firstIndex(of: "\n") {
-            var line = String(carry[..<newline])
-            carry = String(carry[carry.index(after: newline)...])
-            if line.hasSuffix("\r") {
-                line.removeLast()
+        let scalars = Array(carry.unicodeScalars)
+        var index = 0
+        if skipLeadingLF {
+            if index < scalars.count, scalars[index] == "\n" {
+                index += 1
             }
+            skipLeadingLF = false
+        }
+        var lineStart = index
+        while index < scalars.count {
+            let scalar = scalars[index]
+            if scalar != "\r" && scalar != "\n" {
+                index += 1
+                continue
+            }
+            let lineScalars = scalars[lineStart..<index]
+            var afterTerminator = index + 1
+            if scalar == "\r" {
+                if afterTerminator < scalars.count, scalars[afterTerminator] == "\n" {
+                    afterTerminator += 1
+                } else if afterTerminator == scalars.count {
+                    // Trailing CR may be the first half of a cross-chunk CRLF.
+                    skipLeadingLF = true
+                }
+            }
+            let line = String(String.UnicodeScalarView(lineScalars))
             if let event = try pushLine(line) {
                 events.append(event)
             }
+            lineStart = afterTerminator
+            index = afterTerminator
         }
-        // Handle a trailing bare CR without LF (rare); leave it in carry.
+        carry = String(String.UnicodeScalarView(scalars[lineStart...]))
         return events
     }
 
@@ -52,6 +75,7 @@ public struct SSEParser: Sendable {
         eventName = nil
         dataLines = []
         carry = ""
+        skipLeadingLF = false
     }
 
     private mutating func flush() throws -> GatewayWireEvent? {
