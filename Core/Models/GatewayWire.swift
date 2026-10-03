@@ -4,8 +4,11 @@ import Foundation
 ///
 /// Auth is `Authorization: Bearer <device token>`. A token in the query string,
 /// fragment, or userinfo is a protocol violation and must be rejected before any
-/// request is sent. Context blocks are kind-tagged. Successful streams are
-/// `meta` → zero or more `delta` → `done`. Failures are a single `error` event.
+/// request is sent. The protocol defines no query parameters, so any query string
+/// is rejected. Context blocks are kind-tagged. Successful streams are
+/// `meta` → zero or more `delta` → `done`. Failures are a single `error`, or
+/// `meta` → zero or more `delta` → `error` when the upstream fails after output
+/// has begun.
 public enum GatewayContextKind: String, Codable, Sendable, CaseIterable {
     case history
     case summary
@@ -84,11 +87,13 @@ public enum GatewayWireDecodeError: Error, Equatable {
     case malformedEvent(String)
     case unknownEvent(String)
     case missingField(String)
+    case incompleteStream
     case tokenInURL
     case invalidRequest
 }
 
 public enum GatewayWireDecoder {
+    /// Returns `true` when the URL must be rejected (userinfo, fragment, or any query).
     public static func rejectTokenInURL(_ raw: String) -> Bool {
         guard let url = URL(string: raw), let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             return true
@@ -99,11 +104,11 @@ public enum GatewayWireDecoder {
         if components.fragment?.isEmpty == false {
             return true
         }
-        let query = components.queryItems ?? []
-        let banned = ["token", "access_token", "device_token", "authorization", "api_key"]
-        return query.contains { item in
-            banned.contains(item.name.lowercased())
+        // Protocol has no query parameters — reject any query string.
+        if components.query != nil {
+            return true
         }
+        return false
     }
 
     public static func decodeRequest(_ data: Data) throws -> GatewayChatRequest {
@@ -132,7 +137,12 @@ public enum GatewayWireDecoder {
             dataLines = []
         }
 
-        for line in text.split(separator: "\n", omittingEmptySubsequences: false) {
+        // Normalize CRLF / bare CR so splitting on LF works for all common SSE wires.
+        let normalized = text
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+
+        for line in normalized.split(separator: "\n", omittingEmptySubsequences: false) {
             let row = String(line)
             if row.isEmpty {
                 try flush()
@@ -147,58 +157,122 @@ public enum GatewayWireDecoder {
         }
         try flush()
         guard !events.isEmpty else { throw GatewayWireDecodeError.empty }
+        try validateSequence(events)
         return events
     }
 
+    /// Accept only integral JSON numbers representable as `Int` (no truncation).
     private static func intValue(_ value: Any?) -> Int? {
-        if let number = value as? Int { return number }
-        if let number = value as? NSNumber { return number.intValue }
-        return nil
+        guard let number = value as? NSNumber else { return nil }
+        // Bool bridges to NSNumber — reject it.
+        if CFGetTypeID(number as CFTypeRef) == CFBooleanGetTypeID() { return nil }
+        let double = number.doubleValue
+        guard double.isFinite,
+              double.rounded(.towardZero) == double,
+              double >= Double(Int.min),
+              double <= Double(Int.max) else {
+            return nil
+        }
+        return Int(double)
     }
 
     private static func boolValue(_ value: Any?) -> Bool? {
-        if let flag = value as? Bool { return flag }
-        if let number = value as? NSNumber { return number.boolValue }
-        return nil
+        // JSONSerialization booleans are CFBoolean NSNumbers; reject numeric 0/1.
+        guard let number = value as? NSNumber,
+              CFGetTypeID(number as CFTypeRef) == CFBooleanGetTypeID() else {
+            return nil
+        }
+        return number.boolValue
+    }
+
+    private static func jsonObject(_ payload: String, name: String) throws -> [String: Any] {
+        let data = Data(payload.utf8)
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw GatewayWireDecodeError.malformedEvent(name)
+        }
+        return object
+    }
+
+    private static func decodeMeta(_ object: [String: Any]) throws -> GatewayWireEvent {
+        guard let route = object["route"] as? String,
+              let model = object["model"] as? String,
+              let trains = boolValue(object["trainsOnPrompts"]) else {
+            throw GatewayWireDecodeError.missingField("meta")
+        }
+        return .meta(route: route, model: model, trainsOnPrompts: trains)
+    }
+
+    private static func decodeDelta(_ object: [String: Any]) throws -> GatewayWireEvent {
+        guard let text = object["text"] as? String else {
+            throw GatewayWireDecodeError.missingField("delta.text")
+        }
+        return .delta(text)
+    }
+
+    private static func decodeDone(_ object: [String: Any]) throws -> GatewayWireEvent {
+        if let usage = object["usage"] as? [String: Any] {
+            guard let prompt = intValue(usage["promptTokens"]),
+                  let completion = intValue(usage["completionTokens"]) else {
+                throw GatewayWireDecodeError.missingField("done.usage")
+            }
+            return .done(usage: AIResponse.Usage(promptTokens: prompt, completionTokens: completion))
+        }
+        return .done(usage: nil)
+    }
+
+    private static func decodeError(_ object: [String: Any]) throws -> GatewayWireEvent {
+        guard let raw = object["code"] as? String, let code = GatewayErrorCode(rawValue: raw) else {
+            throw GatewayWireDecodeError.missingField("error.code")
+        }
+        // retryAfter must be integral when present; fractional JSON is rejected via nil intValue.
+        if object["retryAfter"] != nil && intValue(object["retryAfter"]) == nil {
+            throw GatewayWireDecodeError.missingField("error.retryAfter")
+        }
+        let retry = intValue(object["retryAfter"])
+        if code == .rateLimited && retry == nil {
+            throw GatewayWireDecodeError.missingField("error.retryAfter")
+        }
+        return .error(code: code, retryAfter: retry)
     }
 
     private static func decode(name: String, payload: String) throws -> GatewayWireEvent {
-        let data = Data(payload.utf8)
-        let object = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        guard let object else { throw GatewayWireDecodeError.malformedEvent(name) }
+        let object = try jsonObject(payload, name: name)
         switch name {
         case "meta":
-            guard let route = object["route"] as? String,
-                  let model = object["model"] as? String,
-                  let trains = boolValue(object["trainsOnPrompts"]) else {
-                throw GatewayWireDecodeError.missingField("meta")
-            }
-            return .meta(route: route, model: model, trainsOnPrompts: trains)
+            return try decodeMeta(object)
         case "delta":
-            guard let text = object["text"] as? String else {
-                throw GatewayWireDecodeError.missingField("delta.text")
-            }
-            return .delta(text)
+            return try decodeDelta(object)
         case "done":
-            if let usage = object["usage"] as? [String: Any] {
-                guard let prompt = intValue(usage["promptTokens"]),
-                      let completion = intValue(usage["completionTokens"]) else {
-                    throw GatewayWireDecodeError.missingField("done.usage")
-                }
-                return .done(usage: AIResponse.Usage(promptTokens: prompt, completionTokens: completion))
-            }
-            return .done(usage: nil)
+            return try decodeDone(object)
         case "error":
-            guard let raw = object["code"] as? String, let code = GatewayErrorCode(rawValue: raw) else {
-                throw GatewayWireDecodeError.missingField("error.code")
-            }
-            let retry = intValue(object["retryAfter"])
-            if code == .rateLimited && retry == nil {
-                throw GatewayWireDecodeError.missingField("error.retryAfter")
-            }
-            return .error(code: code, retryAfter: retry)
+            return try decodeError(object)
         default:
             throw GatewayWireDecodeError.unknownEvent(name)
+        }
+    }
+
+    /// Grammar: `meta`→deltas→`done`, lone `error`, or `meta`→deltas→`error`.
+    private static func validateSequence(_ events: [GatewayWireEvent]) throws {
+        guard let last = events.last else { throw GatewayWireDecodeError.empty }
+        switch last {
+        case .done, .error:
+            break
+        case .meta, .delta:
+            throw GatewayWireDecodeError.incompleteStream
+        }
+
+        if events.count == 1 {
+            if case .error = last { return }
+            throw GatewayWireDecodeError.incompleteStream
+        }
+
+        guard case .meta = events.first else {
+            throw GatewayWireDecodeError.malformedEvent("sequence")
+        }
+        for event in events.dropFirst().dropLast() {
+            guard case .delta = event else {
+                throw GatewayWireDecodeError.malformedEvent("sequence")
+            }
         }
     }
 }

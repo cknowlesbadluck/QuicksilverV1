@@ -4,7 +4,7 @@ Status: contract + fixtures. The Worker still serves only `GET /v1/health`. `Gat
 
 ## Auth
 
-`Authorization: Bearer <device token>`. Never a query string, fragment, or userinfo. `GatewayWireDecoder.rejectTokenInURL` is the client-side reject.
+`Authorization: Bearer <device token>`. Never a query string, fragment, or userinfo. The protocol defines **no query parameters**, so any `?…` on a gateway URL is a protocol violation. `GatewayWireDecoder.rejectTokenInURL` is the client-side reject.
 
 ## `POST /v1/chat`
 
@@ -27,7 +27,15 @@ Response: `text/event-stream`.
 
 Error codes: `unauthorized`, `rate_limited` (requires `retryAfter`), `budget_exhausted`, `upstream_unavailable`, `bad_request`, `timeout`.
 
-A successful stream is `meta`, zero or more `delta`, then `done`. An error stream is a single `error` event. No token is logged.
+`retryAfter`, `promptTokens`, and `completionTokens` are integral integers only; fractional JSON numbers are rejected.
+
+### Stream grammar
+
+- **Success:** `meta` → zero or more `delta` → `done`.
+- **Failure before output:** a single `error` event.
+- **Failure after output has begun:** `meta` → zero or more `delta` → `error` (partial text is preserved for the caller; no further events).
+
+A stream that ends without a terminal `done` or `error` is incomplete and must be rejected. No token is logged.
 
 ## `GET /v1/health`
 
@@ -39,4 +47,4 @@ A successful stream is `meta`, zero or more `delta`, then `done`. An error strea
 
 ## Fixtures
 
-Canonical copies live in `gateway/fixtures/`. SPM replays the copies under `Tests/Fixtures/gateway/`. They must stay byte-identical.
+Canonical copies live in `gateway/fixtures/`. SPM replays the copies under `Tests/Fixtures/gateway/`. They must stay byte-identical. Tests load them via `#filePath` (not `Bundle.module`) so the same path works in SPM and the Xcode `QuicksilverTests` target.

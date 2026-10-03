@@ -38,6 +38,15 @@ struct GatewayProtocolTests {
         }
     }
 
+    @Test func midStreamErrorIsValidFailure() throws {
+        let events = try GatewayWireDecoder.decodeSSE(try fixtureText("mid-stream-error.sse"))
+        #expect(events == [
+            .meta(route: "cloud", model: "fake", trainsOnPrompts: true),
+            .delta("partial"),
+            .error(code: .upstreamUnavailable, retryAfter: nil)
+        ])
+    }
+
     @Test func rateLimitWithoutRetryAfterIsRejected() {
         let body = "event: error\ndata: {\"code\":\"rate_limited\"}\n"
         #expect(throws: GatewayWireDecodeError.missingField("error.retryAfter")) {
@@ -45,8 +54,51 @@ struct GatewayProtocolTests {
         }
     }
 
-    @Test func tokenInURLIsRejected() {
+    @Test func crlfLineEndingsDecode() throws {
+        let body = "event: error\r\ndata: {\"code\":\"timeout\"}\r\n\r\n"
+        let events = try GatewayWireDecoder.decodeSSE(body)
+        #expect(events == [.error(code: .timeout, retryAfter: nil)])
+    }
+
+    @Test func incompleteStreamWithoutTerminalIsRejected() {
+        let body = """
+        event: meta
+        data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
+
+        event: delta
+        data: {"text":"hi"}
+
+        """
+        #expect(throws: GatewayWireDecodeError.incompleteStream) {
+            try GatewayWireDecoder.decodeSSE(body)
+        }
+    }
+
+    @Test func fractionalRetryAfterIsRejected() {
+        let body = "event: error\ndata: {\"code\":\"rate_limited\",\"retryAfter\":2.9}\n"
+        #expect(throws: GatewayWireDecodeError.missingField("error.retryAfter")) {
+            try GatewayWireDecoder.decodeSSE(body)
+        }
+    }
+
+    @Test func fractionalUsageTokensAreRejected() {
+        let body = """
+        event: meta
+        data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
+
+        event: done
+        data: {"usage":{"promptTokens":1.5,"completionTokens":2}}
+
+        """
+        #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
+            try GatewayWireDecoder.decodeSSE(body)
+        }
+    }
+
+    @Test func anyQueryStringIsRejected() {
         #expect(GatewayWireDecoder.rejectTokenInURL("https://gateway.example/v1/chat?token=secret"))
+        #expect(GatewayWireDecoder.rejectTokenInURL("https://gateway.example/v1/chat?auth=secret"))
+        #expect(GatewayWireDecoder.rejectTokenInURL("https://gateway.example/v1/chat?foo=bar"))
         #expect(GatewayWireDecoder.rejectTokenInURL("https://user:secret@gateway.example/v1/chat"))
         #expect(GatewayWireDecoder.rejectTokenInURL("https://gateway.example/v1/chat#access_token=secret"))
         #expect(!GatewayWireDecoder.rejectTokenInURL("https://gateway.example/v1/chat"))
@@ -59,10 +111,12 @@ struct GatewayProtocolTests {
         #expect(config?["protocol"] as? String == "v1")
     }
 
+    /// `#filePath` lookup works for both SPM and the Xcode QuicksilverTests target (no Bundle.module).
     private func fixture(_ name: String) throws -> Data {
-        let url = Bundle.module.url(forResource: name, withExtension: nil, subdirectory: "gateway")
-            ?? Bundle.module.url(forResource: name, withExtension: nil)
-        return try Data(contentsOf: try #require(url))
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/gateway/\(name)")
+        return try Data(contentsOf: url)
     }
 
     private func fixtureText(_ name: String) throws -> String {
