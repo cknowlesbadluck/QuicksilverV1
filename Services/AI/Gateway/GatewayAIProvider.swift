@@ -4,7 +4,7 @@ import Core
 /// Mercury Gateway SSE client (M3-T3).
 ///
 /// Streams `POST /v1/chat` via `URLSession.bytes(for:)`, parsing events with `SSEParser`
-/// and `GatewayWireDecoder`. Not wired into production `AIService` routing yet (M3-T6).
+/// and `GatewayWireDecoder`. Wired into `AIService` when Codex binds URL + device token (M3-T6).
 public struct GatewayAIProvider: AIProvider {
     public let id = "gateway"
     public let displayName = "Mercury Gateway"

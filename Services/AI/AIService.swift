@@ -13,7 +13,7 @@ public final class AIService {
     private var primaryProvider: AIProvider?
     private var secondaryProvider: AIProvider?
     private let eventBus: EventBus
-    private let logger: LoggerService
+    let logger: LoggerService
     private let featureFlags: FeatureFlags
     private let routingConfigStore: RoutingConfigStore?
 
@@ -25,6 +25,12 @@ public final class AIService {
 
     /// Override for tests. When nil, reads `retry` from `routingConfigStore` (bundled default: 1).
     var retryPolicyOverride: AIStreamExecutor.RetryPolicy?
+
+    /// Injectable `GET /v1/health` for Codex test-connection (AppTests stub this).
+    public typealias GatewayHealthFetcher = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    var gatewayHealthFetcher: GatewayHealthFetcher = { request in
+        try await URLSession.shared.data(for: request)
+    }
 
     public static let grokAPIKeyKeychainAccount = "xai.apiKey"
     public static let geminiAPIKeyKeychainAccount = "google.gemini.apiKey"
@@ -70,6 +76,10 @@ public final class AIService {
     }
 
     private static func makeConfiguredProviders() -> (primary: AIProvider?, secondary: AIProvider?) {
+        // Gateway bind (M3-T6) wins when URL + device token are present.
+        if let gateway = makeGatewayProvider() {
+            return (gateway, nil)
+        }
         let grokKey = KeychainStore.string(forKey: grokAPIKeyKeychainAccount)
         let geminiKey = KeychainStore.string(forKey: geminiAPIKeyKeychainAccount)
         let grok = grokKey.flatMap { $0.isEmpty ? nil : GrokAIProvider.make(apiKey: $0) }
@@ -112,7 +122,7 @@ public final class AIService {
         return true
     }
 
-    private func rebuildProviders() {
+    func rebuildProviders() {
         let configured = Self.makeConfiguredProviders()
         primaryProvider = configured.primary
         secondaryProvider = configured.secondary
@@ -152,6 +162,8 @@ public final class AIService {
     public func clearAllAPIKeys() {
         KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
         KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
+        KeychainStore.delete(forKey: Self.gatewayBaseURLKeychainAccount)
+        KeychainStore.delete(forKey: GatewayAIProvider.deviceTokenKeychainAccount)
         primaryProvider = nil
         secondaryProvider = nil
         logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
