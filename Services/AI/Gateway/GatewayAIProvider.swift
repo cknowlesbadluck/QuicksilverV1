@@ -79,22 +79,17 @@ public struct GatewayAIProvider: AIProvider {
     }
 
     public func stream(_ request: AIRequest) -> AsyncThrowingStream<AIStreamEvent, Error> {
-        let endpoint = self.endpoint
-        let deviceToken = self.deviceToken
-        let session = self.session
-        let timeouts = self.timeouts
+        let deps = StreamDeps(
+            endpoint: endpoint,
+            deviceToken: deviceToken,
+            session: session,
+            timeouts: timeouts
+        )
 
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    try await Self.runStream(
-                        request: request,
-                        endpoint: endpoint,
-                        deviceToken: deviceToken,
-                        session: session,
-                        timeouts: timeouts,
-                        continuation: continuation
-                    )
+                    try await Self.runStream(request, deps: deps, continuation: continuation)
                     continuation.finish()
                 } catch is CancellationError {
                     continuation.finish(throwing: CancellationError())
@@ -110,29 +105,38 @@ public struct GatewayAIProvider: AIProvider {
 
     // MARK: - Stream execution
 
+    private struct StreamDeps: Sendable {
+        let endpoint: GatewayEndpoint
+        let deviceToken: String
+        let session: URLSession
+        let timeouts: GatewayTimeouts
+    }
+
     private static func runStream(
-        request: AIRequest,
-        endpoint: GatewayEndpoint,
-        deviceToken: String,
-        session: URLSession,
-        timeouts: GatewayTimeouts,
+        _ request: AIRequest,
+        deps: StreamDeps,
         continuation: AsyncThrowingStream<AIStreamEvent, Error>.Continuation
     ) async throws {
         try Task.checkCancellation()
-        if GatewayWireDecoder.rejectTokenInURL(endpoint.url.absoluteString) {
+        if GatewayWireDecoder.rejectTokenInURL(deps.endpoint.url.absoluteString) {
             throw GatewayEndpointError.tokenInURL
         }
 
-        var urlRequest = try endpoint.authorizedRequest(path: "v1/chat", deviceToken: deviceToken)
-        urlRequest.timeoutInterval = timeouts.connect
-        urlRequest.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        urlRequest.httpBody = try JSONEncoder().encode(makeChatBody(request))
+        var mutableRequest = try deps.endpoint.authorizedRequest(
+            path: "v1/chat",
+            deviceToken: deps.deviceToken
+        )
+        mutableRequest.timeoutInterval = deps.timeouts.connect
+        mutableRequest.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        mutableRequest.httpBody = try JSONEncoder().encode(makeChatBody(request))
 
+        let urlRequest = mutableRequest
         if GatewayWireDecoder.rejectTokenInURL(urlRequest.url?.absoluteString ?? "") {
             throw GatewayEndpointError.tokenInURL
         }
 
-        let clock = StreamTimeoutClock(timeouts: timeouts)
+        let clock = StreamTimeoutClock(timeouts: deps.timeouts)
+        let session = deps.session
         try await withThrowingTaskGroup(of: Void.self) { group in
             defer { group.cancelAll() }
             group.addTask {
@@ -185,7 +189,7 @@ public struct GatewayAIProvider: AIProvider {
             try Task.checkCancellation()
             try clock.check()
             if let wire = try parser.pushLine(line) {
-                try clock.markEvent()
+                clock.markEvent()
                 try handleWire(wire, continuation: continuation, sawTerminal: &sawTerminal)
                 if sawTerminal { break }
             }
