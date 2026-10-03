@@ -389,12 +389,18 @@ private final class GatewayURLProtocolStub: URLProtocol {
         private let lock = NSLock()
         private var handler: Handler?
         private var cancelled = false
+        private var hangContinuations: [CheckedContinuation<Void, any Error>] = []
 
         func set(_ newHandler: Handler?) {
             lock.lock()
             handler = newHandler
             cancelled = false
+            let pending = hangContinuations
+            hangContinuations = []
             lock.unlock()
+            for continuation in pending {
+                continuation.resume(throwing: CancellationError())
+            }
         }
 
         func get() -> Handler? {
@@ -406,7 +412,12 @@ private final class GatewayURLProtocolStub: URLProtocol {
         func markCancelled() {
             lock.lock()
             cancelled = true
+            let pending = hangContinuations
+            hangContinuations = []
             lock.unlock()
+            for continuation in pending {
+                continuation.resume(throwing: CancellationError())
+            }
         }
 
         var wasCancelled: Bool {
@@ -414,30 +425,25 @@ private final class GatewayURLProtocolStub: URLProtocol {
             defer { lock.unlock() }
             return cancelled
         }
+
+        func enqueueHang(_ continuation: CheckedContinuation<Void, any Error>) {
+            lock.lock()
+            hangContinuations.append(continuation)
+            lock.unlock()
+        }
     }
 
     static let handlerBox = HandlerBox()
-    private static let hangLock = NSLock()
-    private static var hangContinuations: [CheckedContinuation<Void, any Error>] = []
 
     static var wasCancelled: Bool { handlerBox.wasCancelled }
 
     static func reset() {
         handlerBox.set(nil)
-        hangLock.lock()
-        let pending = hangContinuations
-        hangContinuations = []
-        hangLock.unlock()
-        for continuation in pending {
-            continuation.resume(throwing: CancellationError())
-        }
     }
 
     static func hang() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            hangLock.lock()
-            hangContinuations.append(continuation)
-            hangLock.unlock()
+            handlerBox.enqueueHang(continuation)
         }
     }
 
@@ -478,12 +484,5 @@ private final class GatewayURLProtocolStub: URLProtocol {
 
     override func stopLoading() {
         Self.handlerBox.markCancelled()
-        Self.hangLock.lock()
-        let pending = Self.hangContinuations
-        Self.hangContinuations = []
-        Self.hangLock.unlock()
-        for continuation in pending {
-            continuation.resume(throwing: CancellationError())
-        }
     }
 }
