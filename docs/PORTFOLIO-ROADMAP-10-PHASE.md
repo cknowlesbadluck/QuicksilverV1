@@ -1,14 +1,40 @@
-# Portfolio 10-phase roadmap — 2026-10-02 14:02 EDT
+# Portfolio 10-phase roadmap — 2026-10-03
 
-Observed, not assumed. Conduit `/health` and `/ready` 200, postgres, 0.8.0. Diagnostics ok. Bound agent `grok`, no binding conflict. Resonance `/api/ready` 503 at 2026-10-02T18:04:01Z missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body has no `ownerActionRequired`. Quicksilver main `a1da2b3`.
+Live probes at 2026-10-03T03:05Z.
 
-1. Owner sets `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus`. Exit: `/api/ready` 200. Do not invent the secret. Do not switch hosts.
-2. Apply Resonance migrations and set scoped GitHub adapter secrets. Exit: persistence and adapter configured on the same host.
-3. Merge Resonance deploy-lag classifier only if CI is green (#145). Do not treat a 503 probe as a code defect.
-4. Quicksilver device HG on iPhone 16e from current main. Simulator CI is not acceptance.
-5. Land fail-closed Mercury endpoint policy (this branch) before any gateway worker calls a URL. #207 stays a scaffold until this gate is on main.
-6. Conduit freeze: do not merge #119, #120, #155, #162 until the named env or migration proof exists.
-7. Close superseded docs PRs (#163, Resonance #143) after this hygiene note lands. Do not delete PR head branches.
-8. Resonance iOS I1 stays blocked by phase 1. #134 is not a substitute for a ready host.
-9. Chamber lifecycle stays blocked by phase 1.
-10. Release surface: owner prune of leftover non-PR refs. This connector has no delete-ref tool. `feat/witness-1501` is the same SHA as Quicksilver main.
+Evidence:
+- Resonance `/api/health` 200. `/api/ready` 503. Missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Deployed body still omits `ownerActionRequired`. Repo already emits it. This is deploy lag, not an agent-fixable secret.
+- Conduit `/health` 200, `/ready` 200, postgres, version 0.8.0.
+- QuicksilverV1 remains the mobile client. Simulator CI is not device acceptance.
+
+## Phase 1 — Owner gate
+Set `SUPABASE_SERVICE_ROLE_KEY` on resonancenexus. Do not invent it. Exit: GET `/api/ready` 200 and body includes `ownerActionRequired: false`.
+
+## Phase 2 — Deploy lag kill
+Ship the repo readiness contract (`ownerActionRequired`, `contractRevision`) so production matches code. Exit: live ready body contains `contractRevision`.
+
+## Phase 3 — Conduit header hardening
+Permissions-Policy, CORP, request id, version on `/health`. Exit: live `/health` returns version and the new headers.
+
+## Phase 4 — Quicksilver fail-closed posture
+`PortfolioPosture` parses both the deployed 503 body and the newer contract. Exit: unit tests green; device build still not claimed.
+
+## Phase 5 — Persistence proof
+After Phase 1, run production smoke against the real 200 body. Exit: smoke script passes on the production host.
+
+## Phase 6 — Chamber fail-closed stays
+No new provider. Execution remains denied when a capability is not executable. Exit: existing chamber tests stay red-free.
+
+## Phase 7 — Hygiene prune
+No hourly audit files. One roadmap file per repo, updated in place. Stale preview secrets revoked by the owner.
+
+## Phase 8 — iOS cockpit only after the app target is green
+Do not start a second client. Exit: existing Quicksilver/Resonance iOS target builds, or the blocking issue is closed.
+
+## Phase 9 — Grant and bridge audit
+Conduit grants stay deny-by-default. Re-check path patterns and SSRF guards. Exit: grant tests green.
+
+## Phase 10 — Cross-plane acceptance
+One probe covers Conduit ready, Resonance ready, and Quicksilver posture parse. Exit: all three green on production, not on a preview.
+
+Binding constraint: owner secret on Netlify. Agent work cannot close Phase 1.
