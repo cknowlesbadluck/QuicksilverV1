@@ -67,14 +67,14 @@ final class AIServiceErrorClassificationTests: XCTestCase {
             .succeed(deltas: ["ok"])
         ])
         let service = makeService(primary: provider)
-        var slept: [TimeInterval] = []
+        let slept = LockedIntervals()
         service.retrySleep = { seconds in slept.append(seconds) }
 
         let response = try await service.complete(prompt: "retry me")
         XCTAssertEqual(response.content, "ok")
         XCTAssertEqual(response.finishReason, .stop)
         XCTAssertEqual(provider.attemptCount, 2)
-        XCTAssertEqual(slept, [1])
+        XCTAssertEqual(slept.snapshot(), [1])
     }
 
     func testFiveHundredBeforeFirstDeltaRetriesOnceThenTypedError() async throws {
@@ -252,6 +252,19 @@ final class AIServiceErrorClassificationTests: XCTestCase {
             logger: LoggerService(),
             featureFlags: flags
         )
+    }
+}
+
+
+private final class LockedIntervals: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [TimeInterval] = []
+    func append(_ value: TimeInterval) {
+        lock.lock(); values.append(value); lock.unlock()
+    }
+    func snapshot() -> [TimeInterval] {
+        lock.lock(); defer { lock.unlock() }
+        return values
     }
 }
 
