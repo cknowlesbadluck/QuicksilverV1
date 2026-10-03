@@ -375,25 +375,6 @@ private final class LockedArray<Element>: @unchecked Sendable {
     }
 }
 
-// MARK: - Locked collector
-
-private final class LockedArray<Element>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var values: [Element] = []
-
-    func append(_ value: Element) {
-        lock.lock()
-        values.append(value)
-        lock.unlock()
-    }
-
-    func snapshot() -> [Element] {
-        lock.lock()
-        defer { lock.unlock() }
-        return values
-    }
-}
-
 // MARK: - URLProtocol stub
 
 /// Synchronous URLProtocol stub (same pattern as ProviderHTTPTests).
