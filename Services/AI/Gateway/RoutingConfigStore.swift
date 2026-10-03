@@ -79,9 +79,7 @@ public final class RoutingConfigStore: @unchecked Sendable {
             }
             let config = try AIRoutingConfig.decodeAndValidate(data)
             try writeCache(data)
-            lock.lock()
-            effective = config
-            lock.unlock()
+            publish(config)
             return true
         } catch {
             return false
@@ -90,6 +88,13 @@ public final class RoutingConfigStore: @unchecked Sendable {
 
     public var cacheFileURL: URL {
         cacheDirectoryURL.appendingPathComponent(Self.cacheFileName)
+    }
+
+    /// Sync helper so `NSLock` is never touched directly from an `async` function body.
+    private func publish(_ config: AIRoutingConfig) {
+        lock.lock()
+        effective = config
+        lock.unlock()
     }
 
     // MARK: - Loaders

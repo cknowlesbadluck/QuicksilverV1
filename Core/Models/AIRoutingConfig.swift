@@ -37,9 +37,15 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
     public static let bundledDefault: AIRoutingConfig = makeBundledDefault()
 
     /// Compact JSON matching `Resources/ai-routing.default.json` / gateway `config.json` semantics.
-    public static let bundledDefaultJSON = """
-    {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"answer":{"route":"cloud","tier":"main"},"plan":{"route":"onDevice"},"tools":{"route":"onDevice"},"memory":{"route":"onDevice"},"summaries":{"route":"onDevice"}},"tiers":{"main":{"displayModel":"Gemini Flash","trainsOnPrompts":true,"contextLevel":"minimal"},"backup":{"displayModel":"Groq gpt-oss-120b","trainsOnPrompts":false,"contextLevel":"standard"},"lastResort":{"displayModel":"Workers AI","trainsOnPrompts":false,"contextLevel":"standard"}},"timeouts":{"connect":10,"firstEvent":20,"idle":15,"total":90},"retry":{"maxAttempts":1,"honorRetryAfter":true}}
-    """
+    public static let bundledDefaultJSON =
+        #"{"protocol":"v1","stream":["meta","delta","done","error"],"#
+        + #""tasks":{"answer":{"route":"cloud","tier":"main"},"plan":{"route":"onDevice"},"#
+        + #""tools":{"route":"onDevice"},"memory":{"route":"onDevice"},"summaries":{"route":"onDevice"}},"#
+        + #""tiers":{"main":{"displayModel":"Gemini Flash","trainsOnPrompts":true,"contextLevel":"minimal"},"#
+        + #""backup":{"displayModel":"Groq gpt-oss-120b","trainsOnPrompts":false,"contextLevel":"standard"},"#
+        + #""lastResort":{"displayModel":"Workers AI","trainsOnPrompts":false,"contextLevel":"standard"}},"#
+        + #""timeouts":{"connect":10,"firstEvent":20,"idle":15,"total":90},"#
+        + #""retry":{"maxAttempts":1,"honorRetryAfter":true}}"#
 
     public static func decodeAndValidate(_ data: Data) throws -> AIRoutingConfig {
         try rejectSecretKeys(in: data)
