@@ -1,50 +1,50 @@
-# Portfolio 10-phase roadmap — 2026-10-03 07:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-03 12:00 EDT
 
-Live probes at 2026-10-03T11:01:43Z. No secrets invented.
+Live probes at 2026-10-03T16:02:31Z. No secrets invented.
 
 Evidence:
-- Resonance `GET /api/ready` returned 503. Body: `status=not_ready`, `missingRequired=[SUPABASE_SERVICE_ROLE_KEY]`, `authMode=required`, `authModeOk=true`, `persistenceConfigured=false`, `githubAdapterConfigured=false`. Body omitted `ownerActionRequired` and `contractRevision`. Owner gate, plus deploy lag.
-- Conduit `GET /health` returned 200 `{"status":"ok","service":"conduit"}` with no version. `GET /ready` returned 200 `version=0.8.0` `persistence=postgres`. Contract split, not an outage.
-- QuicksilverV1 #215 squash-merged at 9663f627. `PortfolioPosture.deployLag` is on main. Simulator CI is not device acceptance. CHR-55 remains open.
+- Resonance public `GET /api/ready` returned 503. Body omitted `ownerActionRequired` and `contractRevision`. Missing exactly `SUPABASE_SERVICE_ROLE_KEY`. `#147` is on main at `a9331e6b`. GitHub production deployment `6829196191` succeeded on a Vercel alias. That alias is not `resonancenexus.netlify.app`. Owner gate plus deploy lag.
+- Conduit `/health` and `/ready` both 200, version 0.8.0, `contractRevision=2026-10-03-ready-surface`, ready persistence postgres.
+- This repo main is `5eb30beb` after `#216`. `#217` (M3-T4 routing config) stays open until iOS Simulator Build and UI smoke are green. Simulator CI is not CHR-55.
 
 ## Phase 1 — Owner gate
 
-Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus` only. Do not invent it. Exit: `GET /api/ready` is 200 and `ownerActionRequired` is false.
+Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify `resonancenexus` only. Do not invent it. Exit: public `/api/ready` is 200 and `ownerActionRequired` is false.
 
 ## Phase 2 — Deploy lag kill
 
-Land Resonance #147 only after CodeRabbit is cleared. Exit: production ready body contains the current `contractRevision`.
+`#147` landed. Exit remaining: public ready body contains `contractRevision` `2026-10-03-owner-gate`. A Vercel status does not close this.
 
 ## Phase 3 — Conduit header and health parity
 
-Land one health contract, not three. #170 is the candidate; Workers Builds failed, so it stays unmerged. Exit: live `/health` and `/ready` both return version 0.8.0.
+Met on the live host at 16:01Z. Do not treat the old split as current.
 
-## Phase 4 — Quicksilver fail-closed posture
+## Phase 4 — Quicksilver routing config
 
-Done on main via #215. Exit already met: stale 503 is deploy lag; stamped 503 is owner-blocked; malformed JSON is fail-closed. Device HG is still open.
+Merge `#217` only if Simulator Build and UI smoke are green. Exit: M3-T4 on main. Device HG still open.
 
 ## Phase 5 — Persistence proof
 
-After Phase 1, run production smoke against the real 200 body. Exit: smoke passes on `resonancenexus`, not a preview.
+After Phase 1, smoke the real 200 body on `resonancenexus`. Exit: smoke passes there, not on a preview.
 
 ## Phase 6 — Chamber fail-closed stays
 
-No new provider. Execution stays denied when a capability is not executable. Exit: chamber tests stay red-free.
+No new provider. Exit: chamber tests stay red-free.
 
 ## Phase 7 — Hygiene prune
 
-No hourly audit files. One roadmap file per repo. Do not merge #119, #120, or #155. Close or rebase overlapping Conduit bolt PRs before adding scope.
+No hourly audit files. One roadmap file. Do not merge Conduit `#119`, `#120`, or `#155`. Legacy twin close still 403.
 
 ## Phase 8 — iOS cockpit only after the app target is green
 
-Do not start a second client. Resonance #134 stays open until it builds or is closed. Exit: one iOS target, not two.
+Do not start a second client. Resonance `#134` is diverged. Exit: one iOS target.
 
 ## Phase 9 — Grant and bridge audit
 
-Conduit grants stay deny-by-default. Exit: grant tests green and no resource record holds a secret.
+Conduit grants stay deny-by-default. Exit: no resource record holds a secret.
 
 ## Phase 10 — Cross-plane acceptance
 
-One probe covers Conduit ready, Resonance ready, and Quicksilver posture parse. Exit: all three green on production. A classifier unit test is not that proof.
+One probe covers Conduit ready, public Resonance ready, and Quicksilver posture parse. Exit: all three green on public hosts. A classifier unit test is not that proof.
 
 Binding constraint: owner secret on Netlify. Agent work cannot close Phase 1.
