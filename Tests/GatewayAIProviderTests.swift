@@ -480,14 +480,10 @@ private final class GatewayURLProtocolStub: URLProtocol {
                     client?.urlProtocol(protocolSelf, didLoad: stub.body)
                 } else {
                     let bodyText = String(decoding: stub.body, as: UTF8.self)
-                    let blocks = bodyText.components(separatedBy: "
-
-")
+                    let blocks = bodyText.components(separatedBy: "\n\n")
                     for (index, block) in blocks.enumerated() {
                         if Self.handlerBox.wasCancelled { break }
-                        let chunk = index < blocks.count - 1 ? block + "
-
-" : block
+                        let chunk = index < blocks.count - 1 ? block + "\n\n" : block
                         if chunk.isEmpty { continue }
                         client?.urlProtocol(protocolSelf, didLoad: Data(chunk.utf8))
                         let delay = TimeInterval(stub.chunkDelayNanoseconds) / 1_000_000_000
