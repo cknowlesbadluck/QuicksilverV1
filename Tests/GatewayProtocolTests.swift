@@ -89,40 +89,45 @@ struct GatewayProtocolTests {
         }
     }
 
+    /// Blank line before EOF is required or the decoder discards the pending event.
+    private func terminated(_ body: String) -> String {
+        body.hasSuffix("\n\n") ? body : body + "\n\n"
+    }
+
     @Test func fractionalUsageTokensAreRejected() {
-        let body = """
+        let body = terminated("""
         event: meta
         data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
 
         event: done
         data: {"usage":{"promptTokens":1.5,"completionTokens":2}}
-        """ + "\n"
+        """)
         #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
     }
 
     @Test func malformedUsageShapeIsRejected() {
-        let body = """
+        let body = terminated("""
         event: meta
         data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
 
         event: done
         data: {"usage":null}
-        """ + "\n"
+        """)
         #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
     }
 
     @Test func intMaxBoundaryIsAccepted() throws {
-        let body = """
+        let body = terminated("""
         event: meta
         data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
 
         event: done
         data: {"usage":{"promptTokens":\(Int.max),"completionTokens":0}}
-        """ + "\n"
+        """)
         let events = try GatewayWireDecoder.decodeSSE(body)
         #expect(events == [
             .meta(route: "on-device", model: "fake", trainsOnPrompts: false),
@@ -132,13 +137,13 @@ struct GatewayProtocolTests {
 
     @Test func intOverflowIsRejected() {
         // One past Int.max — must not trap via Double round-trip.
-        let body = """
+        let body = terminated("""
         event: meta
         data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
 
         event: done
         data: {"usage":{"promptTokens":9223372036854775808,"completionTokens":0}}
-        """ + "\n"
+        """)
         #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
