@@ -10,6 +10,8 @@ final class PortfolioPostureTests: XCTestCase {
         XCTAssertFalse(posture.ready)
         XCTAssertTrue(posture.ownerActionRequired)
         XCTAssertEqual(posture.missingRequired, ["SUPABASE_SERVICE_ROLE_KEY"])
+        XCTAssertTrue(posture.deployLag)
+        XCTAssertNil(posture.contractRevision)
     }
 
     func testNewerContractStillOwnerBlocked() throws {
@@ -19,6 +21,8 @@ final class PortfolioPostureTests: XCTestCase {
         let posture = PortfolioPosture.parse(plane: .resonance, httpStatus: 503, json: body)
         XCTAssertFalse(posture.ready)
         XCTAssertTrue(posture.ownerActionRequired)
+        XCTAssertFalse(posture.deployLag)
+        XCTAssertEqual(posture.contractRevision, "2026-10-03-owner-gate")
     }
 
     func testConduitReadyIsNotOwnerBlocked() throws {
@@ -29,10 +33,12 @@ final class PortfolioPostureTests: XCTestCase {
         XCTAssertTrue(posture.ready)
         XCTAssertFalse(posture.ownerActionRequired)
         XCTAssertEqual(posture.version, "0.8.0")
+        XCTAssertFalse(posture.deployLag)
     }
 
     func testMalformedBodyFailsClosed() {
         let posture = PortfolioPosture.parse(plane: .resonance, httpStatus: 200, json: Data("not-json".utf8))
         XCTAssertFalse(posture.ready)
+        XCTAssertFalse(posture.deployLag)
     }
 }
