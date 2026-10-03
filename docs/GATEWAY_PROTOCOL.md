@@ -1,6 +1,6 @@
 # Mercury Gateway wire protocol v1
 
-Status: contract + fixtures + client (`GatewayAIProvider`, M3-T3). The Worker still serves only `GET /v1/health`. Routing config is M3-T4.
+Status: contract + fixtures + client (`GatewayAIProvider`, M3-T3) + routing config decode (`AIRoutingConfig` / `RoutingConfigStore`, M3-T4). The Worker still serves only `GET /v1/health`. Full gateway router is M3-T20.
 
 ## Auth
 
@@ -43,8 +43,54 @@ A stream that ends without a terminal `done` or `error` is incomplete and must b
 
 ## `GET /v1/config`
 
-`{ "protocol": "v1", "stream": ["meta", "delta", "done", "error"] }`. Auth required. Not implemented on the Worker in this cut.
+Auth required (`Authorization: Bearer <device token>`). Returns the routing policy the client caches locally. **Never includes API keys or device tokens.**
+
+```json
+{
+  "protocol": "v1",
+  "stream": ["meta", "delta", "done", "error"],
+  "tasks": {
+    "answer": { "route": "cloud", "tier": "main" },
+    "plan": { "route": "onDevice" },
+    "tools": { "route": "onDevice" },
+    "memory": { "route": "onDevice" },
+    "summaries": { "route": "onDevice" }
+  },
+  "tiers": {
+    "main": {
+      "displayModel": "Gemini Flash",
+      "trainsOnPrompts": true,
+      "contextLevel": "minimal"
+    },
+    "backup": {
+      "displayModel": "Groq gpt-oss-120b",
+      "trainsOnPrompts": false,
+      "contextLevel": "standard"
+    },
+    "lastResort": {
+      "displayModel": "Workers AI",
+      "trainsOnPrompts": false,
+      "contextLevel": "standard"
+    }
+  },
+  "timeouts": {
+    "connect": 10,
+    "firstEvent": 20,
+    "idle": 15,
+    "total": 90
+  },
+  "retry": {
+    "maxAttempts": 1,
+    "honorRetryAfter": true
+  }
+}
+```
+
+- `tasks.*.route`: `onDevice` or `cloud` (cloud requires `tier`: `main` | `backup` | `lastResort`).
+- `tiers.*.contextLevel`: `standard` | `minimal`. Any tier with `trainsOnPrompts: true` **must** use `minimal`.
+- `retry.maxAttempts`: `0` or `1` in this cut.
+- Not fully implemented on the Worker yet (M3-T20). The client tolerates fetch failure and keeps the bundled / cached copy (`RoutingConfigStore`).
 
 ## Fixtures
 
-Canonical copies live in `gateway/fixtures/`. SPM replays the copies under `Tests/Fixtures/gateway/`. They must stay byte-identical. Tests load them via `#filePath` (not `Bundle.module`) so the same path works in SPM and the Xcode `QuicksilverTests` target.
+Canonical copies live in `gateway/fixtures/`. SPM replays the copies under `Tests/Fixtures/gateway/`. They must stay byte-identical. Tests load them via `#filePath` (not `Bundle.module`) so the same path works in SPM and the Xcode `QuicksilverTests` target. The app also ships `Resources/ai-routing.default.json` (same routing semantics) for offline boot.

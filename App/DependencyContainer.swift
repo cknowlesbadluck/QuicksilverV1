@@ -19,6 +19,7 @@ final class DependencyContainer {
     let personaManager: PersonaManager
     let memoryManager: MemoryManager
     let aiService: AIService
+    let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
 
     /// Central intelligence coordinator. UI and Intents should prefer the Brain
@@ -29,6 +30,7 @@ final class DependencyContainer {
         memoryStore: MemoryStore? = nil,
         aiProvider: AIProvider? = nil,
         nexus: NexusCoordinator? = nil,
+        routingConfigStore: RoutingConfigStore? = nil,
         defaults: UserDefaults = .standard,
         environment: AppEnvironment = .current,
         configuration: AppConfiguration = .shared
@@ -63,6 +65,8 @@ final class DependencyContainer {
             logger: logger,
             featureFlags: featureFlags
         )
+
+        self.routingConfigStore = routingConfigStore ?? RoutingConfigStore()
 
         self.nexus = nexus ?? NexusCoordinator(logger: logger, eventBus: eventBus)
 

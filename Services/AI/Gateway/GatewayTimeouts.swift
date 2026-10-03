@@ -1,7 +1,7 @@
 import Foundation
 
 /// Client-side gateway stream timeouts (M3-T3).
-/// Full routing config (M3-T4) will own these; defaults match ROADMAP M3-T3.
+/// Owned by AIRoutingConfig (M3-T4); defaults match ROADMAP M3-T3.
 public struct GatewayTimeouts: Sendable, Equatable {
     /// TCP / TLS connect budget applied to the URLRequest.
     public var connect: TimeInterval

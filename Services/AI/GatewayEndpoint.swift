@@ -44,7 +44,12 @@ public struct GatewayEndpoint: Equatable, Sendable {
     }
 
     /// Bearer token only. Rejects an empty token and any path that tries to smuggle a query.
-    public func authorizedRequest(path: String, deviceToken: String) throws -> URLRequest {
+    /// Defaults to POST (chat). Pass `method: "GET"` for `/v1/config`.
+    public func authorizedRequest(
+        path: String,
+        deviceToken: String,
+        method: String = "POST"
+    ) throws -> URLRequest {
         let relative = path.hasPrefix("/") ? String(path.dropFirst()) : path
         guard !deviceToken.isEmpty,
               !deviceToken.contains(where: \.isWhitespace),
@@ -54,9 +59,13 @@ public struct GatewayEndpoint: Equatable, Sendable {
             throw GatewayEndpointError.tokenInURL
         }
         var request = URLRequest(url: url.appending(path: relative))
-        request.httpMethod = "POST"
+        request.httpMethod = method
         request.setValue("Bearer \(deviceToken)", forHTTPHeaderField: "Authorization")
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let upper = method.uppercased()
+        if upper == "POST" || upper == "PUT" || upper == "PATCH" {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         return request
     }
 }

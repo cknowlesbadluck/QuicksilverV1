@@ -161,8 +161,13 @@ struct GatewayProtocolTests {
     @Test func healthAndConfigFixturesAreV1() throws {
         let health = try JSONSerialization.jsonObject(with: fixture("health.json")) as? [String: Any]
         #expect(health?["service"] as? String == "mercury-gateway")
-        let config = try JSONSerialization.jsonObject(with: fixture("config.json")) as? [String: Any]
-        #expect(config?["protocol"] as? String == "v1")
+        let config = try AIRoutingConfig.decodeAndValidate(try fixture("config.json"))
+        #expect(config.protocolVersion == "v1")
+        #expect(config.tasks["answer"]?.route == .cloud)
+        #expect(config.tasks["answer"]?.tier == .main)
+        #expect(config.tiers["main"]?.trainsOnPrompts == true)
+        #expect(config.tiers["main"]?.contextLevel == .minimal)
+        #expect(config.retry.maxAttempts == 1)
     }
 
     /// `#filePath` lookup works for both SPM and the Xcode QuicksilverTests target (no Bundle.module).
