@@ -37,6 +37,8 @@ struct CodexView: View {
                 ))
                 LabeledContent("Vessel", value: vm.providerName)
                 LabeledContent("Key bound", value: (vm.hasGrokKey || vm.hasGeminiKey) ? "Yes — Keychain" : "Unbound")
+                LabeledContent("Policy route", value: vm.activeRouteLabel)
+                LabeledContent("Policy model", value: vm.activeModelLabel)
             } header: {
                 Text("Mind")
             } footer: {

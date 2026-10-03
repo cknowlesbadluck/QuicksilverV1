@@ -66,4 +66,17 @@ final class GatewayEndpointTests: XCTestCase {
         let other = Data(#"{"ok":true,"service":"something-else"}"#.utf8)
         XCTAssertFalse(try JSONDecoder().decode(GatewayHealth.self, from: other).isMercury)
     }
+
+    func testConfigRequestIsAuthorizedGET() throws {
+        let endpoint = try GatewayEndpoint(raw: "https://mercury.example.workers.dev")
+        let token = "device-token-value"
+        let request = try endpoint.authorizedRequest(path: "/v1/config", deviceToken: token, method: "GET")
+        XCTAssertEqual(request.httpMethod, "GET")
+        XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer \(token)")
+        XCTAssertNil(request.value(forHTTPHeaderField: "Content-Type"))
+        XCTAssertFalse(request.url?.absoluteString.contains(token) ?? true)
+        XCTAssertNil(request.url?.query)
+        XCTAssertEqual(request.url?.path, "/v1/config")
+        XCTAssertEqual(request.cachePolicy, .reloadIgnoringLocalCacheData)
+    }
 }

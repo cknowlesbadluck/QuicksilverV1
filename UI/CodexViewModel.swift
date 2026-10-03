@@ -15,6 +15,10 @@ final class CodexViewModel {
     private(set) var aiEnabled: Bool = false
     private(set) var statusMessage: String?
     private(set) var statusIsError: Bool = false
+    /// Read-only active answer route from `RoutingConfigStore` (M3-T4).
+    private(set) var activeRouteLabel: String = "cloud / main"
+    /// Read-only display model for the active answer route.
+    private(set) var activeModelLabel: String = "Gemini Flash"
 
     private let container: DependencyContainer
 
@@ -29,6 +33,9 @@ final class CodexViewModel {
         providerName = container.aiService.currentProviderName
         fallbackProviderName = container.aiService.fallbackProviderName
         aiEnabled = container.featureFlags.isEnabled("aiServiceEnabled")
+        let display = container.routingConfigStore.loadValidated().answerDisplay()
+        activeRouteLabel = display.route
+        activeModelLabel = display.model
     }
 
     func saveGrokKey() {
