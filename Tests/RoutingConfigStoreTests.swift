@@ -150,6 +150,17 @@ final class RoutingConfigStoreTests: XCTestCase {
         }
     }
 
+    func testUnsupportedStreamEventRejected() {
+        let json = """
+        {"protocol":"v1","stream":["meta","delta","done","error","heartbeat"],"tasks":{"answer":{"route":"onDevice"},"plan":{"route":"onDevice"},"tools":{"route":"onDevice"},"memory":{"route":"onDevice"},"summaries":{"route":"onDevice"}},"tiers":{},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false}}
+        """
+        XCTAssertThrowsError(try AIRoutingConfig.decodeAndValidate(Data(json.utf8))) { error in
+            guard case AIRoutingConfigError.invalidStream = error else {
+                return XCTFail("Expected invalidStream, got \(error)")
+            }
+        }
+    }
+
     func testMissingRequiredTasksRejected() {
         let json = """
         {"protocol":"v1","stream":["meta","delta","done","error"],"tasks":{"foo":{"route":"onDevice"}},"tiers":{},"timeouts":{"connect":1,"firstEvent":1,"idle":1,"total":2},"retry":{"maxAttempts":0,"honorRetryAfter":false}}

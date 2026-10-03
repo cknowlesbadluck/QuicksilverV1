@@ -69,7 +69,8 @@ public struct AIRoutingConfig: Codable, Sendable, Equatable {
             throw AIRoutingConfigError.invalidProtocol(protocolVersion)
         }
         let requiredEvents: Set<String> = ["meta", "delta", "done", "error"]
-        guard requiredEvents.isSubset(of: Set(stream)) else {
+        // Exact v1 set — extras (e.g. heartbeat) would advertise events the wire decoder rejects.
+        guard Set(stream) == requiredEvents, stream.count == requiredEvents.count else {
             throw AIRoutingConfigError.invalidStream(stream)
         }
         let taskKeys = Set(tasks.keys)
