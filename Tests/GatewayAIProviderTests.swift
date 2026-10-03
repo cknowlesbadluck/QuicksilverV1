@@ -87,9 +87,7 @@ final class GatewayAIProviderTests: XCTestCase {
     func testFirstEventTimeout() async throws {
         let session = makeSession()
         GatewayURLProtocolStub.handlerBox.set { request in
-            // Hang forever until cancelled.
-            try await GatewayURLProtocolStub.hang()
-            return try Self.sseResponse(for: request, status: 200, body: "")
+            try Self.sseResponse(for: request, status: 200, body: "", hang: true)
         }
 
         let provider = try makeProvider(
@@ -337,7 +335,8 @@ final class GatewayAIProviderTests: XCTestCase {
         for request: URLRequest,
         status: Int,
         body: String,
-        chunkDelayNanoseconds: UInt64 = 0
+        chunkDelayNanoseconds: UInt64 = 0,
+        hang: Bool = false
     ) throws -> GatewayURLProtocolStub.StubResponse {
         let url = try XCTUnwrap(request.url)
         let response = try XCTUnwrap(
@@ -351,8 +350,28 @@ final class GatewayAIProviderTests: XCTestCase {
         return GatewayURLProtocolStub.StubResponse(
             response: response,
             body: Data(body.utf8),
-            chunkDelayNanoseconds: chunkDelayNanoseconds
+            chunkDelayNanoseconds: chunkDelayNanoseconds,
+            hang: hang
         )
+    }
+}
+
+// MARK: - Locked collector
+
+private final class LockedArray<Element>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [Element] = []
+
+    func append(_ value: Element) {
+        lock.lock()
+        values.append(value)
+        lock.unlock()
+    }
+
+    func snapshot() -> [Element] {
+        lock.lock()
+        defer { lock.unlock() }
+        return values
     }
 }
 
@@ -377,74 +396,77 @@ private final class LockedArray<Element>: @unchecked Sendable {
 
 // MARK: - URLProtocol stub
 
+/// Synchronous URLProtocol stub (same pattern as ProviderHTTPTests).
+/// Supports hang-until-cancel and optional per-chunk delays without spawning Tasks.
 private final class GatewayURLProtocolStub: URLProtocol {
     struct StubResponse: Sendable {
         let response: HTTPURLResponse
         let body: Data
         let chunkDelayNanoseconds: UInt64
+        let hang: Bool
+
+        init(
+            response: HTTPURLResponse,
+            body: Data,
+            chunkDelayNanoseconds: UInt64 = 0,
+            hang: Bool = false
+        ) {
+            self.response = response
+            self.body = body
+            self.chunkDelayNanoseconds = chunkDelayNanoseconds
+            self.hang = hang
+        }
     }
 
     final class HandlerBox: @unchecked Sendable {
-        typealias Handler = @Sendable (URLRequest) async throws -> StubResponse
+        typealias Handler = @Sendable (URLRequest) throws -> StubResponse
         private let lock = NSLock()
+        private let condition = NSCondition()
         private var handler: Handler?
         private var cancelled = false
-        private var hangContinuations: [CheckedContinuation<Void, any Error>] = []
 
         func set(_ newHandler: Handler?) {
-            lock.lock()
+            condition.lock()
             handler = newHandler
             cancelled = false
-            let pending = hangContinuations
-            hangContinuations = []
-            lock.unlock()
-            for continuation in pending {
-                continuation.resume(throwing: CancellationError())
-            }
+            condition.broadcast()
+            condition.unlock()
         }
 
         func get() -> Handler? {
-            lock.lock()
-            defer { lock.unlock() }
+            condition.lock()
+            defer { condition.unlock() }
             return handler
         }
 
         func markCancelled() {
-            lock.lock()
+            condition.lock()
             cancelled = true
-            let pending = hangContinuations
-            hangContinuations = []
-            lock.unlock()
-            for continuation in pending {
-                continuation.resume(throwing: CancellationError())
-            }
+            condition.broadcast()
+            condition.unlock()
         }
 
         var wasCancelled: Bool {
-            lock.lock()
-            defer { lock.unlock() }
+            condition.lock()
+            defer { condition.unlock() }
             return cancelled
         }
 
-        func enqueueHang(_ continuation: CheckedContinuation<Void, any Error>) {
-            lock.lock()
-            hangContinuations.append(continuation)
-            lock.unlock()
+        /// Block until `stopLoading` marks cancelled (first-event timeout / cancel tests).
+        func waitUntilCancelled() {
+            condition.lock()
+            while !cancelled {
+                condition.wait()
+            }
+            condition.unlock()
         }
     }
 
     static let handlerBox = HandlerBox()
-
     static var wasCancelled: Bool { handlerBox.wasCancelled }
 
     static func reset() {
         handlerBox.set(nil)
-    }
-
-    static func hang() async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            handlerBox.enqueueHang(continuation)
-        }
     }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -455,30 +477,35 @@ private final class GatewayURLProtocolStub: URLProtocol {
             client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
             return
         }
-        Task {
-            do {
-                let stub = try await handler(request)
-                client?.urlProtocol(self, didReceive: stub.response, cacheStoragePolicy: .notAllowed)
-                if stub.chunkDelayNanoseconds == 0 {
-                    client?.urlProtocol(self, didLoad: stub.body)
-                } else {
-                    // Deliver one SSE event block at a time so cancel can interrupt.
-                    let text = String(decoding: stub.body, as: UTF8.self)
-                    let blocks = text.components(separatedBy: "\n\n")
-                    for (index, block) in blocks.enumerated() {
-                        if Task.isCancelled { break }
-                        let chunk = index < blocks.count - 1 ? block + "\n\n" : block
-                        if chunk.isEmpty { continue }
-                        client?.urlProtocol(self, didLoad: Data(chunk.utf8))
-                        try await Task.sleep(nanoseconds: stub.chunkDelayNanoseconds)
-                    }
-                }
-                client?.urlProtocolDidFinishLoading(self)
-            } catch is CancellationError {
+        do {
+            let stub = try handler(request)
+            if stub.hang {
+                Self.handlerBox.waitUntilCancelled()
                 client?.urlProtocol(self, didFailWithError: URLError(.cancelled))
-            } catch {
-                client?.urlProtocol(self, didFailWithError: error)
+                return
             }
+            client?.urlProtocol(self, didReceive: stub.response, cacheStoragePolicy: .notAllowed)
+            if stub.chunkDelayNanoseconds == 0 {
+                client?.urlProtocol(self, didLoad: stub.body)
+            } else {
+                let text = String(decoding: stub.body, as: UTF8.self)
+                let blocks = text.components(separatedBy: "\n\n")
+                for (index, block) in blocks.enumerated() {
+                    if Self.handlerBox.wasCancelled { break }
+                    let chunk = index < blocks.count - 1 ? block + "\n\n" : block
+                    if chunk.isEmpty { continue }
+                    client?.urlProtocol(self, didLoad: Data(chunk.utf8))
+                    let delay = TimeInterval(stub.chunkDelayNanoseconds) / 1_000_000_000
+                    Thread.sleep(forTimeInterval: delay)
+                }
+            }
+            if Self.handlerBox.wasCancelled {
+                client?.urlProtocol(self, didFailWithError: URLError(.cancelled))
+            } else {
+                client?.urlProtocolDidFinishLoading(self)
+            }
+        } catch {
+            client?.urlProtocol(self, didFailWithError: error)
         }
     }
 
