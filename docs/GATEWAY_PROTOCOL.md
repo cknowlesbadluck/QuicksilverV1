@@ -35,7 +35,7 @@ Error codes: `unauthorized`, `rate_limited` (requires `retryAfter`), `budget_exh
 - **Failure before output:** a single `error` event.
 - **Failure after output has begun:** `meta` → zero or more `delta` → `error` (partial text is preserved for the caller; no further events).
 
-A stream that ends without a terminal `done` or `error` is incomplete and must be rejected. No token is logged.
+A stream that ends without a terminal `done` or `error` is incomplete and must be rejected. Each SSE event must be terminated by a blank line; pending fields at EOF are discarded (WHATWG). No token is logged.
 
 ## `GET /v1/health`
 

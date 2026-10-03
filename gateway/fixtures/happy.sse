@@ -6,3 +6,4 @@ data: {"text":"Forge"}
 
 event: done
 data: {"usage":{"promptTokens":12,"completionTokens":1}}
+

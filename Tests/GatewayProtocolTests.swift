@@ -48,7 +48,7 @@ struct GatewayProtocolTests {
     }
 
     @Test func rateLimitWithoutRetryAfterIsRejected() {
-        let body = "event: error\ndata: {\"code\":\"rate_limited\"}\n"
+        let body = "event: error\ndata: {\"code\":\"rate_limited\"}\n\n"
         #expect(throws: GatewayWireDecodeError.missingField("error.retryAfter")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
@@ -74,8 +74,16 @@ struct GatewayProtocolTests {
         }
     }
 
+    @Test func unterminatedFinalEventAtEOFIsDiscarded() {
+        // Pending fields without a blank line before EOF must not dispatch (WHATWG).
+        let body = "event: error\ndata: {\"code\":\"timeout\"}\n"
+        #expect(throws: GatewayWireDecodeError.empty) {
+            try GatewayWireDecoder.decodeSSE(body)
+        }
+    }
+
     @Test func fractionalRetryAfterIsRejected() {
-        let body = "event: error\ndata: {\"code\":\"rate_limited\",\"retryAfter\":2.9}\n"
+        let body = "event: error\ndata: {\"code\":\"rate_limited\",\"retryAfter\":2.9}\n\n"
         #expect(throws: GatewayWireDecodeError.missingField("error.retryAfter")) {
             try GatewayWireDecoder.decodeSSE(body)
         }
@@ -88,6 +96,51 @@ struct GatewayProtocolTests {
 
         event: done
         data: {"usage":{"promptTokens":1.5,"completionTokens":2}}
+
+        """
+        #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
+            try GatewayWireDecoder.decodeSSE(body)
+        }
+    }
+
+    @Test func malformedUsageShapeIsRejected() {
+        let body = """
+        event: meta
+        data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
+
+        event: done
+        data: {"usage":null}
+
+        """
+        #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {
+            try GatewayWireDecoder.decodeSSE(body)
+        }
+    }
+
+    @Test func intMaxBoundaryIsAccepted() throws {
+        let body = """
+        event: meta
+        data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
+
+        event: done
+        data: {"usage":{"promptTokens":\(Int.max),"completionTokens":0}}
+
+        """
+        let events = try GatewayWireDecoder.decodeSSE(body)
+        #expect(events == [
+            .meta(route: "on-device", model: "fake", trainsOnPrompts: false),
+            .done(usage: AIResponse.Usage(promptTokens: Int.max, completionTokens: 0))
+        ])
+    }
+
+    @Test func intOverflowIsRejected() {
+        // One past Int.max — must not trap via Double round-trip.
+        let body = """
+        event: meta
+        data: {"route":"on-device","model":"fake","trainsOnPrompts":false}
+
+        event: done
+        data: {"usage":{"promptTokens":9223372036854775808,"completionTokens":0}}
 
         """
         #expect(throws: GatewayWireDecodeError.missingField("done.usage")) {

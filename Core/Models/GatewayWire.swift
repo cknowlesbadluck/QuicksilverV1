@@ -155,25 +155,23 @@ public enum GatewayWireDecoder {
                 dataLines.append(row.dropFirst(5).trimmingCharacters(in: .whitespaces))
             }
         }
-        try flush()
+        // Do not flush a trailing unterminated event at EOF (WHATWG discards pending fields).
         guard !events.isEmpty else { throw GatewayWireDecodeError.empty }
         try validateSequence(events)
         return events
     }
 
-    /// Accept only integral JSON numbers representable as `Int` (no truncation).
+    /// Accept only integral JSON numbers representable as `Int` (no truncation / no Double round-trip).
     private static func intValue(_ value: Any?) -> Int? {
         guard let number = value as? NSNumber else { return nil }
         // Bool bridges to NSNumber — reject it.
         if CFGetTypeID(number as CFTypeRef) == CFBooleanGetTypeID() { return nil }
-        let double = number.doubleValue
-        guard double.isFinite,
-              double.rounded(.towardZero) == double,
-              double >= Double(Int.min),
-              double <= Double(Int.max) else {
-            return nil
+        if CFNumberIsFloatType(number) {
+            // Exact integral floats only (e.g. 2.0); 2.9 rejects.
+            return Int(exactly: number.doubleValue)
         }
-        return Int(double)
+        // Integer NSNumber: parse decimal string to avoid Double precision / Int.max+1 traps.
+        return Int(number.stringValue)
     }
 
     private static func boolValue(_ value: Any?) -> Bool? {
@@ -210,7 +208,10 @@ public enum GatewayWireDecoder {
     }
 
     private static func decodeDone(_ object: [String: Any]) throws -> GatewayWireEvent {
-        if let usage = object["usage"] as? [String: Any] {
+        if object.keys.contains("usage") {
+            guard let usage = object["usage"] as? [String: Any] else {
+                throw GatewayWireDecodeError.missingField("done.usage")
+            }
             guard let prompt = intValue(usage["promptTokens"]),
                   let completion = intValue(usage["completionTokens"]) else {
                 throw GatewayWireDecodeError.missingField("done.usage")
