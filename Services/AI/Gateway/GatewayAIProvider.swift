@@ -351,7 +351,10 @@ private final class StreamTimeoutClock: @unchecked Sendable {
         if now - start > .seconds(timeouts.total) {
             throw AppError.aiRequestFailed("Gateway timed out")
         }
-        // firstEvent starts after headers; before that only `total` applies.
+        // Before headers: enforce connect. After headers: firstEvent / idle.
+        if responseStart == nil, now - start > .seconds(timeouts.connect) {
+            throw AppError.aiRequestFailed("Gateway timed out connecting")
+        }
         if !gotFirst, let responseStart,
            now - responseStart > .seconds(timeouts.firstEvent) {
             throw AppError.aiRequestFailed("Gateway timed out waiting for the first event")
