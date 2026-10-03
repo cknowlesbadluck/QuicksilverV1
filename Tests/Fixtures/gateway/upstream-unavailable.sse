@@ -1,0 +1,3 @@
+event: error
+data: {"code":"upstream_unavailable"}
+

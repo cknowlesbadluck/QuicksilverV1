@@ -1,0 +1,10 @@
+{
+  "taskTier": "standard",
+  "messages": [{ "role": "user", "content": "Name the active aspect." }],
+  "context": [
+    { "kind": "memory", "text": "Quicksilver is one entity.", "privacy": "device" },
+    { "kind": "device", "text": "iPhone 16e", "privacy": "device" }
+  ],
+  "privacy": "device",
+  "maxTokens": 64
+}

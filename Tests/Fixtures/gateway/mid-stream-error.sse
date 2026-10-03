@@ -1,0 +1,9 @@
+event: meta
+data: {"route":"cloud","model":"fake","trainsOnPrompts":true}
+
+event: delta
+data: {"text":"partial"}
+
+event: error
+data: {"code":"upstream_unavailable"}
+
