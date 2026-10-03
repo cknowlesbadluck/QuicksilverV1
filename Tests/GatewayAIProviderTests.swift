@@ -339,17 +339,21 @@ final class GatewayAIProviderTests: XCTestCase {
         hang: Bool = false
     ) throws -> GatewayURLProtocolStub.StubResponse {
         let url = try XCTUnwrap(request.url)
+        let data = Data(body.utf8)
         let response = try XCTUnwrap(
             HTTPURLResponse(
                 url: url,
                 statusCode: status,
                 httpVersion: "HTTP/1.1",
-                headerFields: ["Content-Type": "text/event-stream"]
+                headerFields: [
+                    "Content-Type": "text/event-stream",
+                    "Content-Length": "\(data.count)"
+                ]
             )
         )
         return GatewayURLProtocolStub.StubResponse(
             response: response,
-            body: Data(body.utf8),
+            body: data,
             chunkDelayNanoseconds: chunkDelayNanoseconds,
             hang: hang
         )
@@ -377,9 +381,9 @@ private final class LockedArray<Element>: @unchecked Sendable {
 
 // MARK: - URLProtocol stub
 
-/// Synchronous URLProtocol stub (same pattern as ProviderHTTPTests).
-/// Supports hang-until-cancel and optional per-chunk delays without spawning Tasks.
-private final class GatewayURLProtocolStub: URLProtocol {
+/// URLProtocol stub tuned for `URLSession.bytes(for:)`.
+/// Delivery is deferred one run-loop turn so AsyncBytes can attach before `didLoad`.
+private final class GatewayURLProtocolStub: URLProtocol, @unchecked Sendable {
     struct StubResponse: Sendable {
         let response: HTTPURLResponse
         let body: Data
@@ -401,7 +405,6 @@ private final class GatewayURLProtocolStub: URLProtocol {
 
     final class HandlerBox: @unchecked Sendable {
         typealias Handler = @Sendable (URLRequest) throws -> StubResponse
-        private let lock = NSLock()
         private let condition = NSCondition()
         private var handler: Handler?
         private var cancelled = false
@@ -433,7 +436,6 @@ private final class GatewayURLProtocolStub: URLProtocol {
             return cancelled
         }
 
-        /// Block until `stopLoading` marks cancelled (first-event timeout / cancel tests).
         func waitUntilCancelled() {
             condition.lock()
             while !cancelled {
@@ -451,52 +453,59 @@ private final class GatewayURLProtocolStub: URLProtocol {
     }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
+
+    override class func canInit(with task: URLSessionTask) -> Bool { true }
+
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
+    override class func requestIsCacheEquivalent(_ a: URLRequest, to b: URLRequest) -> Bool { false }
+
     override func startLoading() {
-        // Deliver asynchronously so URLSession.bytes(for:) can attach its consumer
-        // before didReceive/didLoad/didFinish run (sync delivery drops the body).
-        let client = self.client
-        let protocolSelf = self
-        let request = self.request
-        DispatchQueue.global(qos: .userInitiated).async {
-            guard let handler = Self.handlerBox.get() else {
-                client?.urlProtocol(protocolSelf, didFailWithError: URLError(.badServerResponse))
+        let box = Self.handlerBox
+        // Capture request now; deliver on next run-loop turn for AsyncBytes.
+        let currentRequest = request
+        DispatchQueue.global(qos: .userInitiated).async { [client] in
+            // Brief pause so URLSession.bytes can subscribe before didLoad.
+            Thread.sleep(forTimeInterval: 0.02)
+            guard let handler = box.get() else {
+                client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
                 return
             }
             do {
-                let stub = try handler(request)
+                let stub = try handler(currentRequest)
                 if stub.hang {
-                    Self.handlerBox.waitUntilCancelled()
-                    client?.urlProtocol(protocolSelf, didFailWithError: URLError(.cancelled))
+                    box.waitUntilCancelled()
+                    client?.urlProtocol(self, didFailWithError: URLError(.cancelled))
                     return
                 }
-                client?.urlProtocol(
-                    protocolSelf,
-                    didReceive: stub.response,
-                    cacheStoragePolicy: .notAllowed
-                )
+                client?.urlProtocol(self, didReceive: stub.response, cacheStoragePolicy: .notAllowed)
                 if stub.chunkDelayNanoseconds == 0 {
-                    client?.urlProtocol(protocolSelf, didLoad: stub.body)
+                    if !stub.body.isEmpty {
+                        client?.urlProtocol(self, didLoad: stub.body)
+                    }
                 } else {
                     let bodyText = String(decoding: stub.body, as: UTF8.self)
-                    let blocks = bodyText.components(separatedBy: "\n\n")
+                    let separator = "\n\n"
+                    let blocks = bodyText.components(separatedBy: separator)
                     for (index, block) in blocks.enumerated() {
-                        if Self.handlerBox.wasCancelled { break }
-                        let chunk = index < blocks.count - 1 ? block + "\n\n" : block
+                        if box.wasCancelled { break }
+                        var chunk = block
+                        if index < blocks.count - 1 {
+                            chunk += separator
+                        }
                         if chunk.isEmpty { continue }
-                        client?.urlProtocol(protocolSelf, didLoad: Data(chunk.utf8))
+                        client?.urlProtocol(self, didLoad: Data(chunk.utf8))
                         let delay = TimeInterval(stub.chunkDelayNanoseconds) / 1_000_000_000
                         Thread.sleep(forTimeInterval: delay)
                     }
                 }
-                if Self.handlerBox.wasCancelled {
-                    client?.urlProtocol(protocolSelf, didFailWithError: URLError(.cancelled))
+                if box.wasCancelled {
+                    client?.urlProtocol(self, didFailWithError: URLError(.cancelled))
                 } else {
-                    client?.urlProtocolDidFinishLoading(protocolSelf)
+                    client?.urlProtocolDidFinishLoading(self)
                 }
             } catch {
-                client?.urlProtocol(protocolSelf, didFailWithError: error)
+                client?.urlProtocol(self, didFailWithError: error)
             }
         }
     }
