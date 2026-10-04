@@ -34,9 +34,6 @@ final class MercuryBrain {
     private(set) var livingStatus: String = LivingNarration.defaultStatus
     private(set) var visualState: VisualState = .idle
     private(set) var activeAspect: Aspect = .quicksilver
-    /// Aspect applied for the most recently completed successful `ask`.
-    /// Captured before the provider await so overlapping MainActor asks cannot retag it.
-    private(set) var lastAskAspectID: String = Aspect.quicksilver.rawValue
     /// Latched conversational register. Resets to `.playful` on a new Brain session.
     private(set) var activeRegister: Register = .playful
     private var lastAspectChangeAt: Date?
@@ -68,6 +65,11 @@ final class MercuryBrain {
 
     /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
+        try await askWithAspect(query).text
+    }
+
+    /// Ask and return the aspect applied for this turn (captured before the provider await).
+    func askWithAspect(_ query: String) async throws -> AskResult {
         personaManager.recordInteraction()
         try rejectAskWhileDisconnected()
         let intent = intentEngine.classify(query)
@@ -84,8 +86,12 @@ final class MercuryBrain {
             maxTokens: turn.maxTokens,
             history: turn.history
         )
-        lastAskAspectID = aspectID
-        return reply
+        return AskResult(text: reply, aspectID: aspectID)
+    }
+
+    struct AskResult: Sendable {
+        let text: String
+        let aspectID: String
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).

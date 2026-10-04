@@ -56,7 +56,9 @@ final class AskViewModelTests: XCTestCase {
         vm.draft = "keep this across aspects"
 
         await vm.submit()
-        let recordedAspect = container.brain.lastAskAspectID
+        let recordedAspect = container.memoryManager.items
+            .first { $0.metadata["role"] == "assistant" }?
+            .metadata["aspect"]
         let otherAspect = recordedAspect == "forge" ? "eternal" : "forge"
         try await container.personaManager.switchTo(id: otherAspect)
         XCTAssertNotEqual(container.personaManager.activePersonaID, recordedAspect)
@@ -67,6 +69,7 @@ final class AskViewModelTests: XCTestCase {
         let stored = container.memoryManager.items.filter { $0.category == .conversation }
         XCTAssertFalse(stored.isEmpty)
         XCTAssertTrue(stored.allSatisfy { $0.personaScope == nil })
+        XCTAssertNotNil(recordedAspect)
         XCTAssertTrue(stored.allSatisfy { $0.metadata["aspect"] == recordedAspect })
     }
 

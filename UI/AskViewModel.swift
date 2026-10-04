@@ -79,17 +79,17 @@ final class AskViewModel {
 
         do {
             // All conversation now routes through Mercury Brain
-            let responseText = try await container.brain.ask(text)
+            let result = try await container.brain.askWithAspect(text)
 
-            // Per-turn aspect captured inside Brain before the provider suspension.
-            let responseAspectID = container.brain.lastAskAspectID
+            // Aspect travels with the result — not a shared lastAskAspectID slot.
+            let responseAspectID = result.aspectID
             let responseHint = MemoryPolicy.policy(for: responseAspectID).writeImportanceHint
             await persistTurn(userTurn, personaID: responseAspectID, writeHint: responseHint)
 
             let assistantTurn = ChatTurn(
                 id: UUID(),
                 role: .assistant,
-                text: responseText,
+                text: result.text,
                 createdAt: Date()
             )
             turns.append(assistantTurn)
