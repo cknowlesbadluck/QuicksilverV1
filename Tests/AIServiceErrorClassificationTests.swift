@@ -308,6 +308,42 @@ final class AIServiceErrorClassificationTests: XCTestCase {
         XCTAssertEqual(provider.attemptCount, 1)
     }
 
+    func testFallbackToTrainingProviderRedactsStandardContext() async throws {
+        let primary = AttemptScriptProvider(scripts: [
+            .fail(.networkUnavailable),
+            .fail(.networkUnavailable)
+        ])
+        let secondary = CapturingTrainingProvider(reply: "safe-fallback")
+        let service = makeService(primary: primary, secondary: secondary)
+        service.retrySleep = { _ in }
+        service.retryPolicyOverride = AIStreamExecutor.RetryPolicy(maxRetries: 0, honorRetryAfter: true)
+
+        let appendix = CloudContextPolicy.systemAppendix(from: [
+            GatewayContextBlock(kind: .memory, text: "private tea preference", privacy: .device),
+            GatewayContextBlock(kind: .device, text: "battery low", privacy: .device)
+        ])
+        let request = AIRequest(
+            prompt: "failover",
+            systemPrompt: "You are Mercury.\n\n" + appendix,
+            history: [
+                Message(role: .user, content: "earlier"),
+                Message(role: .assistant, content: "reply")
+            ],
+            context: [
+                GatewayContextBlock(kind: .memory, text: "private tea preference", privacy: .device),
+                GatewayContextBlock(kind: .device, text: "battery low", privacy: .device)
+            ]
+        )
+        let response = try await service.complete(request)
+        XCTAssertEqual(response.content, "safe-fallback")
+        let seen = try XCTUnwrap(secondary.lastRequest)
+        XCTAssertTrue(seen.context.isEmpty)
+        XCTAssertEqual(seen.systemPrompt, "You are Mercury.")
+        XCTAssertFalse((seen.systemPrompt ?? "").contains("private tea preference"))
+        XCTAssertFalse((seen.systemPrompt ?? "").contains("battery low"))
+        XCTAssertEqual(seen.history.map(\.content), ["earlier", "reply"])
+    }
+
     // MARK: - Helpers
 
     private func makeService(
@@ -422,6 +458,42 @@ private struct AttemptScriptProvider: AIProvider {
                 continuation.finish(throwing: error)
             }
         }
+    }
+}
+
+private final class CapturedRequestBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: AIRequest?
+    var request: AIRequest? {
+        lock.lock(); defer { lock.unlock() }
+        return value
+    }
+    func store(_ request: AIRequest) {
+        lock.lock(); value = request; lock.unlock()
+    }
+}
+
+private struct CapturingTrainingProvider: AIProvider {
+    let id = "capturing-training"
+    let displayName = "Capturing Training"
+    let isAvailable = true
+    var trainsOnPrompts: Bool { true }
+    let reply: String
+    private let box = CapturedRequestBox()
+    var lastRequest: AIRequest? { box.request }
+
+    init(reply: String) {
+        self.reply = reply
+    }
+
+    func complete(_ request: AIRequest) async throws -> AIResponse {
+        box.store(request)
+        return AIResponse(
+            requestID: request.id,
+            content: reply,
+            finishReason: .stop,
+            usage: .init(promptTokens: 1, completionTokens: 1)
+        )
     }
 }
 

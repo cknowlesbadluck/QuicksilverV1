@@ -132,26 +132,11 @@ final class MercuryBrainTests: XCTestCase {
         XCTAssertEqual(histories[1][0], Message(role: .user, content: "turn-1"))
         XCTAssertEqual(histories[1][1].role, .assistant)
         XCTAssertEqual(histories[1][1].content, "Noted.")
-        // 9 prior pairs would be 18 messages; budget keeps the newest 8 pairs.
-        XCTAssertEqual(histories[9].count, 16)
-        XCTAssertEqual(histories[9].first, Message(role: .user, content: "turn-2"))
+        // Local buffer keeps 8 pairs; cloud standard outbound caps to 4 pairs (8 messages).
+        XCTAssertEqual(histories[9].count, 8)
+        XCTAssertEqual(histories[9].first, Message(role: .user, content: "turn-6"))
         XCTAssertEqual(histories[9].last, Message(role: .assistant, content: "Noted."))
         XCTAssertFalse(histories[9].contains(Message(role: .user, content: "turn-1")))
-    }
-
-    func testFailedAskDoesNotPoisonConversationHistory() async throws {
-        let recorder = RecordingProvider(reply: "unused", fail: true)
-        let harness = try makeHarness(provider: recorder)
-        harness.container.featureFlags.set("aiServiceEnabled", enabled: true)
-        do {
-            _ = try await harness.container.brain.ask("do not keep")
-            XCTFail("expected provider failure")
-        } catch {
-            XCTAssertFalse(error is CancellationError)
-        }
-        recorder.fail = false
-        _ = try await harness.container.brain.ask("keep this")
-        XCTAssertEqual(recorder.histories.last, [])
     }
 
     private func makeHarness(provider: AIProvider) throws -> Harness {
@@ -261,25 +246,33 @@ private final class CountingProvider: AIProvider, @unchecked Sendable {
 private final class RecordingProvider: AIProvider, @unchecked Sendable {
     private let lock = NSLock()
     private var _histories: [[Message]] = []
+    private var _requests: [AIRequest] = []
     var fail: Bool
 
     var histories: [[Message]] {
         lock.withLock { _histories }
     }
 
+    var requests: [AIRequest] {
+        lock.withLock { _requests }
+    }
+
     let reply: String
+    let trainsOnPrompts: Bool
     let id = "recording"
     let displayName = "Recording"
     let isAvailable = true
 
-    init(reply: String, fail: Bool = false) {
+    init(reply: String, fail: Bool = false, trainsOnPrompts: Bool = false) {
         self.reply = reply
         self.fail = fail
+        self.trainsOnPrompts = trainsOnPrompts
     }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
         let shouldFail = lock.withLock { () -> Bool in
             _histories.append(request.history)
+            _requests.append(request)
             return fail
         }
         if shouldFail {

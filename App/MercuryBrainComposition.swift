@@ -3,6 +3,7 @@ import Core
 import Memory
 import Personas
 import Nexus
+import ServicesAI
 
 /// Pure composition helpers for MercuryBrain.
 ///
@@ -76,17 +77,20 @@ enum BrainComposition {
         return Array(messages.suffix(maxMessages))
     }
 
+    /// Estimate outbound prompt size. Pass the capped context blocks that leave the device
+    /// (or empty when those texts are already folded into `systemHint` via systemAppendix).
     static func estimateContextTokens(
         systemHint: String,
-        memory: [MemoryItem],
+        serializedContext: [GatewayContextBlock] = [],
         query: String,
         history: [Message] = []
     ) -> Int {
-        let memoryChars = memory.reduce(0) { $0 + $1.value.count }
+        let contextChars = serializedContext.reduce(0) { $0 + $1.text.count }
         let historyChars = history.reduce(0) { $0 + $1.content.count }
-        return (systemHint.count + memoryChars + historyChars + query.count) / 4
+        return (systemHint.count + contextChars + historyChars + query.count) / 4
     }
 
+    /// Cloud prompts never embed memories or raw Nexus device text — CloudContextPolicy owns that.
     static func systemPrompt(
         base: String,
         bias: String,
@@ -97,19 +101,61 @@ enum BrainComposition {
         destination: PromptComposer.Destination = .cloud,
         plainMode: Bool = false
     ) -> String {
-        let health = state.overallHealthScore
-        let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        let device = "Device context (private): health \(health), battery \(battery)."
+        let includeLocal = destination == .onDevice
+        let memoryForPrompt = includeLocal ? memory : []
+        let device: String
+        if includeLocal {
+            let health = state.overallHealthScore
+            let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
+            device = "Device context (private): health \(health), battery \(battery)."
+        } else {
+            device = ""
+        }
         return PromptComposer.compose(
             core: PromptManager.coreIdentity(),
             aspect: base,
             bias: bias,
-            memory: memory,
+            memory: memoryForPrompt,
             device: device,
             aspectLabel: aspect.diagnosticLabel,
             plainMode: plainMode,
             owner: owner,
             destination: destination
+        )
+    }
+
+    struct CloudAskPayload {
+        let level: CloudContextLevel
+        let history: [Message]
+        let context: [GatewayContextBlock]
+    }
+
+    /// Build CloudContextPolicy blocks for one outbound Ask. `level` is already resolved.
+    static func cloudPayload(
+        question: String,
+        history: [Message],
+        memories: [MemoryItem],
+        state: NexusState,
+        level: CloudContextLevel
+    ) -> CloudAskPayload {
+        let deviceLine = CloudContextPolicy.coarseDeviceLine(
+            batteryLevel: state.batteryLevel,
+            thermalState: state.thermalState,
+            lowPowerMode: state.lowPowerMode
+        )
+        let blocks = CloudContextPolicy.assemble(
+            CloudContextInput(
+                question: question,
+                recentTurns: history.map(\.content),
+                memories: memories,
+                coarseDeviceLine: deviceLine
+            ),
+            level: level
+        )
+        return CloudAskPayload(
+            level: level,
+            history: CloudContextPolicy.cappedHistory(history, level: level),
+            context: CloudContextPolicy.gatewayContext(from: blocks)
         )
     }
 }

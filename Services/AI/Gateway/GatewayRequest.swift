@@ -1,10 +1,10 @@
 import Foundation
 import Core
 
-/// Encodes an `AIRequest` into a protocol v1 `GatewayChatRequest` / JSON body (M3-T8).
+/// Encodes an `AIRequest` into a protocol v1 `GatewayChatRequest` / JSON body (M3-T8 / M3-T11).
 ///
 /// Message order: optional non-empty system → history (user/assistant) → current user prompt.
-/// Context blocks are empty here; CloudContextPolicy fills them in M3-T11.
+/// Context blocks come from CloudContextPolicy via `AIRequest.context`.
 public enum GatewayRequest {
     public static func makeChatBody(_ request: AIRequest) -> GatewayChatRequest {
         var messages: [GatewayMessage] = []
@@ -18,7 +18,7 @@ public enum GatewayRequest {
         return GatewayChatRequest(
             taskTier: "standard",
             messages: messages,
-            context: [],
+            context: request.context,
             privacy: .device,
             maxTokens: request.maxTokens
         )

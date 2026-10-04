@@ -79,13 +79,7 @@ final class MercuryBrain {
         let turn = try await preparedAsk(query: query, intent: intent, turnRegister: turnRegister)
         // Capture before the provider await — another MainActor ask can change activeAspect while suspended.
         let aspectID = activeAspect.rawValue
-        let reply = try await completeAsk(
-            query: query,
-            system: turn.system,
-            config: turn.config,
-            maxTokens: turn.maxTokens,
-            history: turn.history
-        )
+        let reply = try await completeAsk(query: query, turn: turn)
         return AskResult(text: reply, aspectID: aspectID)
     }
 
@@ -281,9 +275,9 @@ extension MercuryBrain {
         let config: PersonaConfiguration
         let maxTokens: Int
         let history: [Message]
+        let context: [GatewayContextBlock]
     }
 
-    /// Aspect, prompt, history budget, and broker cap for one ask. History is prior turns only.
     private func preparedAsk(query: String, intent: Intent, turnRegister: Register) async throws -> PreparedAsk {
         let environment = AspectPolicy.Environment(
             isLowPower: nexus.state.lowPowerMode,
@@ -294,54 +288,84 @@ extension MercuryBrain {
         let config = PersonaConfiguration.forAspect(activeAspect)
         personality.recomputeForTurn(aspect: activeAspect)
         personality.noteInteraction()
-        if turnRegister == .plain {
-            personality.enterPlainRegister()
-        }
-        let system = buildSystemPrompt(
-            for: config,
-            memory: retrieveRelevantMemory(matching: query),
-            register: turnRegister
+        if turnRegister == .plain { personality.enterPlainRegister() }
+        let memoryCandidates = retrieveSnapshot(limit: 12, text: query)
+        let trains = aiService.primaryTrainsOnPrompts
+        let level = CloudContextPolicy.resolvedLevel(
+            requested: trains ? .minimal : .standard,
+            trainsOnPrompts: trains
         )
-        let history = BrainComposition.recentHistory(conversation)
-        let estimatedTokens = BrainComposition.estimateContextTokens(
+        let payload = BrainComposition.cloudPayload(
+            question: query,
+            history: BrainComposition.recentHistory(conversation),
+            memories: memoryCandidates,
+            state: nexus.state,
+            level: level
+        )
+        let system = cloudSystemPrompt(
+            config: config,
+            register: turnRegister,
+            memories: memoryCandidates,
+            context: payload.context
+        )
+        let contextForEstimate = aiService.currentProviderID == "gateway"
+            ? payload.context
+            : []
+        let tokens = BrainComposition.estimateContextTokens(
             systemHint: system,
-            memory: [],
+            serializedContext: contextForEstimate,
             query: query,
-            history: history
+            history: payload.history
         )
-        let effectivePlan = try evaluateBrokerDecision(intent: intent, tokens: estimatedTokens)
+        let plan = try evaluateBrokerDecision(intent: intent, tokens: tokens)
         return PreparedAsk(
             system: system,
             config: config,
-            maxTokens: min(config.maxTokensHint, effectivePlan.maxOutputTokens),
-            history: history
+            maxTokens: min(config.maxTokensHint, plan.maxOutputTokens),
+            history: payload.history,
+            context: payload.context
         )
     }
 
-    private func completeAsk(
-        query: String,
-        system: String,
+    private func cloudSystemPrompt(
         config: PersonaConfiguration,
-        maxTokens: Int,
-        history: [Message]
-    ) async throws -> String {
+        register: Register,
+        memories: [MemoryItem],
+        context: [GatewayContextBlock]
+    ) -> String {
+        let base = BrainComposition.systemPrompt(
+            base: config.systemPrompt,
+            bias: personality.promptBias(register: register),
+            memory: memories,
+            state: nexus.state,
+            aspect: activeAspect,
+            plainMode: register == .plain
+        )
+        guard aiService.currentProviderID != "gateway" else { return base }
+        let appendix = CloudContextPolicy.systemAppendix(from: context)
+        return appendix.isEmpty ? base : base + "\n\n" + appendix
+    }
+
+    private func completeAsk(query: String, turn: PreparedAsk) async throws -> String {
         do {
             let response = try await aiService.complete(
-                prompt: query,
-                systemPrompt: system,
-                temperature: config.preferredTemperature,
-                maxTokens: maxTokens,
-                history: history
+                AIRequest(
+                    prompt: query,
+                    systemPrompt: turn.system,
+                    history: turn.history,
+                    context: turn.context,
+                    temperature: turn.config.preferredTemperature,
+                    maxTokens: turn.maxTokens
+                )
             )
             recordTurn(user: query, assistant: response.content)
             visualState = .speaking
-            let colored = personality.colorResponse(response.content, personaID: config.id)
+            let colored = personality.colorResponse(response.content, personaID: turn.config.id)
             visualState = .success
             refreshLivingStatus()
             stabilizeVisualStateAfterSuccess()
             return colored
         } catch {
-            // Unbound is a state, not a failure: settle to baseline and let the UI show the notice.
             visualState = AppError.unboundNotice(for: error) == nil ? .warning : environmentalBaseline()
             refreshLivingStatus()
             throw error
@@ -365,25 +389,9 @@ extension MercuryBrain {
         retrieveSnapshot(limit: 4, text: text)
     }
 
-    /// Keep the model-visible turn, not the personality-colored UI string.
     private func recordTurn(user: String, assistant: String) {
         conversation.append(Message(role: .user, content: user))
         conversation.append(Message(role: .assistant, content: assistant))
         conversation = BrainComposition.recentHistory(conversation)
-    }
-
-    private func buildSystemPrompt(
-        for config: PersonaConfiguration,
-        memory: [MemoryItem],
-        register: Register
-    ) -> String {
-        BrainComposition.systemPrompt(
-            base: config.systemPrompt,
-            bias: personality.promptBias(register: register),
-            memory: memory,
-            state: nexus.state,
-            aspect: activeAspect,
-            plainMode: register == .plain
-        )
     }
 }

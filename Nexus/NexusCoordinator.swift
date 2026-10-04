@@ -121,6 +121,11 @@ public final class NexusCoordinator {
         handleNetwork(connected: isConnected, expensive: isExpensive, constrained: isConstrained)
     }
 
+    /// Fold a battery reading into `state` (same path as the live monitor). AppTests use this for M3-T11.
+    public func noteBatteryCondition(level: Double, stateDescription: String = "unplugged") {
+        handleBattery(level: level, description: stateDescription)
+    }
+
     // MARK: - Persona context sync
 
     /// Keep insight tags aligned with PersonaManager for *all* switch paths
