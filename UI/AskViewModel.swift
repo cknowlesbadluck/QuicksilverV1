@@ -74,11 +74,14 @@ final class AskViewModel {
         turns.append(userTurn)
         draft = ""
 
-        await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
-
         do {
             // All conversation now routes through Mercury Brain
             let responseText = try await container.brain.ask(text)
+
+            // Tag both turns with the aspect the Brain settled on for this exchange.
+            let responseAspectID = container.personaManager.activePersonaID
+            let responseHint = container.personaManager.activeMemoryPolicy.writeImportanceHint
+            await persistTurn(userTurn, personaID: responseAspectID, writeHint: responseHint)
 
             let assistantTurn = ChatTurn(
                 id: UUID(),
@@ -87,11 +90,10 @@ final class AskViewModel {
                 createdAt: Date()
             )
             turns.append(assistantTurn)
-            // Tag with the aspect the Brain settled on for this turn.
-            let responseAspectID = container.personaManager.activePersonaID
-            let responseHint = container.personaManager.activeMemoryPolicy.writeImportanceHint
             await persistTurn(assistantTurn, personaID: responseAspectID, writeHint: responseHint)
         } catch {
+            // Failed asks still leave a user trail under the pre-call aspect.
+            await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
             if let notice = AppError.unboundNotice(for: error) {
                 unboundNotice = notice
             } else {

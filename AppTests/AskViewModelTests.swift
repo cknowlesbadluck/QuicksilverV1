@@ -53,12 +53,13 @@ final class AskViewModelTests: XCTestCase {
         container.featureFlags.set("aiServiceEnabled", enabled: true)
         await container.memoryManager.load()
         let vm = AskViewModel(container: container)
-        let origin = container.personaManager.activePersonaID
         vm.draft = "keep this across aspects"
 
         await vm.submit()
-        try await container.personaManager.switchTo(id: "forge")
-        XCTAssertNotEqual(container.personaManager.activePersonaID, origin)
+        let recordedAspect = container.personaManager.activePersonaID
+        let otherAspect = recordedAspect == "forge" ? "eternal" : "forge"
+        try await container.personaManager.switchTo(id: otherAspect)
+        XCTAssertNotEqual(container.personaManager.activePersonaID, recordedAspect)
 
         await vm.loadHistory()
 
@@ -66,7 +67,7 @@ final class AskViewModelTests: XCTestCase {
         let stored = container.memoryManager.items.filter { $0.category == .conversation }
         XCTAssertFalse(stored.isEmpty)
         XCTAssertTrue(stored.allSatisfy { $0.personaScope == nil })
-        XCTAssertTrue(stored.allSatisfy { $0.metadata["aspect"] == origin })
+        XCTAssertTrue(stored.allSatisfy { $0.metadata["aspect"] == recordedAspect })
     }
 
     func testUnboundSubmitShowsNotice() async throws {
