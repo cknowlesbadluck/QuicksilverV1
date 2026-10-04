@@ -1,6 +1,25 @@
 import XCTest
 
+/// Simulator transport failures XCUITest records from `launch()` / `terminate()`
+/// on shared CI runners (seen on main 2026-10-04). App defects do not produce
+/// these messages; a crash or hang on launch still fails the single retry.
+private let simulatorLaunchFlakeMarkers = [
+    "Failed to get launch progress",
+    "Timed out while requesting launch progress",
+    "Failed to get background assertion",
+    "Failed to terminate"
+]
+
+/// `performAccessibilityAudit` throws this when the audit itself times out.
+/// It is not an accessibility finding: real findings reach the issue handler.
+private let accessibilityAuditErrorDomain = "com.apple.xcode.xctest.accessibilityAudit"
+private let accessibilityAuditTimedOutCode = -56
+
 final class SanctumSmokeTests: XCTestCase {
+    private static let launchTimeout: TimeInterval = 30
+    private static let auditAttempts = 3
+    private static let auditSettleInterval: TimeInterval = 5
+
     private var app: XCUIApplication!
 
     override func setUpWithError() throws {
@@ -17,7 +36,7 @@ final class SanctumSmokeTests: XCTestCase {
         // CI UI Smoke is an isolated job, so the first contact is always launch()
         // with `-uitest` (launchArguments only apply to launch, not activate).
         if app.state == .notRunning {
-            app.launch()
+            launchRetryingSimulatorFlakeOnce()
         } else {
             app.activate()
             returnToSanctumIfNeeded()
@@ -43,10 +62,7 @@ final class SanctumSmokeTests: XCTestCase {
         for destination in destinations {
             let portal = app.buttons[destination]
             XCTAssertTrue(portal.waitForExistence(timeout: 8), "Missing portal: \(destination)")
-            portal.tap()
-
-            let done = app.buttons["Done"]
-            XCTAssertTrue(done.waitForExistence(timeout: 8), "Realm did not open: \(destination)")
+            let done = openRealm(through: portal, named: destination)
             done.tap()
             XCTAssertTrue(portal.waitForExistence(timeout: 8), "Sanctum did not return after: \(destination)")
         }
@@ -64,15 +80,82 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
         // Sanctum portals and Speak with Quicksilver must be idle before audit.
         // Decorative motion is frozen via -uitest in AmbientLayer/core/Sanctum.
-        try app.performAccessibilityAudit { issue in
-            print(
-                "AUDIT compact=\(issue.compactDescription) "
-                    + "detail=\(issue.detailedDescription)"
-            )
-            return false
+        try performAccessibilityAuditRetryingTimeouts()
+    }
+
+    /// Retries only the audit's own "failed to complete in time" error.
+    /// Every accessibility issue the audit reports still fails the test.
+    private func performAccessibilityAuditRetryingTimeouts() throws {
+        for attempt in 1...Self.auditAttempts {
+            do {
+                try app.performAccessibilityAudit { issue in
+                    print(
+                        "AUDIT compact=\(issue.compactDescription) "
+                            + "detail=\(issue.detailedDescription)"
+                    )
+                    return false
+                }
+                return
+            } catch {
+                let nsError = error as NSError
+                let timedOut = nsError.domain == accessibilityAuditErrorDomain
+                    && nsError.code == accessibilityAuditTimedOutCode
+                guard timedOut, attempt < Self.auditAttempts else { throw error }
+                print("AUDIT attempt \(attempt) timed out; settling before retry")
+                Thread.sleep(forTimeInterval: Self.auditSettleInterval)
+                XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
+            }
         }
     }
 
+    /// Taps a portal and returns the realm's Done button. A busy simulator can
+    /// drop the first tap after a cold launch (PR #225 run 37238895244), so tap
+    /// once more if the realm hasn't opened and the portal is still on screen.
+    private func openRealm(through portal: XCUIElement, named destination: String) -> XCUIElement {
+        let done = app.buttons["Done"]
+        portal.tap()
+        if !done.waitForExistence(timeout: 8) && portal.isHittable {
+            print("PORTAL \(destination) did not open on first tap; tapping again")
+            portal.tap()
+        }
+        XCTAssertTrue(done.waitForExistence(timeout: 8), "Realm did not open: \(destination)")
+        return done
+    }
+
+    /// Launches once; if the simulator drops the launch handshake, terminates
+    /// and launches one more time. The retry's failures are recorded normally.
+    private func launchRetryingSimulatorFlakeOnce() {
+        let options = XCTExpectedFailure.Options()
+        options.isStrict = false
+        options.issueMatcher = { issue in
+            simulatorLaunchFlakeMarkers.contains { issue.compactDescription.contains($0) }
+        }
+
+        continueAfterFailure = true
+        XCTExpectFailure("Simulator launch handshake flake; relaunching once", options: options) {
+            app.launch()
+        }
+        if app.wait(for: .runningForeground, timeout: Self.launchTimeout) {
+            continueAfterFailure = false
+            return
+        }
+
+        print("LAUNCH first attempt did not reach foreground; relaunching")
+        XCTExpectFailure("Simulator terminate flake before relaunch", options: options) {
+            app.terminate()
+        }
+        continueAfterFailure = false
+        app.launch()
+        XCTAssertTrue(
+            app.wait(for: .runningForeground, timeout: Self.launchTimeout),
+            "App did not reach foreground after relaunch"
+        )
+    }
+
+    // Known gap (PR #225): this center swipeDown() often leaves the Ask sheet
+    // presented, so the audit mostly covers Ask. Truly dismissing it surfaces
+    // Sanctum header findings (contrast, Dynamic Type) to fix in product code
+    // before tightening this helper.
     private func returnToSanctumIfNeeded() {
         if app.navigationBars["Ask"].exists {
             app.swipeDown()
