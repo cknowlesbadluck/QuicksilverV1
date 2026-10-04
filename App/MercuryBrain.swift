@@ -20,7 +20,7 @@ final class MercuryBrain {
     private let personaManager: PersonaManager
     private let memoryManager: MemoryManager
     private let aiService: AIService
-    private let nexus: NexusCoordinator
+    let nexus: NexusCoordinator
     private let eventBus: EventBus
     private let logger: LoggerService
 
@@ -65,6 +65,11 @@ final class MercuryBrain {
 
     /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
+        try await askWithAspect(query).text
+    }
+
+    /// Ask and return the aspect applied for this turn (captured before the provider await).
+    func askWithAspect(_ query: String) async throws -> AskResult {
         personaManager.recordInteraction()
         try rejectAskWhileDisconnected()
         let intent = intentEngine.classify(query)
@@ -72,13 +77,21 @@ final class MercuryBrain {
         activeRegister = turnRegister
         visualState = .thinking
         let turn = try await preparedAsk(query: query, intent: intent, turnRegister: turnRegister)
-        return try await completeAsk(
+        // Capture before the provider await — another MainActor ask can change activeAspect while suspended.
+        let aspectID = activeAspect.rawValue
+        let reply = try await completeAsk(
             query: query,
             system: turn.system,
             config: turn.config,
             maxTokens: turn.maxTokens,
             history: turn.history
         )
+        return AskResult(text: reply, aspectID: aspectID)
+    }
+
+    struct AskResult: Sendable {
+        let text: String
+        let aspectID: String
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
@@ -372,22 +385,5 @@ extension MercuryBrain {
             aspect: activeAspect,
             plainMode: register == .plain
         )
-    }
-}
-
-// MARK: - IntelligenceSurface
-
-extension MercuryBrain: IntelligenceSurface {
-
-    /// Memory snapshot for Intents / automation (alias of retrieveSnapshot).
-    func snapshot(limit: Int) -> [MemoryItem] {
-        retrieveSnapshot(limit: limit)
-    }
-
-    /// Aspect identity plus Nexus full diagnostic — Intents call only this.
-    func statusReport() throws -> String {
-        let aspect = "\(activeAspect.diagnosticLabel) (\(activeAspect.rawValue))"
-        let diagnostic = try nexus.bridge.triggerDiagnostic(named: "full")
-        return "\(aspect) | \(diagnostic)"
     }
 }

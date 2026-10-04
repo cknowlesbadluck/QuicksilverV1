@@ -38,15 +38,16 @@ final class AskViewModel {
 
     func loadHistory() async {
         await container.memoryManager.load()
-        let personaID = container.personaManager.activePersonaID
+        // M3-T10: Ask history is entity-wide. Aspect is metadata, not a filter.
+        // Cap by recency after fetch — MemoryQuery.limit ranks by importance.
         let query = MemoryQuery(
             category: .conversation,
-            personaScope: personaID,
-            keyPrefix: "chat.",
-            limit: historyLimit
+            keyPrefix: "chat."
         )
-        let items = container.memoryManager.items(matching: query)
-            .sorted { $0.createdAt < $1.createdAt }
+        let matched = container.memoryManager.items(matching: query)
+        let newestFirst = matched.sorted { $0.createdAt > $1.createdAt }
+        let recent = newestFirst.prefix(historyLimit)
+        let items = recent.sorted { $0.createdAt < $1.createdAt }
 
         turns = items.compactMap { item in
             let role: ChatTurn.Role = item.metadata["role"] == "assistant" ? .assistant : .user
@@ -71,20 +72,26 @@ final class AskViewModel {
         turns.append(userTurn)
         draft = ""
 
+        // Durable write before the provider await (survive termination mid-flight).
         await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
 
         do {
             // All conversation now routes through Mercury Brain
-            let responseText = try await container.brain.ask(text)
+            let result = try await container.brain.askWithAspect(text)
+
+            // Aspect travels with the result — not a shared lastAskAspectID slot.
+            let responseAspectID = result.aspectID
+            let responseHint = MemoryPolicy.policy(for: responseAspectID).writeImportanceHint
+            await persistTurn(userTurn, personaID: responseAspectID, writeHint: responseHint)
 
             let assistantTurn = ChatTurn(
                 id: UUID(),
                 role: .assistant,
-                text: responseText,
+                text: result.text,
                 createdAt: Date()
             )
             turns.append(assistantTurn)
-            await persistTurn(assistantTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
+            await persistTurn(assistantTurn, personaID: responseAspectID, writeHint: responseHint)
         } catch {
             if let notice = AppError.unboundNotice(for: error) {
                 unboundNotice = notice
@@ -104,10 +111,11 @@ final class AskViewModel {
             category: .conversation,
             metadata: [
                 "role": turn.role.rawValue,
-                "persona": personaID
+                "persona": personaID,
+                "aspect": personaID
             ],
             importanceBoost: turn.role == .assistant ? writeHint : 0.45,
-            personaScope: personaID
+            personaScope: nil
         )
     }
 }
