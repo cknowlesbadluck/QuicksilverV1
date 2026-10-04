@@ -20,7 +20,7 @@ final class MercuryBrain {
     private let personaManager: PersonaManager
     private let memoryManager: MemoryManager
     private let aiService: AIService
-    private let nexus: NexusCoordinator
+    let nexus: NexusCoordinator
     private let eventBus: EventBus
     private let logger: LoggerService
 
