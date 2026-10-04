@@ -52,6 +52,22 @@ final class AskViewModelTests: XCTestCase {
         )
         container.featureFlags.set("aiServiceEnabled", enabled: true)
         await container.memoryManager.load()
+
+        let originalAspect = container.personaManager.activePersonaID
+        let seededText = "seeded-scoped-turn-before-switch"
+        await container.memoryManager.set(
+            key: "chat.seeded.scoped.history",
+            value: seededText,
+            category: .conversation,
+            metadata: [
+                "role": "user",
+                "persona": originalAspect,
+                "aspect": originalAspect
+            ],
+            importanceBoost: 0.5,
+            personaScope: originalAspect
+        )
+
         let vm = AskViewModel(container: container)
         vm.draft = "keep this across aspects"
 
@@ -65,12 +81,21 @@ final class AskViewModelTests: XCTestCase {
 
         await vm.loadHistory()
 
-        XCTAssertEqual(vm.turns.map(\.text), ["keep this across aspects", "Still here."])
-        let stored = container.memoryManager.items.filter { $0.category == .conversation }
-        XCTAssertFalse(stored.isEmpty)
-        XCTAssertTrue(stored.allSatisfy { $0.personaScope == nil })
+        XCTAssertTrue(vm.turns.map(\.text).contains(seededText))
+        XCTAssertTrue(vm.turns.map(\.text).contains("keep this across aspects"))
+        XCTAssertTrue(vm.turns.map(\.text).contains("Still here."))
+
+        let submitTexts = Set(["keep this across aspects", "Still here."])
+        let submitTurns = container.memoryManager.items.filter {
+            $0.category == .conversation && submitTexts.contains($0.value)
+        }
+        XCTAssertEqual(submitTurns.count, 2)
+        XCTAssertTrue(submitTurns.allSatisfy { $0.personaScope == nil })
         XCTAssertNotNil(recordedAspect)
-        XCTAssertTrue(stored.allSatisfy { $0.metadata["aspect"] == recordedAspect })
+        XCTAssertTrue(submitTurns.allSatisfy { $0.metadata["aspect"] == recordedAspect })
+
+        let seeded = container.memoryManager.items.first { $0.value == seededText }
+        XCTAssertEqual(seeded?.personaScope, originalAspect)
     }
 
     func testUnboundSubmitShowsNotice() async throws {

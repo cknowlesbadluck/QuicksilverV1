@@ -34,3 +34,20 @@ extension MercuryBrain {
         }
     }
 }
+
+// MARK: - IntelligenceSurface
+
+extension MercuryBrain: IntelligenceSurface {
+
+    /// Memory snapshot for Intents / automation (alias of retrieveSnapshot).
+    func snapshot(limit: Int) -> [MemoryItem] {
+        retrieveSnapshot(limit: limit)
+    }
+
+    /// Aspect identity plus Nexus full diagnostic — Intents call only this.
+    func statusReport() throws -> String {
+        let aspect = "\(activeAspect.diagnosticLabel) (\(activeAspect.rawValue))"
+        let diagnostic = try nexus.bridge.triggerDiagnostic(named: "full")
+        return "\(aspect) | \(diagnostic)"
+    }
+}
