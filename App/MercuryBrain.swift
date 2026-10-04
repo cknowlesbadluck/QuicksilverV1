@@ -37,6 +37,8 @@ final class MercuryBrain {
     /// Latched conversational register. Resets to `.playful` on a new Brain session.
     private(set) var activeRegister: Register = .playful
     private var lastAspectChangeAt: Date?
+    /// Prior turns only. Current prompt is sent separately. Capped at 8 pairs.
+    private var conversation: [Message] = []
 
     init(
         personaManager: PersonaManager,
@@ -117,15 +119,23 @@ final class MercuryBrain {
             memory: relevantMemory,
             register: turnRegister
         )
+        let history = BrainComposition.recentHistory(conversation)
         let estimatedTokens = BrainComposition.estimateContextTokens(
             systemHint: system,
             memory: [],
-            query: query
+            query: query,
+            history: history
         )
 
         let effectivePlan = try evaluateBrokerDecision(intent: intent, tokens: estimatedTokens)
         let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
-        return try await completeAsk(query: query, system: system, config: config, maxTokens: maxTokens)
+        return try await completeAsk(
+            query: query,
+            system: system,
+            config: config,
+            maxTokens: maxTokens,
+            history: history
+        )
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).
@@ -291,15 +301,18 @@ extension MercuryBrain {
         query: String,
         system: String,
         config: PersonaConfiguration,
-        maxTokens: Int
+        maxTokens: Int,
+        history: [Message]
     ) async throws -> String {
         do {
             let response = try await aiService.complete(
                 prompt: query,
                 systemPrompt: system,
                 temperature: config.preferredTemperature,
-                maxTokens: maxTokens
+                maxTokens: maxTokens,
+                history: history
             )
+            recordTurn(user: query, assistant: response.content)
             visualState = .speaking
             let colored = personality.colorResponse(response.content, personaID: config.id)
             visualState = .success
@@ -329,6 +342,13 @@ extension MercuryBrain {
 
     private func retrieveRelevantMemory(matching text: String? = nil) -> [MemoryItem] {
         retrieveSnapshot(limit: 4, text: text)
+    }
+
+    /// Keep the model-visible turn, not the personality-colored UI string.
+    private func recordTurn(user: String, assistant: String) {
+        conversation.append(Message(role: .user, content: user))
+        conversation.append(Message(role: .assistant, content: assistant))
+        conversation = BrainComposition.recentHistory(conversation)
     }
 
     private func buildSystemPrompt(

@@ -162,13 +162,15 @@ public final class AIService {
         prompt: String,
         systemPrompt: String? = nil,
         temperature: Double = 0.7,
-        maxTokens: Int = 1024
+        maxTokens: Int = 1024,
+        history: [Message] = []
     ) async throws -> AIResponse {
         try await execute(
             prompt: prompt,
             systemPrompt: systemPrompt,
             temperature: temperature,
-            maxTokens: maxTokens
+            maxTokens: maxTokens,
+            history: history
         )
     }
 
@@ -176,7 +178,8 @@ public final class AIService {
         prompt: String,
         systemPrompt: String?,
         temperature: Double,
-        maxTokens: Int
+        maxTokens: Int,
+        history: [Message]
     ) async throws -> AIResponse {
         try ensureReadyForNetworkRequest()
         guard let provider = primaryProvider else {
@@ -187,6 +190,7 @@ public final class AIService {
         let request = AIRequest(
             prompt: prompt,
             systemPrompt: systemPrompt,
+            history: history,
             temperature: temperature,
             maxTokens: maxTokens
         )
