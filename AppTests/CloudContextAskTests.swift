@@ -39,8 +39,8 @@ final class CloudContextAskTests: XCTestCase {
         _ = try await harness.container.brain.ask("plan the day")
 
         let last = try XCTUnwrap(recorder.requests.last)
-        XCTAssertFalse((last.systemPrompt ?? "").contains("terse answers"))
-        XCTAssertFalse((last.systemPrompt ?? "").contains("Device context"))
+        XCTAssertFalse((last.systemPrompt ?? "").contains("Device context (private)"))
+        XCTAssertTrue((last.systemPrompt ?? "").contains("terse answers"), "direct providers get cloud-safe appendix")
         let memories = last.context.filter { $0.kind == .memory }
         XCTAssertEqual(memories.count, 1)
         XCTAssertEqual(memories[0].text, "plan the day with terse answers")

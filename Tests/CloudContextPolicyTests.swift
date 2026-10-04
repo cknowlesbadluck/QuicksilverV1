@@ -24,12 +24,12 @@ final class CloudContextPolicyTests: XCTestCase {
             ),
             level: .minimal
         )
-        XCTAssertEqual(blocks.map(\.kind), [.question, .turn, .turn])
-        XCTAssertEqual(blocks.map(\.text), ["what next", "two", "three"])
+        XCTAssertEqual(blocks.map(\.kind), [.question])
+        XCTAssertEqual(blocks.map(\.text), ["what next"])
         XCTAssertFalse(blocks.contains { $0.kind == .memory || $0.kind == .device })
     }
 
-    func testStandardCapsTurnsMemoriesAndDeviceLine() {
+    func testStandardCapsMemoriesAndDeviceLine() {
         let memories = [
             note(String(repeating: "a", count: 200)),
             note("second"),
@@ -45,9 +45,9 @@ final class CloudContextPolicyTests: XCTestCase {
             ),
             level: .standard
         )
-        let turns = blocks.filter { $0.kind == .turn }
         let notes = blocks.filter { $0.kind == .memory }
-        XCTAssertEqual(turns.map(\.text), ["t2", "t3", "t4", "t5"])
+        XCTAssertEqual(blocks.first?.kind, .question)
+        XCTAssertFalse(blocks.contains { $0.kind == .turn })
         XCTAssertEqual(notes.count, 3)
         XCTAssertEqual(notes[0].text.count, CloudContextPolicy.memoryCharCap)
         XCTAssertEqual(blocks.last?.text, "battery low")
@@ -97,18 +97,25 @@ final class CloudContextPolicyTests: XCTestCase {
 
     func testCredentialValuesNeverLeave() {
         let leak = note("my API token is sk-abcdefghijklmnopqrstuvwxyz")
+        let plain = note("API token: abcdefghijklmnopqrstuvwxyz")
         let blocks = CloudContextPolicy.assemble(
-            CloudContextInput(question: "q", memories: [leak, note("safe")]),
+            CloudContextInput(question: "q", memories: [leak, plain, note("safe")]),
             level: .standard
         )
         XCTAssertEqual(blocks.map(\.text), ["q", "safe"])
     }
 
-    func testDeviceAllowlistRejectsIdentifiers() {
+    func testDeviceAllowlistAndThermalPriority() {
         XCTAssertNil(CloudContextPolicy.sanitizedDeviceLine("Christopher iPhone"))
-        XCTAssertNil(CloudContextPolicy.sanitizedDeviceLine("nexus diagnostic 42"))
-        XCTAssertNil(CloudContextPolicy.sanitizedDeviceLine("battery 20%"))
         XCTAssertEqual(CloudContextPolicy.sanitizedDeviceLine("battery low"), "battery low")
+        XCTAssertEqual(
+            CloudContextPolicy.coarseDeviceLine(
+                batteryLevel: 0.8,
+                thermalState: "critical",
+                lowPowerMode: true
+            ),
+            "thermal critical"
+        )
         XCTAssertEqual(
             CloudContextPolicy.coarseDeviceLine(
                 batteryLevel: 0.1,
@@ -119,7 +126,7 @@ final class CloudContextPolicyTests: XCTestCase {
         )
     }
 
-    func testGatewayContextOmitsQuestion() {
+    func testGatewayContextOmitsQuestionAndTurns() {
         let blocks = CloudContextPolicy.assemble(
             CloudContextInput(
                 question: "q",
@@ -130,8 +137,8 @@ final class CloudContextPolicyTests: XCTestCase {
             level: .standard
         )
         let context = CloudContextPolicy.gatewayContext(from: blocks)
-        XCTAssertEqual(context.map(\.kind), [.history, .history, .memory, .device])
-        XCTAssertEqual(context.map(\.text), ["u", "a", "m", "thermal fair"])
+        XCTAssertEqual(context.map(\.kind), [.memory, .device])
+        XCTAssertEqual(context.map(\.text), ["m", "thermal fair"])
     }
 
     func testCappedHistoryUsesPairs() {
@@ -146,6 +153,14 @@ final class CloudContextPolicyTests: XCTestCase {
         let standard = CloudContextPolicy.cappedHistory(history, level: .standard)
         XCTAssertEqual(standard.count, 8)
         XCTAssertEqual(standard.first?.content, "u3")
+    }
+
+    func testShareableMemoriesBackfillsAfterPrivate() {
+        var privateNote = note("hidden")
+        privateNote.metadata["private"] = "true"
+        let items = [privateNote, note("one"), note("two"), note("three"), note("four")]
+        let kept = CloudContextPolicy.shareableMemories(items, cap: 3)
+        XCTAssertEqual(kept.map(\.value), ["one", "two", "three"])
     }
 
     private func note(_ value: String) -> MemoryItem {

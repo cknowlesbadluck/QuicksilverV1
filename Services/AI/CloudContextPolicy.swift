@@ -98,22 +98,15 @@ public enum CloudContextPolicy {
     }
 
     /// Kind-tagged blocks. Private memories, credentials, and raw diagnostics never leave.
+    /// Conversation turns travel only via `cappedHistory` → `AIRequest.history` (not duplicated here).
     public static func assemble(
         _ input: CloudContextInput,
         level: CloudContextLevel
     ) -> [CloudContextBlock] {
-        let turnLimit = turnCap(for: level)
         var blocks = [CloudContextBlock(kind: .question, text: input.question)]
-        for turn in input.recentTurns.suffix(turnLimit) {
-            let trimmed = turn.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { continue }
-            blocks.append(CloudContextBlock(kind: .turn, text: trimmed))
-        }
         guard level == .standard else { return blocks }
 
-        let notes = input.memories
-            .filter { isShareable($0) }
-            .prefix(standardMemoryCap)
+        let notes = shareableMemories(input.memories, cap: standardMemoryCap)
         for note in notes {
             blocks.append(
                 CloudContextBlock(kind: .memory, text: String(note.value.prefix(memoryCharCap)))
@@ -125,16 +118,33 @@ public enum CloudContextPolicy {
         return blocks
     }
 
-    /// Map policy blocks to gateway wire context (question stays in messages).
+    /// Shareable memories with backfill after private/credential filtering.
+    public static func shareableMemories(_ memories: [MemoryItem], cap: Int) -> [MemoryItem] {
+        Array(memories.filter { isShareable($0) }.prefix(max(0, cap)))
+    }
+
+    /// Appendix for direct providers that ignore `AIRequest.context` (e.g. Grok).
+    public static func systemAppendix(from context: [GatewayContextBlock]) -> String {
+        var parts: [String] = []
+        let memories = context.filter { $0.kind == .memory }.map(\.text)
+        if !memories.isEmpty {
+            parts.append("Relevant memory (cloud-safe):")
+            parts.append(contentsOf: memories.map { "- \($0)" })
+        }
+        if let device = context.first(where: { $0.kind == .device })?.text {
+            parts.append("Device: \(device).")
+        }
+        return parts.joined(separator: "\n")
+    }
+
+    /// Map policy blocks to gateway wire context (question + turns stay in messages).
     public static func gatewayContext(
         from blocks: [CloudContextBlock]
     ) -> [GatewayContextBlock] {
         blocks.compactMap { block in
             switch block.kind {
-            case .question:
+            case .question, .turn:
                 return nil
-            case .turn:
-                return GatewayContextBlock(kind: .history, text: block.text, privacy: .device)
             case .memory:
                 return GatewayContextBlock(kind: .memory, text: block.text, privacy: .device)
             case .device:
@@ -144,11 +154,15 @@ public enum CloudContextPolicy {
     }
 
     /// Derive an allowlisted coarse device line from Nexus-ish signals.
+    /// Severity order: thermal critical/serious → low power → battery → milder thermal.
     public static func coarseDeviceLine(
         batteryLevel: Double?,
         thermalState: String,
         lowPowerMode: Bool
     ) -> String? {
+        let thermal = thermalState.lowercased()
+        if thermal == "critical" { return "thermal critical" }
+        if thermal == "serious" { return "thermal serious" }
         if lowPowerMode { return "low power" }
         if let battery = batteryCoarseLine(batteryLevel) { return battery }
         return thermalCoarseLine(thermalState)
@@ -173,7 +187,7 @@ public enum CloudContextPolicy {
         }
     }
 
-    static func isShareable(_ item: MemoryItem) -> Bool {
+    public static func isShareable(_ item: MemoryItem) -> Bool {
         if isPrivateFlag(item.metadata["private"]) { return false }
         if keyHasCredentialSegment(item.key) { return false }
         if valueLooksLikeCredential(item.value) { return false }
@@ -199,9 +213,9 @@ public enum CloudContextPolicy {
     static func valueLooksLikeCredential(_ value: String) -> Bool {
         let lowered = value.lowercased()
         let phrases = [
-            "api key", "api_key", "apikey",
+            "api key", "api_key", "apikey", "api token",
             "access token", "secret key", "secret token",
-            "bearer ", "password:"
+            "token:", "bearer ", "password:"
         ]
         if phrases.contains(where: { lowered.contains($0) }) { return true }
         // Common key prefixes (sk-/pk-/api_) followed by a long token-like run.

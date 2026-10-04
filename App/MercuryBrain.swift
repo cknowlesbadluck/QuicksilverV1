@@ -289,15 +289,17 @@ extension MercuryBrain {
         personality.recomputeForTurn(aspect: activeAspect)
         personality.noteInteraction()
         if turnRegister == .plain { personality.enterPlainRegister() }
-        let memories = retrieveSnapshot(limit: 4, text: query)
+        // Oversample so private/credential notes can be backfilled by shareable ones.
+        let memoryCandidates = retrieveSnapshot(limit: 12, text: query)
         let system = BrainComposition.systemPrompt(
             base: config.systemPrompt,
             bias: personality.promptBias(register: turnRegister),
-            memory: memories,
+            memory: memoryCandidates,
             state: nexus.state,
             aspect: activeAspect,
             plainMode: turnRegister == .plain
         )
+        // Live provider trainsOnPrompts is the force; non-training direct providers get .standard.
         let level = CloudContextPolicy.resolvedLevel(
             requested: aiService.primaryTrainsOnPrompts ? .minimal : .standard,
             trainsOnPrompts: aiService.primaryTrainsOnPrompts
@@ -305,19 +307,29 @@ extension MercuryBrain {
         let payload = BrainComposition.cloudPayload(
             question: query,
             history: BrainComposition.recentHistory(conversation),
-            memories: memories,
+            memories: memoryCandidates,
             state: nexus.state,
             level: level
         )
+        var cloudSystem = system
+        // Direct providers (Grok/Gemini) ignore AIRequest.context — append filtered blocks.
+        if aiService.currentProviderID != "gateway" {
+            let appendix = CloudContextPolicy.systemAppendix(from: payload.context)
+            if !appendix.isEmpty {
+                cloudSystem = system + "\n\n" + appendix
+            }
+        }
         let tokens = BrainComposition.estimateContextTokens(
-            systemHint: system,
-            memory: payload.level == .standard ? memories : [],
+            systemHint: cloudSystem,
+            memory: payload.level == .standard
+                ? CloudContextPolicy.shareableMemories(memoryCandidates, cap: CloudContextPolicy.standardMemoryCap)
+                : [],
             query: query,
             history: payload.history
         )
         let plan = try evaluateBrokerDecision(intent: intent, tokens: tokens)
         return PreparedAsk(
-            system: system,
+            system: cloudSystem,
             config: config,
             maxTokens: min(config.maxTokensHint, plan.maxOutputTokens),
             history: payload.history,
