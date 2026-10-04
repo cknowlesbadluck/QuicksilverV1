@@ -215,12 +215,17 @@ public enum CloudContextPolicy {
         let phrases = [
             "api key", "api_key", "apikey", "api token",
             "access token", "secret key", "secret token",
-            "token:", "bearer ", "password:"
+            "token:", "bearer ", "password:",
+            // Natural-language statement forms (narrow; not a general classifier).
+            "password is", "token is", "api key is", "api_key is",
+            "secret is", "bearer is"
         ]
         if phrases.contains(where: { lowered.contains($0) }) { return true }
-        // Assignment/statement forms: password = …, token = …, api_key = …
-        let assignment = #"(?:^|[^a-z0-9])(password|token|api[_-]?key|secret|bearer)\s*=\s*\S+"#
+        // Assignment/statement forms: password = …, token is …, api_key = …
+        let assignment = #"(?:^|[^a-z0-9])(password|token|api[_ -]?key|secret|bearer)\s*(?:=|:)\s*\S+"#
         if lowered.range(of: assignment, options: .regularExpression) != nil { return true }
+        let statement = #"(?:^|[^a-z0-9])(password|token|api[_ -]?key|secret|bearer)\s+is\s+\S+"#
+        if lowered.range(of: statement, options: .regularExpression) != nil { return true }
         // Common key prefixes (sk-/pk-/api_) followed by a long token-like run.
         let pattern = #"(sk|pk|api)[-_][a-z0-9]{16,}"#
         return lowered.range(of: pattern, options: .regularExpression) != nil
@@ -246,14 +251,14 @@ public enum CloudContextPolicy {
     }
 
     /// Redact a standard-built request for a trainsOnPrompts (or otherwise minimal) provider.
-    /// Clears memory/device context blocks and strips the direct-provider appendix.
-    /// History stays as already capped by the caller.
+    /// Clears memory/device context blocks, strips the direct-provider appendix,
+    /// and re-caps history to the `.minimal` pair limit.
     public static func redactForTrainingProvider(_ request: AIRequest) -> AIRequest {
         AIRequest(
             id: request.id,
             prompt: request.prompt,
             systemPrompt: stripSystemAppendix(request.systemPrompt),
-            history: request.history,
+            history: cappedHistory(request.history, level: .minimal),
             context: [],
             temperature: request.temperature,
             maxTokens: request.maxTokens,

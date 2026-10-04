@@ -103,12 +103,19 @@ final class CloudContextPolicyTests: XCTestCase {
         let apiKeyAssign = note("api_key = abcdefghijklmnopqrstuvwxyz")
         let secretAssign = note("secret = hunter2")
         let bearerAssign = note("bearer = abcdefghijklmnopqrstuvwxyz")
+        let passwordIs = note("my password is hunter2")
+        let tokenIs = note("the token is abcdefghijklmnopqrstuvwxyz")
+        let apiKeyIs = note("api key is abcdefghijklmnopqrstuvwxyz")
+        let secretIs = note("secret is hunter2")
+        let bearerIs = note("bearer is abcdefghijklmnopqrstuvwxyz")
         let blocks = CloudContextPolicy.assemble(
             CloudContextInput(
                 question: "q",
                 memories: [
                     leak, plain, passwordAssign, tokenAssign,
-                    apiKeyAssign, secretAssign, bearerAssign, note("safe")
+                    apiKeyAssign, secretAssign, bearerAssign,
+                    passwordIs, tokenIs, apiKeyIs, secretIs, bearerIs,
+                    note("safe")
                 ]
             ),
             level: .standard
@@ -122,13 +129,17 @@ final class CloudContextPolicyTests: XCTestCase {
             GatewayContextBlock(kind: .device, text: "battery low", privacy: .device)
         ])
         let system = "You are Mercury.\n\n" + appendix
+        // Standard-capped history can hold up to 4 pairs; training fallback must keep 2.
+        let history = (1...4).flatMap { index -> [Message] in
+            [
+                Message(role: .user, content: "u\(index)"),
+                Message(role: .assistant, content: "a\(index)")
+            ]
+        }
         let request = AIRequest(
             prompt: "hello",
             systemPrompt: system,
-            history: [
-                Message(role: .user, content: "u1"),
-                Message(role: .assistant, content: "a1")
-            ],
+            history: history,
             context: [
                 GatewayContextBlock(kind: .memory, text: "tea preference", privacy: .device),
                 GatewayContextBlock(kind: .device, text: "battery low", privacy: .device)
@@ -137,7 +148,8 @@ final class CloudContextPolicyTests: XCTestCase {
         let redacted = CloudContextPolicy.redactForTrainingProvider(request)
         XCTAssertEqual(redacted.systemPrompt, "You are Mercury.")
         XCTAssertTrue(redacted.context.isEmpty)
-        XCTAssertEqual(redacted.history.map(\.content), ["u1", "a1"])
+        XCTAssertEqual(redacted.history.map(\.content), ["u3", "a3", "u4", "a4"])
+        XCTAssertEqual(redacted.history.count, CloudContextPolicy.minimalTurnCap * 2)
         XCTAssertFalse((redacted.systemPrompt ?? "").contains("tea preference"))
         XCTAssertFalse((redacted.systemPrompt ?? "").contains("battery low"))
     }
