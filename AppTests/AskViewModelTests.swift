@@ -45,6 +45,29 @@ final class AskViewModelTests: XCTestCase {
         XCTAssertFalse(vm.isProcessing)
     }
 
+    func testHistorySurvivesAspectSwitch() async throws {
+        let container = try ViewModelTestSupport.makeContainer(
+            provider: ScriptedProvider(reply: "Still here.", failure: nil),
+            testCase: self
+        )
+        container.featureFlags.set("aiServiceEnabled", enabled: true)
+        await container.memoryManager.load()
+        let vm = AskViewModel(container: container)
+        let origin = container.personaManager.activePersonaID
+        vm.draft = "keep this across aspects"
+
+        await vm.submit()
+        try await container.personaManager.switchTo(id: "forge")
+        XCTAssertNotEqual(container.personaManager.activePersonaID, origin)
+
+        await vm.loadHistory()
+
+        XCTAssertEqual(vm.turns.map(\.text), ["keep this across aspects", "Still here."])
+        let stored = container.memoryManager.items.filter { $0.category == .conversation }
+        XCTAssertFalse(stored.isEmpty)
+        XCTAssertTrue(stored.allSatisfy { $0.metadata["aspect"] == origin })
+    }
+
     func testUnboundSubmitShowsNotice() async throws {
         ViewModelTestSupport.isolateProviderKeychain(testCase: self)
         let container = try ViewModelTestSupport.makeContainer(provider: nil, testCase: self)

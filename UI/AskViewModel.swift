@@ -38,10 +38,9 @@ final class AskViewModel {
 
     func loadHistory() async {
         await container.memoryManager.load()
-        let personaID = container.personaManager.activePersonaID
+        // M3-T10: Ask history is entity-wide. Aspect is metadata, not a filter.
         let query = MemoryQuery(
             category: .conversation,
-            personaScope: personaID,
             keyPrefix: "chat.",
             limit: historyLimit
         )
@@ -104,7 +103,8 @@ final class AskViewModel {
             category: .conversation,
             metadata: [
                 "role": turn.role.rawValue,
-                "persona": personaID
+                "persona": personaID,
+                "aspect": personaID
             ],
             importanceBoost: turn.role == .assistant ? writeHint : 0.45,
             personaScope: personaID
