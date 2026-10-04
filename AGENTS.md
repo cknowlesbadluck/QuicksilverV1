@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: M3-T6 Codex gateway bind (URL + device token). M3-T5 Error classification is done. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
+Current focus: M3-T8 Multi-turn history in AIRequest / gateway request. M3-T6 Codex gateway bind is done. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 

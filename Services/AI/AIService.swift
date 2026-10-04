@@ -10,12 +10,12 @@ public final class AIService {
 
     /// `nil` means intelligence is unbound: no real provider has a key. Requests throw
     /// `AppError.apiKeyMissing`; no mock text is ever substituted (M1-T3).
-    private var primaryProvider: AIProvider?
-    private var secondaryProvider: AIProvider?
+    var primaryProvider: AIProvider?
+    var secondaryProvider: AIProvider?
     private let eventBus: EventBus
-    private let logger: LoggerService
-    private let featureFlags: FeatureFlags
-    private let routingConfigStore: RoutingConfigStore?
+    let logger: LoggerService
+    let featureFlags: FeatureFlags
+    let routingConfigStore: RoutingConfigStore?
 
     /// Injected sleep for M3-T5 retry backoff (tests replace with a no-op).
     var retrySleep: @Sendable (TimeInterval) async throws -> Void = { seconds in
@@ -25,6 +25,12 @@ public final class AIService {
 
     /// Override for tests. When nil, reads `retry` from `routingConfigStore` (bundled default: 1).
     var retryPolicyOverride: AIStreamExecutor.RetryPolicy?
+
+    /// Injectable `GET /v1/health` for Codex test-connection (AppTests stub this).
+    public typealias GatewayHealthFetcher = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+    public var gatewayHealthFetcher: GatewayHealthFetcher = { request in
+        try await URLSession.shared.data(for: request)
+    }
 
     public static let grokAPIKeyKeychainAccount = "xai.apiKey"
     public static let geminiAPIKeyKeychainAccount = "google.gemini.apiKey"
@@ -36,20 +42,18 @@ public final class AIService {
         featureFlags: FeatureFlags,
         routingConfigStore: RoutingConfigStore? = nil
     ) {
-        let configured: (primary: AIProvider?, secondary: AIProvider?)
-        if let provider {
-            configured = (provider, nil)
-        } else {
-            configured = Self.makeConfiguredProviders()
-        }
         self.init(
-            primary: configured.primary,
-            secondary: configured.secondary,
+            primary: provider,
+            secondary: nil,
             eventBus: eventBus,
             logger: logger,
             featureFlags: featureFlags,
             routingConfigStore: routingConfigStore
         )
+        // When no injected provider, rebuild from Keychain (gateway / Gemini / Grok).
+        if provider == nil {
+            rebuildProviders()
+        }
     }
 
     /// Explicit routing (tests). `primary == nil` is the unbound state; the Keychain is not read.
@@ -69,9 +73,13 @@ public final class AIService {
         self.secondaryProvider = secondary
     }
 
-    private static func makeConfiguredProviders() -> (primary: AIProvider?, secondary: AIProvider?) {
-        let grokKey = KeychainStore.string(forKey: grokAPIKeyKeychainAccount)
-        let geminiKey = KeychainStore.string(forKey: geminiAPIKeyKeychainAccount)
+    private func makeConfiguredProviders() -> (primary: AIProvider?, secondary: AIProvider?) {
+        // Gateway bind (M3-T6) wins when URL + device token are present.
+        if let gateway = makeGatewayProvider() {
+            return (gateway, nil)
+        }
+        let grokKey = KeychainStore.string(forKey: Self.grokAPIKeyKeychainAccount)
+        let geminiKey = KeychainStore.string(forKey: Self.geminiAPIKeyKeychainAccount)
         let grok = grokKey.flatMap { $0.isEmpty ? nil : GrokAIProvider.make(apiKey: $0) }
         let gemini = geminiKey.flatMap { $0.isEmpty ? nil : GeminiAIProvider.make(apiKey: $0) }
 
@@ -112,8 +120,8 @@ public final class AIService {
         return true
     }
 
-    private func rebuildProviders() {
-        let configured = Self.makeConfiguredProviders()
+    func rebuildProviders() {
+        let configured = makeConfiguredProviders()
         primaryProvider = configured.primary
         secondaryProvider = configured.secondary
         logger.info(
@@ -149,14 +157,6 @@ public final class AIService {
         configureGrokAPIKey(key)
     }
 
-    public func clearAllAPIKeys() {
-        KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
-        KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
-        primaryProvider = nil
-        secondaryProvider = nil
-        logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
-    }
-
     @discardableResult
     public func complete(
         prompt: String,
@@ -170,19 +170,6 @@ public final class AIService {
             temperature: temperature,
             maxTokens: maxTokens
         )
-    }
-
-    /// Throws `.apiKeyMissing` / `.intelligenceDisabled` when a request would not hit the network.
-    /// Used by MercuryBrain offline fast-fail so unbound/disabled guidance wins over airplane mode.
-    public func ensureReadyForNetworkRequest() throws {
-        guard primaryProvider != nil else {
-            logger.info("AI request refused: intelligence unbound", category: logger.ai)
-            throw AppError.apiKeyMissing
-        }
-        guard featureFlags.isEnabled("aiServiceEnabled") else {
-            logger.info("AI request refused: intelligence disabled in the Codex", category: logger.ai)
-            throw AppError.intelligenceDisabled
-        }
     }
 
     private func execute(

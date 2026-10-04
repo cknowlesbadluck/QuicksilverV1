@@ -40,13 +40,21 @@ enum ViewModelTestSupport {
     static func isolateProviderKeychain(testCase: XCTestCase) {
         let grokKey = AIService.grokAPIKeyKeychainAccount
         let geminiKey = AIService.geminiAPIKeyKeychainAccount
+        let gatewayURL = AIService.gatewayBaseURLKeychainAccount
+        let gatewayToken = GatewayAIProvider.deviceTokenKeychainAccount
         let previousGrok = KeychainStore.string(forKey: grokKey)
         let previousGemini = KeychainStore.string(forKey: geminiKey)
+        let previousGatewayURL = KeychainStore.string(forKey: gatewayURL)
+        let previousGatewayToken = KeychainStore.string(forKey: gatewayToken)
         KeychainStore.delete(forKey: grokKey)
         KeychainStore.delete(forKey: geminiKey)
+        KeychainStore.delete(forKey: gatewayURL)
+        KeychainStore.delete(forKey: gatewayToken)
         testCase.addTeardownBlock {
             restore(previousGrok, forKey: grokKey)
             restore(previousGemini, forKey: geminiKey)
+            restore(previousGatewayURL, forKey: gatewayURL)
+            restore(previousGatewayToken, forKey: gatewayToken)
         }
     }
 
