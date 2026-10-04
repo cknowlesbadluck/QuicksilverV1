@@ -278,10 +278,10 @@ private final class RecordingProvider: AIProvider, @unchecked Sendable {
     }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
-        lock.lock()
-        _histories.append(request.history)
-        let shouldFail = fail
-        lock.unlock()
+        let shouldFail = lock.withLock { () -> Bool in
+            _histories.append(request.history)
+            return fail
+        }
         if shouldFail {
             throw AppError.aiRequestFailed("recording-fail")
         }
