@@ -18,7 +18,7 @@ private let accessibilityAuditTimedOutCode = -56
 final class SanctumSmokeTests: XCTestCase {
     private static let launchTimeout: TimeInterval = 30
     private static let auditAttempts = 3
-    private static let auditSettleInterval: TimeInterval = 2
+    private static let auditSettleInterval: TimeInterval = 5
 
     private var app: XCUIApplication!
 
