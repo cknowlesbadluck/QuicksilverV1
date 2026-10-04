@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: M3-T10 Entity-wide Ask history. M3-T9 Brain sends recent conversation within budget is in review. M3-T8 is done. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
+Current focus: M3-T11 CloudContextPolicy (standard vs minimal). M3-T10 Entity-wide Ask history is done. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 
