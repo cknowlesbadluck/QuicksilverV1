@@ -62,10 +62,7 @@ final class SanctumSmokeTests: XCTestCase {
         for destination in destinations {
             let portal = app.buttons[destination]
             XCTAssertTrue(portal.waitForExistence(timeout: 8), "Missing portal: \(destination)")
-            portal.tap()
-
-            let done = app.buttons["Done"]
-            XCTAssertTrue(done.waitForExistence(timeout: 8), "Realm did not open: \(destination)")
+            let done = openRealm(through: portal, named: destination)
             done.tap()
             XCTAssertTrue(portal.waitForExistence(timeout: 8), "Sanctum did not return after: \(destination)")
         }
@@ -109,6 +106,20 @@ final class SanctumSmokeTests: XCTestCase {
                 XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
             }
         }
+    }
+
+    /// Taps a portal and returns the realm's Done button. A busy simulator can
+    /// drop the first tap after a cold launch (PR #225 run 37238895244), so tap
+    /// once more if the realm hasn't opened and the portal is still on screen.
+    private func openRealm(through portal: XCUIElement, named destination: String) -> XCUIElement {
+        let done = app.buttons["Done"]
+        portal.tap()
+        if !done.waitForExistence(timeout: 8) && portal.isHittable {
+            print("PORTAL \(destination) did not open on first tap; tapping again")
+            portal.tap()
+        }
+        XCTAssertTrue(done.waitForExistence(timeout: 8), "Realm did not open: \(destination)")
+        return done
     }
 
     /// Launches once; if the simulator drops the launch handshake, terminates
