@@ -56,7 +56,7 @@ final class AskViewModelTests: XCTestCase {
         vm.draft = "keep this across aspects"
 
         await vm.submit()
-        let recordedAspect = container.personaManager.activePersonaID
+        let recordedAspect = container.brain.lastAskAspectID
         let otherAspect = recordedAspect == "forge" ? "eternal" : "forge"
         try await container.personaManager.switchTo(id: otherAspect)
         XCTAssertNotEqual(container.personaManager.activePersonaID, recordedAspect)

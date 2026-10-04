@@ -34,6 +34,9 @@ final class MercuryBrain {
     private(set) var livingStatus: String = LivingNarration.defaultStatus
     private(set) var visualState: VisualState = .idle
     private(set) var activeAspect: Aspect = .quicksilver
+    /// Aspect applied for the most recently completed successful `ask`.
+    /// Captured before the provider await so overlapping MainActor asks cannot retag it.
+    private(set) var lastAskAspectID: String = Aspect.quicksilver.rawValue
     /// Latched conversational register. Resets to `.playful` on a new Brain session.
     private(set) var activeRegister: Register = .playful
     private var lastAspectChangeAt: Date?
@@ -72,13 +75,17 @@ final class MercuryBrain {
         activeRegister = turnRegister
         visualState = .thinking
         let turn = try await preparedAsk(query: query, intent: intent, turnRegister: turnRegister)
-        return try await completeAsk(
+        // Capture before the provider await — another MainActor ask can change activeAspect while suspended.
+        let aspectID = activeAspect.rawValue
+        let reply = try await completeAsk(
             query: query,
             system: turn.system,
             config: turn.config,
             maxTokens: turn.maxTokens,
             history: turn.history
         )
+        lastAskAspectID = aspectID
+        return reply
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).

@@ -74,13 +74,16 @@ final class AskViewModel {
         turns.append(userTurn)
         draft = ""
 
+        // Durable write before the provider await (survive termination mid-flight).
+        await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
+
         do {
             // All conversation now routes through Mercury Brain
             let responseText = try await container.brain.ask(text)
 
-            // Tag both turns with the aspect the Brain settled on for this exchange.
-            let responseAspectID = container.personaManager.activePersonaID
-            let responseHint = container.personaManager.activeMemoryPolicy.writeImportanceHint
+            // Per-turn aspect captured inside Brain before the provider suspension.
+            let responseAspectID = container.brain.lastAskAspectID
+            let responseHint = MemoryPolicy.policy(for: responseAspectID).writeImportanceHint
             await persistTurn(userTurn, personaID: responseAspectID, writeHint: responseHint)
 
             let assistantTurn = ChatTurn(
@@ -92,8 +95,6 @@ final class AskViewModel {
             turns.append(assistantTurn)
             await persistTurn(assistantTurn, personaID: responseAspectID, writeHint: responseHint)
         } catch {
-            // Failed asks still leave a user trail under the pre-call aspect.
-            await persistTurn(userTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
             if let notice = AppError.unboundNotice(for: error) {
                 unboundNotice = notice
             } else {
