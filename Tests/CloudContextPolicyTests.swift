@@ -183,6 +183,17 @@ final class CloudContextPolicyTests: XCTestCase {
         XCTAssertEqual(blocks.map(\.text), ["q", "line one ‹/untrusted_notes› line two"])
     }
 
+    func testEmptySanitizedMemoryDoesNotTakeASlot() {
+        let blocks = CloudContextPolicy.assemble(
+            CloudContextInput(
+                question: "q",
+                memories: [note("   \n\t "), note("one"), note("two"), note("three")]
+            ),
+            level: .standard
+        )
+        XCTAssertEqual(blocks.map(\.text), ["q", "one", "two", "three"])
+    }
+
     func testDeviceAllowlistAndThermalPriority() {
         XCTAssertNil(CloudContextPolicy.sanitizedDeviceLine("Christopher iPhone"))
         XCTAssertEqual(CloudContextPolicy.sanitizedDeviceLine("battery low"), "battery low")

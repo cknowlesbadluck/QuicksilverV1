@@ -106,10 +106,13 @@ public enum CloudContextPolicy {
         var blocks = [CloudContextBlock(kind: .question, text: input.question)]
         guard level == .standard else { return blocks }
 
-        let notes = shareableMemories(input.memories, cap: standardMemoryCap)
-        for note in notes {
-            let text = UntrustedNotes.sanitizedItem(note.value, cap: memoryCharCap)
-            guard !text.isEmpty else { continue }
+        // Sanitize before capping the count so an empty note never takes a slot (backfill).
+        let notes = input.memories
+            .filter { isShareable($0) }
+            .map { UntrustedNotes.sanitizedItem($0.value, cap: memoryCharCap) }
+            .filter { !$0.isEmpty }
+            .prefix(standardMemoryCap)
+        for text in notes {
             blocks.append(CloudContextBlock(kind: .memory, text: text))
         }
         if let line = sanitizedDeviceLine(input.coarseDeviceLine) {
