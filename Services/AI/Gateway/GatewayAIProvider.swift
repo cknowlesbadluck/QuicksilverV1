@@ -151,7 +151,7 @@ private enum GatewayAIStreamEngine {
         // StreamTimeoutClock enforces the finer deadlines after the response opens.
         mutableRequest.timeoutInterval = deps.timeouts.total
         mutableRequest.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        mutableRequest.httpBody = try JSONEncoder().encode(makeChatBody(request))
+        mutableRequest.httpBody = try GatewayRequest.encodeChatBody(request)
 
         let urlRequest = mutableRequest
         if GatewayWireDecoder.rejectTokenInURL(urlRequest.url?.absoluteString ?? "") {
@@ -279,21 +279,6 @@ private enum GatewayAIStreamEngine {
             sawTerminal = true
             throw mapWireError(code, retryAfter: retryAfter)
         }
-    }
-
-    private static func makeChatBody(_ request: AIRequest) -> GatewayChatRequest {
-        var messages: [GatewayMessage] = []
-        if let system = request.systemPrompt, !system.isEmpty {
-            messages.append(GatewayMessage(role: "system", content: system))
-        }
-        messages.append(GatewayMessage(role: "user", content: request.prompt))
-        return GatewayChatRequest(
-            taskTier: "standard",
-            messages: messages,
-            context: [],
-            privacy: .device,
-            maxTokens: request.maxTokens
-        )
     }
 
     private static func mapWireError(_ code: GatewayErrorCode, retryAfter: Int?) -> AppError {
