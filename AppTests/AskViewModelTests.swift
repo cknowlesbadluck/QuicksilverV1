@@ -65,6 +65,7 @@ final class AskViewModelTests: XCTestCase {
         XCTAssertEqual(vm.turns.map(\.text), ["keep this across aspects", "Still here."])
         let stored = container.memoryManager.items.filter { $0.category == .conversation }
         XCTAssertFalse(stored.isEmpty)
+        XCTAssertTrue(stored.allSatisfy { $0.personaScope == nil })
         XCTAssertTrue(stored.allSatisfy { $0.metadata["aspect"] == origin })
     }
 

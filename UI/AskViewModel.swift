@@ -39,13 +39,17 @@ final class AskViewModel {
     func loadHistory() async {
         await container.memoryManager.load()
         // M3-T10: Ask history is entity-wide. Aspect is metadata, not a filter.
+        // Cap by recency after fetch — MemoryQuery.limit ranks by importance.
         let query = MemoryQuery(
             category: .conversation,
-            keyPrefix: "chat.",
-            limit: historyLimit
+            keyPrefix: "chat."
         )
-        let items = container.memoryManager.items(matching: query)
-            .sorted { $0.createdAt < $1.createdAt }
+        let items = Array(
+            container.memoryManager.items(matching: query)
+                .sorted { $0.createdAt > $1.createdAt }
+                .prefix(historyLimit)
+        )
+        .sorted { $0.createdAt < $1.createdAt }
 
         turns = items.compactMap { item in
             let role: ChatTurn.Role = item.metadata["role"] == "assistant" ? .assistant : .user
@@ -83,7 +87,10 @@ final class AskViewModel {
                 createdAt: Date()
             )
             turns.append(assistantTurn)
-            await persistTurn(assistantTurn, personaID: personaID, writeHint: policy.writeImportanceHint)
+            // Tag with the aspect the Brain settled on for this turn.
+            let responseAspectID = container.personaManager.activePersonaID
+            let responseHint = container.personaManager.activeMemoryPolicy.writeImportanceHint
+            await persistTurn(assistantTurn, personaID: responseAspectID, writeHint: responseHint)
         } catch {
             if let notice = AppError.unboundNotice(for: error) {
                 unboundNotice = notice
@@ -107,7 +114,7 @@ final class AskViewModel {
                 "aspect": personaID
             ],
             importanceBoost: turn.role == .assistant ? writeHint : 0.45,
-            personaScope: personaID
+            personaScope: nil
         )
     }
 }
