@@ -66,75 +66,18 @@ final class MercuryBrain {
     /// Primary entry for natural language. All conversation should come through here.
     func ask(_ query: String) async throws -> String {
         personaManager.recordInteraction()
-
-        // M3-T7: offline fast-fail — skip gateway/network entirely while disconnected.
-        // After M3.5-T3 this routes on-device; until then throw `.networkUnavailable`.
-        // Unbound / disabled still win so Ask keeps bind/wake guidance (no network needed).
-        // Living status carries the offline signal; no `.warning` latch / settle timer.
-        if nexus.state.networkStatus == "disconnected" {
-            try aiService.ensureReadyForNetworkRequest()
-            refreshLivingStatus()
-            throw AppError.networkUnavailable
-        }
-
-        // Mask slip (P-T5): evaluate register from pre-turn VisualState + Nexus
-        // severity BEFORE moving to `.thinking`, so `.critical` is still visible.
+        try rejectAskWhileDisconnected()
         let intent = intentEngine.classify(query)
-        let preTurnVisual = visualState
-        // Only the newest insight/event counts as "current" severity (not full history).
-        let nexusCritical = nexus.state.recentInsights.first?.severity == .critical
-            || nexus.state.recentEvents.first?.severity == .critical
-        let turnRegister = registerPolicy.evaluate(
-            text: query,
-            visualState: preTurnVisual,
-            intent: intent,
-            previous: activeRegister,
-            thermalState: nexus.state.thermalState,
-            nexusSeverityCritical: nexusCritical
-        )
+        let turnRegister = evaluatedRegister(query: query, intent: intent)
         activeRegister = turnRegister
-
         visualState = .thinking
-
-        let environment = AspectPolicy.Environment(
-            isLowPower: nexus.state.lowPowerMode,
-            thermalState: nexus.state.thermalState
-        )
-        let turnAspect = aspectPolicy.aspectForTurn(intent: intent, environment: environment)
-        await applyAspect(turnAspect, reason: "turn intent \(intent.kind.rawValue)")
-
-        let config = PersonaConfiguration.forAspect(activeAspect)
-        // Idempotent recompute from aspect baseline; nudges applied after (P-T18).
-        personality.recomputeForTurn(aspect: activeAspect)
-        personality.noteInteraction()
-        // Use turn-local register so a concurrent ask cannot swap posture mid-turn.
-        if turnRegister == .plain {
-            personality.enterPlainRegister()
-        }
-
-        let relevantMemory = retrieveRelevantMemory(matching: query)
-        // Compose first so broker estimates include core identity, bias, and device context.
-        let system = buildSystemPrompt(
-            for: config,
-            memory: relevantMemory,
-            register: turnRegister
-        )
-        let history = BrainComposition.recentHistory(conversation)
-        let estimatedTokens = BrainComposition.estimateContextTokens(
-            systemHint: system,
-            memory: [],
-            query: query,
-            history: history
-        )
-
-        let effectivePlan = try evaluateBrokerDecision(intent: intent, tokens: estimatedTokens)
-        let maxTokens = min(config.maxTokensHint, effectivePlan.maxOutputTokens)
+        let turn = try await preparedAsk(query: query, intent: intent, turnRegister: turnRegister)
         return try await completeAsk(
             query: query,
-            system: system,
-            config: config,
-            maxTokens: maxTokens,
-            history: history
+            system: turn.system,
+            config: turn.config,
+            maxTokens: turn.maxTokens,
+            history: turn.history
         )
     }
 
@@ -295,6 +238,71 @@ extension MercuryBrain {
             refreshLivingStatus()
             throw AppError.aiRequestFailed(reason)
         }
+    }
+
+
+    /// M3-T7: skip the gateway while disconnected. On-device route is M3.5-T3.
+    private func rejectAskWhileDisconnected() throws {
+        guard nexus.state.networkStatus == "disconnected" else { return }
+        try aiService.ensureReadyForNetworkRequest()
+        refreshLivingStatus()
+        throw AppError.networkUnavailable
+    }
+
+    /// Register is evaluated before `.thinking` so a critical Nexus signal stays visible.
+    private func evaluatedRegister(query: String, intent: Intent) -> Register {
+        let nexusCritical = nexus.state.recentInsights.first?.severity == .critical
+            || nexus.state.recentEvents.first?.severity == .critical
+        return registerPolicy.evaluate(
+            text: query,
+            visualState: visualState,
+            intent: intent,
+            previous: activeRegister,
+            thermalState: nexus.state.thermalState,
+            nexusSeverityCritical: nexusCritical
+        )
+    }
+
+    private struct PreparedAsk {
+        let system: String
+        let config: PersonaConfiguration
+        let maxTokens: Int
+        let history: [Message]
+    }
+
+    /// Aspect, prompt, history budget, and broker cap for one ask. History is prior turns only.
+    private func preparedAsk(query: String, intent: Intent, turnRegister: Register) async throws -> PreparedAsk {
+        let environment = AspectPolicy.Environment(
+            isLowPower: nexus.state.lowPowerMode,
+            thermalState: nexus.state.thermalState
+        )
+        let turnAspect = aspectPolicy.aspectForTurn(intent: intent, environment: environment)
+        await applyAspect(turnAspect, reason: "turn intent \(intent.kind.rawValue)")
+        let config = PersonaConfiguration.forAspect(activeAspect)
+        personality.recomputeForTurn(aspect: activeAspect)
+        personality.noteInteraction()
+        if turnRegister == .plain {
+            personality.enterPlainRegister()
+        }
+        let system = buildSystemPrompt(
+            for: config,
+            memory: retrieveRelevantMemory(matching: query),
+            register: turnRegister
+        )
+        let history = BrainComposition.recentHistory(conversation)
+        let estimatedTokens = BrainComposition.estimateContextTokens(
+            systemHint: system,
+            memory: [],
+            query: query,
+            history: history
+        )
+        let effectivePlan = try evaluateBrokerDecision(intent: intent, tokens: estimatedTokens)
+        return PreparedAsk(
+            system: system,
+            config: config,
+            maxTokens: min(config.maxTokensHint, effectivePlan.maxOutputTokens),
+            history: history
+        )
     }
 
     private func completeAsk(
