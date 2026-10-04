@@ -21,6 +21,14 @@ private let accessibilityAuditTimedOutCode = -56
 /// Only a contrast issue on exactly this static text is tolerated.
 private let decorativeSeparatorLabel = "\u{00B7}"
 
+/// True only for a contrast finding on the hidden decorative separator.
+/// File-scope (not a static member) so the audit handler captures nothing:
+/// Swift 6.2 treats a captured `Self` metatype as non-Sendable.
+private func isDecorativeSeparatorContrast(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+    guard issue.auditType == .contrast, let element = issue.element else { return false }
+    return element.elementType == .staticText && element.label == decorativeSeparatorLabel
+}
+
 final class SanctumSmokeTests: XCTestCase {
     private static let launchTimeout: TimeInterval = 30
     private static let auditAttempts = 3
@@ -100,7 +108,7 @@ final class SanctumSmokeTests: XCTestCase {
         for attempt in 1...Self.auditAttempts {
             do {
                 try app.performAccessibilityAudit { issue in
-                    let ignored = Self.isDecorativeSeparatorContrast(issue)
+                    let ignored = isDecorativeSeparatorContrast(issue)
                     print(
                         "AUDIT compact=\(issue.compactDescription) "
                             + "detail=\(issue.detailedDescription) ignored=\(ignored)"
@@ -118,12 +126,6 @@ final class SanctumSmokeTests: XCTestCase {
                 XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
             }
         }
-    }
-
-    /// True only for a contrast finding on the hidden decorative separator.
-    private static func isDecorativeSeparatorContrast(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
-        guard issue.auditType == .contrast, let element = issue.element else { return false }
-        return element.elementType == .staticText && element.label == decorativeSeparatorLabel
     }
 
     /// Launches once; if the simulator drops the launch handshake, terminates
