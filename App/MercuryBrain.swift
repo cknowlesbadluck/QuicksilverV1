@@ -308,14 +308,12 @@ extension MercuryBrain {
             memories: memoryCandidates,
             context: payload.context
         )
-        let shareable = payload.level == .standard
-            ? CloudContextPolicy.shareableMemories(
-                memoryCandidates,
-                cap: CloudContextPolicy.standardMemoryCap
-            ) : []
+        let contextForEstimate = aiService.currentProviderID == "gateway"
+            ? payload.context
+            : []
         let tokens = BrainComposition.estimateContextTokens(
             systemHint: system,
-            memory: shareable,
+            serializedContext: contextForEstimate,
             query: query,
             history: payload.history
         )

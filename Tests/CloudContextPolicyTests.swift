@@ -98,11 +98,48 @@ final class CloudContextPolicyTests: XCTestCase {
     func testCredentialValuesNeverLeave() {
         let leak = note("my API token is sk-abcdefghijklmnopqrstuvwxyz")
         let plain = note("API token: abcdefghijklmnopqrstuvwxyz")
+        let passwordAssign = note("password = hunter2")
+        let tokenAssign = note("token = abcdefghijklmnopqrstuvwxyz")
+        let apiKeyAssign = note("api_key = abcdefghijklmnopqrstuvwxyz")
+        let secretAssign = note("secret = hunter2")
+        let bearerAssign = note("bearer = abcdefghijklmnopqrstuvwxyz")
         let blocks = CloudContextPolicy.assemble(
-            CloudContextInput(question: "q", memories: [leak, plain, note("safe")]),
+            CloudContextInput(
+                question: "q",
+                memories: [
+                    leak, plain, passwordAssign, tokenAssign,
+                    apiKeyAssign, secretAssign, bearerAssign, note("safe")
+                ]
+            ),
             level: .standard
         )
         XCTAssertEqual(blocks.map(\.text), ["q", "safe"])
+    }
+
+    func testRedactForTrainingProviderStripsAppendixAndContext() {
+        let appendix = CloudContextPolicy.systemAppendix(from: [
+            GatewayContextBlock(kind: .memory, text: "tea preference", privacy: .device),
+            GatewayContextBlock(kind: .device, text: "battery low", privacy: .device)
+        ])
+        let system = "You are Mercury.\n\n" + appendix
+        let request = AIRequest(
+            prompt: "hello",
+            systemPrompt: system,
+            history: [
+                Message(role: .user, content: "u1"),
+                Message(role: .assistant, content: "a1")
+            ],
+            context: [
+                GatewayContextBlock(kind: .memory, text: "tea preference", privacy: .device),
+                GatewayContextBlock(kind: .device, text: "battery low", privacy: .device)
+            ]
+        )
+        let redacted = CloudContextPolicy.redactForTrainingProvider(request)
+        XCTAssertEqual(redacted.systemPrompt, "You are Mercury.")
+        XCTAssertTrue(redacted.context.isEmpty)
+        XCTAssertEqual(redacted.history.map(\.content), ["u1", "a1"])
+        XCTAssertFalse((redacted.systemPrompt ?? "").contains("tea preference"))
+        XCTAssertFalse((redacted.systemPrompt ?? "").contains("battery low"))
     }
 
     func testDeviceAllowlistAndThermalPriority() {

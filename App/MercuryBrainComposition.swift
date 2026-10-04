@@ -77,15 +77,17 @@ enum BrainComposition {
         return Array(messages.suffix(maxMessages))
     }
 
+    /// Estimate outbound prompt size. Pass the capped context blocks that leave the device
+    /// (or empty when those texts are already folded into `systemHint` via systemAppendix).
     static func estimateContextTokens(
         systemHint: String,
-        memory: [MemoryItem],
+        serializedContext: [GatewayContextBlock] = [],
         query: String,
         history: [Message] = []
     ) -> Int {
-        let memoryChars = memory.reduce(0) { $0 + $1.value.count }
+        let contextChars = serializedContext.reduce(0) { $0 + $1.text.count }
         let historyChars = history.reduce(0) { $0 + $1.content.count }
-        return (systemHint.count + memoryChars + historyChars + query.count) / 4
+        return (systemHint.count + contextChars + historyChars + query.count) / 4
     }
 
     /// Cloud prompts never embed memories or raw Nexus device text — CloudContextPolicy owns that.

@@ -256,8 +256,9 @@ public final class AIService {
                 "Primary AI provider failed; attempting fallback: \(fallback.displayName)",
                 category: logger.ai
             )
+            let fallbackRequest = Self.requestForFallback(request, provider: fallback)
             return try await AIStreamExecutor.collect(
-                request: request,
+                request: fallbackRequest,
                 provider: fallback,
                 policy: effectiveRetryPolicy(),
                 sleep: retrySleep
@@ -273,6 +274,12 @@ public final class AIService {
             maxRetries: retry.maxAttempts,
             honorRetryAfter: retry.honorRetryAfter
         )
+    }
+
+    /// When falling back to a trainsOnPrompts provider, redact standard memory/device context.
+    private static func requestForFallback(_ request: AIRequest, provider: AIProvider) -> AIRequest {
+        guard provider.trainsOnPrompts else { return request }
+        return CloudContextPolicy.redactForTrainingProvider(request)
     }
 
     private static func isClassifiedClientError(_ error: Error) -> Bool {

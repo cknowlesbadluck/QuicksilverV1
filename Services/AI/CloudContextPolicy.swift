@@ -218,9 +218,47 @@ public enum CloudContextPolicy {
             "token:", "bearer ", "password:"
         ]
         if phrases.contains(where: { lowered.contains($0) }) { return true }
+        // Assignment/statement forms: password = …, token = …, api_key = …
+        let assignment = #"(?:^|[^a-z0-9])(password|token|api[_-]?key|secret|bearer)\s*=\s*\S+"#
+        if lowered.range(of: assignment, options: .regularExpression) != nil { return true }
         // Common key prefixes (sk-/pk-/api_) followed by a long token-like run.
         let pattern = #"(sk|pk|api)[-_][a-z0-9]{16,}"#
         return lowered.range(of: pattern, options: .regularExpression) != nil
+    }
+
+    /// Markers produced by `systemAppendix` when appended after a blank line.
+    static let systemAppendixMarkers = [
+        "\n\nRelevant memory (cloud-safe):",
+        "\n\nDevice: "
+    ]
+
+    /// Strip direct-provider cloud-safe memory/device appendix from a system prompt.
+    public static func stripSystemAppendix(_ systemPrompt: String?) -> String? {
+        guard let system = systemPrompt, !system.isEmpty else { return systemPrompt }
+        var cut = system.endIndex
+        for marker in systemAppendixMarkers {
+            if let range = system.range(of: marker) {
+                cut = min(cut, range.lowerBound)
+            }
+        }
+        let trimmed = String(system[..<cut])
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Redact a standard-built request for a trainsOnPrompts (or otherwise minimal) provider.
+    /// Clears memory/device context blocks and strips the direct-provider appendix.
+    /// History stays as already capped by the caller.
+    public static func redactForTrainingProvider(_ request: AIRequest) -> AIRequest {
+        AIRequest(
+            id: request.id,
+            prompt: request.prompt,
+            systemPrompt: stripSystemAppendix(request.systemPrompt),
+            history: request.history,
+            context: [],
+            temperature: request.temperature,
+            maxTokens: request.maxTokens,
+            metadata: request.metadata
+        )
     }
 
     static func sanitizedDeviceLine(_ line: String?) -> String? {
