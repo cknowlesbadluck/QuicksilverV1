@@ -44,12 +44,10 @@ final class AskViewModel {
             category: .conversation,
             keyPrefix: "chat."
         )
-        let items = Array(
-            container.memoryManager.items(matching: query)
-                .sorted { $0.createdAt > $1.createdAt }
-                .prefix(historyLimit)
-        )
-        .sorted { $0.createdAt < $1.createdAt }
+        let matched = container.memoryManager.items(matching: query)
+        let newestFirst = matched.sorted { $0.createdAt > $1.createdAt }
+        let recent = newestFirst.prefix(historyLimit)
+        let items = recent.sorted { $0.createdAt < $1.createdAt }
 
         turns = items.compactMap { item in
             let role: ChatTurn.Role = item.metadata["role"] == "assistant" ? .assistant : .user
