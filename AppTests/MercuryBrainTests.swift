@@ -112,6 +112,48 @@ final class MercuryBrainTests: XCTestCase {
         XCTAssertEqual(harness.container.personaManager.activePersonaID, Aspect.forge.rawValue)
     }
 
+    func testAskSendsRecentHistoryAndDropsTurnsBeyondBudget() async throws {
+        let recorder = RecordingProvider(reply: "Noted.")
+        let harness = try makeHarness(provider: recorder)
+        harness.container.featureFlags.set("aiServiceEnabled", enabled: true)
+
+        _ = try await harness.container.brain.ask("turn-1")
+        let first = recorder.histories
+        XCTAssertEqual(first.count, 1)
+        XCTAssertEqual(first[0], [])
+
+        for index in 2...10 {
+            _ = try await harness.container.brain.ask("turn-\(index)")
+        }
+
+        let histories = recorder.histories
+        XCTAssertEqual(histories.count, 10)
+        XCTAssertEqual(histories[1].count, 2)
+        XCTAssertEqual(histories[1][0], Message(role: .user, content: "turn-1"))
+        XCTAssertEqual(histories[1][1].role, .assistant)
+        XCTAssertEqual(histories[1][1].content, "Noted.")
+        // 9 prior pairs would be 18 messages; budget keeps the newest 8 pairs.
+        XCTAssertEqual(histories[9].count, 16)
+        XCTAssertEqual(histories[9].first, Message(role: .user, content: "turn-2"))
+        XCTAssertEqual(histories[9].last, Message(role: .assistant, content: "Noted."))
+        XCTAssertFalse(histories[9].contains(Message(role: .user, content: "turn-1")))
+    }
+
+    func testFailedAskDoesNotPoisonConversationHistory() async throws {
+        let recorder = RecordingProvider(reply: "unused", fail: true)
+        let harness = try makeHarness(provider: recorder)
+        harness.container.featureFlags.set("aiServiceEnabled", enabled: true)
+        do {
+            _ = try await harness.container.brain.ask("do not keep")
+            XCTFail("expected provider failure")
+        } catch {
+            XCTAssertFalse(error is CancellationError)
+        }
+        recorder.fail = false
+        _ = try await harness.container.brain.ask("keep this")
+        XCTAssertEqual(recorder.histories.last, [])
+    }
+
     private func makeHarness(provider: AIProvider) throws -> Harness {
         let suiteName = "MercuryBrainTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -213,6 +255,37 @@ private final class CountingProvider: AIProvider, @unchecked Sendable {
     func complete(_ request: AIRequest) async throws -> AIResponse {
         recordCall()
         return AIResponse(requestID: request.id, content: "should-not-run")
+    }
+}
+
+private final class RecordingProvider: AIProvider, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _histories: [[Message]] = []
+    var fail: Bool
+
+    var histories: [[Message]] {
+        lock.withLock { _histories }
+    }
+
+    let reply: String
+    let id = "recording"
+    let displayName = "Recording"
+    let isAvailable = true
+
+    init(reply: String, fail: Bool = false) {
+        self.reply = reply
+        self.fail = fail
+    }
+
+    func complete(_ request: AIRequest) async throws -> AIResponse {
+        let shouldFail = lock.withLock { () -> Bool in
+            _histories.append(request.history)
+            return fail
+        }
+        if shouldFail {
+            throw AppError.aiRequestFailed("recording-fail")
+        }
+        return AIResponse(requestID: request.id, content: reply)
     }
 }
 

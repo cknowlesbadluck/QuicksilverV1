@@ -67,9 +67,24 @@ enum BrainComposition {
         return aspect.defaultVisualState
     }
 
-    static func estimateContextTokens(systemHint: String, memory: [MemoryItem], query: String) -> Int {
+    /// Prior user/assistant pairs kept on a Brain turn. Current prompt is not history.
+    static let maxConversationTurns = 8
+
+    static func recentHistory(_ messages: [Message], maxTurns: Int = maxConversationTurns) -> [Message] {
+        let maxMessages = max(0, maxTurns) * 2
+        guard messages.count > maxMessages else { return messages }
+        return Array(messages.suffix(maxMessages))
+    }
+
+    static func estimateContextTokens(
+        systemHint: String,
+        memory: [MemoryItem],
+        query: String,
+        history: [Message] = []
+    ) -> Int {
         let memoryChars = memory.reduce(0) { $0 + $1.value.count }
-        return (systemHint.count + memoryChars + query.count) / 4
+        let historyChars = history.reduce(0) { $0 + $1.content.count }
+        return (systemHint.count + memoryChars + historyChars + query.count) / 4
     }
 
     static func systemPrompt(
