@@ -1,0 +1,12 @@
+{
+  "taskTier": "standard",
+  "messages": [
+    { "role": "system", "content": "You are Quicksilver." },
+    { "role": "user", "content": "What aspect is active?" },
+    { "role": "assistant", "content": "Forge." },
+    { "role": "user", "content": "Name one Forge strength." }
+  ],
+  "context": [],
+  "privacy": "device",
+  "maxTokens": 128
+}
