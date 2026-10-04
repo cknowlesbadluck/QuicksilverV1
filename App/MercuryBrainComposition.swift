@@ -122,6 +122,12 @@ enum BrainComposition {
         )
     }
 
+    struct CloudAskPayload {
+        let level: CloudContextLevel
+        let history: [Message]
+        let context: [GatewayContextBlock]
+    }
+
     /// Build CloudContextPolicy blocks for one outbound Ask. `level` is already resolved.
     static func cloudPayload(
         question: String,
@@ -129,7 +135,7 @@ enum BrainComposition {
         memories: [MemoryItem],
         state: NexusState,
         level: CloudContextLevel
-    ) -> (level: CloudContextLevel, blocks: [CloudContextBlock], history: [Message], context: [GatewayContextBlock]) {
+    ) -> CloudAskPayload {
         let deviceLine = CloudContextPolicy.coarseDeviceLine(
             batteryLevel: state.batteryLevel,
             thermalState: state.thermalState,
@@ -144,8 +150,10 @@ enum BrainComposition {
             ),
             level: level
         )
-        let capped = CloudContextPolicy.cappedHistory(history, level: level)
-        let context = CloudContextPolicy.gatewayContext(from: blocks)
-        return (level, blocks, capped, context)
+        return CloudAskPayload(
+            level: level,
+            history: CloudContextPolicy.cappedHistory(history, level: level),
+            context: CloudContextPolicy.gatewayContext(from: blocks)
+        )
     }
 }

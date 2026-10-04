@@ -150,12 +150,20 @@ public enum CloudContextPolicy {
         lowPowerMode: Bool
     ) -> String? {
         if lowPowerMode { return "low power" }
-        if let level = batteryLevel {
-            if level < 0.15 { return "battery critical" }
-            if level < 0.25 { return "battery low" }
-            if level >= 0.95 { return "battery full" }
-            if level >= 0.5 { return "battery ok" }
-        }
+        if let battery = batteryCoarseLine(batteryLevel) { return battery }
+        return thermalCoarseLine(thermalState)
+    }
+
+    private static func batteryCoarseLine(_ level: Double?) -> String? {
+        guard let level else { return nil }
+        if level < 0.15 { return "battery critical" }
+        if level < 0.25 { return "battery low" }
+        if level >= 0.95 { return "battery full" }
+        if level >= 0.5 { return "battery ok" }
+        return nil
+    }
+
+    private static func thermalCoarseLine(_ thermalState: String) -> String? {
         switch thermalState.lowercased() {
         case "critical": return "thermal critical"
         case "serious": return "thermal serious"
