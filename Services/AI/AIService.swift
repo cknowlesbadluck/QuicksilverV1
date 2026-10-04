@@ -157,6 +157,22 @@ public final class AIService {
         configureGrokAPIKey(key)
     }
 
+    /// Fail-closed: unbound / unknown providers are treated as training-on-prompts.
+    public var primaryTrainsOnPrompts: Bool {
+        primaryProvider?.trainsOnPrompts ?? true
+    }
+
+    /// Requested cloud context level for the `answer` task (before trainsOnPrompts force).
+    public var requestedCloudContextLevel: CloudContextLevel {
+        let config = routingConfigStore?.loadValidated() ?? AIRoutingConfig.bundledDefault
+        guard let routing = config.tasks["answer"], routing.route == .cloud,
+              let tierID = routing.tier?.rawValue,
+              let tier = config.tiers[tierID] else {
+            return .standard
+        }
+        return CloudContextLevel(aiLevel: tier.contextLevel)
+    }
+
     @discardableResult
     public func complete(
         prompt: String,
@@ -165,35 +181,28 @@ public final class AIService {
         maxTokens: Int = 1024,
         history: [Message] = []
     ) async throws -> AIResponse {
-        try await execute(
-            prompt: prompt,
-            systemPrompt: systemPrompt,
-            temperature: temperature,
-            maxTokens: maxTokens,
-            history: history
+        try await complete(
+            AIRequest(
+                prompt: prompt,
+                systemPrompt: systemPrompt,
+                history: history,
+                temperature: temperature,
+                maxTokens: maxTokens
+            )
         )
     }
 
-    private func execute(
-        prompt: String,
-        systemPrompt: String?,
-        temperature: Double,
-        maxTokens: Int,
-        history: [Message]
-    ) async throws -> AIResponse {
+    @discardableResult
+    public func complete(_ request: AIRequest) async throws -> AIResponse {
+        try await execute(request)
+    }
+
+    private func execute(_ request: AIRequest) async throws -> AIResponse {
         try ensureReadyForNetworkRequest()
         guard let provider = primaryProvider else {
             // Unreachable after ensureReadyForNetworkRequest; keeps type narrowing.
             throw AppError.apiKeyMissing
         }
-
-        let request = AIRequest(
-            prompt: prompt,
-            systemPrompt: systemPrompt,
-            history: history,
-            temperature: temperature,
-            maxTokens: maxTokens
-        )
         isProcessing = true
         await eventBus.publish(.aiRequestStarted(requestID: request.id.uuidString))
         logger.debug("AI request started: \(request.id)", category: logger.ai)

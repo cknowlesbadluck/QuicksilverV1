@@ -83,6 +83,23 @@ final class GatewayRequestTests: XCTestCase {
         XCTAssertEqual(body.messages.map(\.content), ["Only user"])
     }
 
+
+    func testContextBlocksPassThrough() {
+        let context = [
+            GatewayContextBlock(kind: .memory, text: "note", privacy: .device),
+            GatewayContextBlock(kind: .device, text: "battery low", privacy: .device)
+        ]
+        let request = AIRequest(
+            prompt: "Hello",
+            systemPrompt: "Be brief",
+            context: context,
+            maxTokens: 64
+        )
+        let body = GatewayRequest.makeChatBody(request)
+        XCTAssertEqual(body.context, context)
+        XCTAssertEqual(body.messages.map(\.content), ["Be brief", "Hello"])
+    }
+
     private func fixtureData(_ name: String) throws -> Data {
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

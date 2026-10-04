@@ -24,6 +24,8 @@ public struct AIRequest: Sendable, Identifiable {
     public let systemPrompt: String?
     /// Prior turns only (not the current `prompt`). Defaults to empty for single-turn call sites.
     public let history: [Message]
+    /// Kind-tagged cloud context from CloudContextPolicy (M3-T11). Empty for on-device-only paths.
+    public let context: [GatewayContextBlock]
     public let temperature: Double
     public let maxTokens: Int
     public let metadata: [String: String]
@@ -33,6 +35,7 @@ public struct AIRequest: Sendable, Identifiable {
         prompt: String,
         systemPrompt: String? = nil,
         history: [Message] = [],
+        context: [GatewayContextBlock] = [],
         temperature: Double = 0.7,
         maxTokens: Int = 1024,
         metadata: [String: String] = [:]
@@ -41,6 +44,7 @@ public struct AIRequest: Sendable, Identifiable {
         self.prompt = prompt
         self.systemPrompt = systemPrompt
         self.history = history
+        self.context = context
         self.temperature = temperature
         self.maxTokens = maxTokens
         self.metadata = metadata

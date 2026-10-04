@@ -16,12 +16,13 @@ final class CloudContextPolicyTests: XCTestCase {
 
     func testMinimalDropsMemoriesAndDeviceLine() {
         let blocks = CloudContextPolicy.assemble(
-            question: "what next",
-            recentTurns: ["one", "two", "three"],
-            memories: [note("keep me")],
-            coarseDeviceLine: "battery low",
-            requested: .standard,
-            trainsOnPrompts: true
+            CloudContextInput(
+                question: "what next",
+                recentTurns: ["one", "two", "three"],
+                memories: [note("keep me")],
+                coarseDeviceLine: "battery low"
+            ),
+            level: .minimal
         )
         XCTAssertEqual(blocks.map(\.kind), [.question, .turn, .turn])
         XCTAssertEqual(blocks.map(\.text), ["what next", "two", "three"])
@@ -36,12 +37,13 @@ final class CloudContextPolicyTests: XCTestCase {
             note("fourth")
         ]
         let blocks = CloudContextPolicy.assemble(
-            question: "plan",
-            recentTurns: ["t1", "t2", "t3", "t4", "t5"],
-            memories: memories,
-            coarseDeviceLine: "battery low",
-            requested: .standard,
-            trainsOnPrompts: false
+            CloudContextInput(
+                question: "plan",
+                recentTurns: ["t1", "t2", "t3", "t4", "t5"],
+                memories: memories,
+                coarseDeviceLine: "battery low"
+            ),
+            level: .standard
         )
         let turns = blocks.filter { $0.kind == .turn }
         let notes = blocks.filter { $0.kind == .memory }
@@ -51,19 +53,99 @@ final class CloudContextPolicyTests: XCTestCase {
         XCTAssertEqual(blocks.last?.text, "battery low")
     }
 
-    func testPrivateAndKeyLikeMemoriesNeverLeave() {
-        var privateNote = note("secret thought")
-        privateNote.metadata["private"] = "true"
+    func testPrivateFlagVariantsNeverLeave() {
+        for flag in ["true", "1", "yes", "TRUE", "Yes", "YES"] {
+            var privateNote = note("secret thought \(flag)")
+            privateNote.metadata["private"] = flag
+            let blocks = CloudContextPolicy.assemble(
+                CloudContextInput(
+                    question: "q",
+                    memories: [privateNote, note("ok-\(flag)")]
+                ),
+                level: .standard
+            )
+            XCTAssertEqual(
+                blocks.map(\.text),
+                ["q", "ok-\(flag)"],
+                "private flag \(flag) must drop the note"
+            )
+        }
+    }
+
+    func testCredentialKeySegmentsNotSubstrings() {
         let keyNote = MemoryItem(key: "api.token.backup", category: .system, value: "nope")
-        let blocks = CloudContextPolicy.assemble(
-            question: "q",
-            recentTurns: [],
-            memories: [privateNote, keyNote, note("ok")],
-            coarseDeviceLine: "nexus diagnostic 42",
-            requested: .standard,
-            trainsOnPrompts: false
+        let keyboard = MemoryItem(
+            key: "preference.keyboard.layout",
+            category: .preference,
+            value: "qwerty"
         )
-        XCTAssertEqual(blocks.map(\.text), ["q", "ok"])
+        let monkey = MemoryItem(
+            key: "note.monkey_behavior",
+            category: .temporary,
+            value: "curious"
+        )
+        let blocks = CloudContextPolicy.assemble(
+            CloudContextInput(
+                question: "q",
+                memories: [keyNote, keyboard, monkey],
+                coarseDeviceLine: "Christopher iPhone"
+            ),
+            level: .standard
+        )
+        XCTAssertEqual(blocks.map(\.text), ["q", "qwerty", "curious"])
+    }
+
+    func testCredentialValuesNeverLeave() {
+        let leak = note("my API token is sk-abcdefghijklmnopqrstuvwxyz")
+        let blocks = CloudContextPolicy.assemble(
+            CloudContextInput(question: "q", memories: [leak, note("safe")]),
+            level: .standard
+        )
+        XCTAssertEqual(blocks.map(\.text), ["q", "safe"])
+    }
+
+    func testDeviceAllowlistRejectsIdentifiers() {
+        XCTAssertNil(CloudContextPolicy.sanitizedDeviceLine("Christopher iPhone"))
+        XCTAssertNil(CloudContextPolicy.sanitizedDeviceLine("nexus diagnostic 42"))
+        XCTAssertNil(CloudContextPolicy.sanitizedDeviceLine("battery 20%"))
+        XCTAssertEqual(CloudContextPolicy.sanitizedDeviceLine("battery low"), "battery low")
+        XCTAssertEqual(
+            CloudContextPolicy.coarseDeviceLine(
+                batteryLevel: 0.1,
+                thermalState: "nominal",
+                lowPowerMode: false
+            ),
+            "battery critical"
+        )
+    }
+
+    func testGatewayContextOmitsQuestion() {
+        let blocks = CloudContextPolicy.assemble(
+            CloudContextInput(
+                question: "q",
+                recentTurns: ["u", "a"],
+                memories: [note("m")],
+                coarseDeviceLine: "thermal fair"
+            ),
+            level: .standard
+        )
+        let context = CloudContextPolicy.gatewayContext(from: blocks)
+        XCTAssertEqual(context.map(\.kind), [.history, .history, .memory, .device])
+        XCTAssertEqual(context.map(\.text), ["u", "a", "m", "thermal fair"])
+    }
+
+    func testCappedHistoryUsesPairs() {
+        let history = (1...6).flatMap { index -> [Message] in
+            [
+                Message(role: .user, content: "u\(index)"),
+                Message(role: .assistant, content: "a\(index)")
+            ]
+        }
+        let minimal = CloudContextPolicy.cappedHistory(history, level: .minimal)
+        XCTAssertEqual(minimal.map(\.content), ["u5", "a5", "u6", "a6"])
+        let standard = CloudContextPolicy.cappedHistory(history, level: .standard)
+        XCTAssertEqual(standard.count, 8)
+        XCTAssertEqual(standard.first?.content, "u3")
     }
 
     private func note(_ value: String) -> MemoryItem {

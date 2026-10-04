@@ -6,6 +6,13 @@ import Core
 public enum CloudContextLevel: String, Sendable, Equatable {
     case standard
     case minimal
+
+    public init(aiLevel: AIContextLevel) {
+        switch aiLevel {
+        case .standard: self = .standard
+        case .minimal: self = .minimal
+        }
+    }
 }
 
 public struct CloudContextBlock: Sendable, Equatable {
@@ -25,11 +32,49 @@ public struct CloudContextBlock: Sendable, Equatable {
     }
 }
 
+/// Inputs for `CloudContextPolicy.assemble` (keeps the call site ≤5 parameters).
+public struct CloudContextInput: Sendable, Equatable {
+    public let question: String
+    public let recentTurns: [String]
+    public let memories: [MemoryItem]
+    public let coarseDeviceLine: String?
+
+    public init(
+        question: String,
+        recentTurns: [String] = [],
+        memories: [MemoryItem] = [],
+        coarseDeviceLine: String? = nil
+    ) {
+        self.question = question
+        self.recentTurns = recentTurns
+        self.memories = memories
+        self.coarseDeviceLine = coarseDeviceLine
+    }
+}
+
 public enum CloudContextPolicy {
     public static let memoryCharCap = 180
     public static let standardTurnCap = 4
     public static let minimalTurnCap = 2
     public static let standardMemoryCap = 3
+
+    /// Allowlisted coarse device vocabulary only — never free-form identifiers.
+    public static let allowedDeviceLines: Set<String> = [
+        "battery low",
+        "battery critical",
+        "battery ok",
+        "battery full",
+        "thermal nominal",
+        "thermal fair",
+        "thermal serious",
+        "thermal critical",
+        "low power"
+    ]
+
+    /// Complete key-path segments treated as credential markers (not substrings).
+    public static let credentialKeySegments: Set<String> = [
+        "key", "token", "secret", "password", "apikey", "auth", "bearer"
+    ]
 
     public static func resolvedLevel(
         requested: CloudContextLevel,
@@ -38,26 +83,35 @@ public enum CloudContextPolicy {
         trainsOnPrompts ? .minimal : requested
     }
 
-    /// Kind-tagged blocks. Private memories, key-like records, and raw diagnostics never leave.
+    public static func turnCap(for level: CloudContextLevel) -> Int {
+        level == .minimal ? minimalTurnCap : standardTurnCap
+    }
+
+    /// Cap prior user/assistant pairs for the outbound cloud request.
+    public static func cappedHistory(
+        _ history: [Message],
+        level: CloudContextLevel
+    ) -> [Message] {
+        let maxMessages = turnCap(for: level) * 2
+        guard history.count > maxMessages else { return history }
+        return Array(history.suffix(maxMessages))
+    }
+
+    /// Kind-tagged blocks. Private memories, credentials, and raw diagnostics never leave.
     public static func assemble(
-        question: String,
-        recentTurns: [String],
-        memories: [MemoryItem],
-        coarseDeviceLine: String?,
-        requested: CloudContextLevel,
-        trainsOnPrompts: Bool
+        _ input: CloudContextInput,
+        level: CloudContextLevel
     ) -> [CloudContextBlock] {
-        let level = resolvedLevel(requested: requested, trainsOnPrompts: trainsOnPrompts)
-        let turnCap = level == .minimal ? minimalTurnCap : standardTurnCap
-        var blocks = [CloudContextBlock(kind: .question, text: question)]
-        for turn in recentTurns.suffix(turnCap) {
+        let turnLimit = turnCap(for: level)
+        var blocks = [CloudContextBlock(kind: .question, text: input.question)]
+        for turn in input.recentTurns.suffix(turnLimit) {
             let trimmed = turn.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { continue }
             blocks.append(CloudContextBlock(kind: .turn, text: trimmed))
         }
         guard level == .standard else { return blocks }
 
-        let notes = memories
+        let notes = input.memories
             .filter { isShareable($0) }
             .prefix(standardMemoryCap)
         for note in notes {
@@ -65,18 +119,86 @@ public enum CloudContextPolicy {
                 CloudContextBlock(kind: .memory, text: String(note.value.prefix(memoryCharCap)))
             )
         }
-        if let line = sanitizedDeviceLine(coarseDeviceLine) {
+        if let line = sanitizedDeviceLine(input.coarseDeviceLine) {
             blocks.append(CloudContextBlock(kind: .device, text: line))
         }
         return blocks
     }
 
+    /// Map policy blocks to gateway wire context (question stays in messages).
+    public static func gatewayContext(
+        from blocks: [CloudContextBlock]
+    ) -> [GatewayContextBlock] {
+        blocks.compactMap { block in
+            switch block.kind {
+            case .question:
+                return nil
+            case .turn:
+                return GatewayContextBlock(kind: .history, text: block.text, privacy: .device)
+            case .memory:
+                return GatewayContextBlock(kind: .memory, text: block.text, privacy: .device)
+            case .device:
+                return GatewayContextBlock(kind: .device, text: block.text, privacy: .device)
+            }
+        }
+    }
+
+    /// Derive an allowlisted coarse device line from Nexus-ish signals.
+    public static func coarseDeviceLine(
+        batteryLevel: Double?,
+        thermalState: String,
+        lowPowerMode: Bool
+    ) -> String? {
+        if lowPowerMode { return "low power" }
+        if let level = batteryLevel {
+            if level < 0.15 { return "battery critical" }
+            if level < 0.25 { return "battery low" }
+            if level >= 0.95 { return "battery full" }
+            if level >= 0.5 { return "battery ok" }
+        }
+        switch thermalState.lowercased() {
+        case "critical": return "thermal critical"
+        case "serious": return "thermal serious"
+        case "fair": return "thermal fair"
+        case "nominal": return "thermal nominal"
+        default: return nil
+        }
+    }
+
     static func isShareable(_ item: MemoryItem) -> Bool {
-        let flag = item.metadata["private"]?.lowercased()
-        if flag == "true" || flag == "1" || flag == "yes" { return false }
-        let key = item.key.lowercased()
-        if key.contains("key") || key.contains("token") || key.contains("secret") { return false }
+        if isPrivateFlag(item.metadata["private"]) { return false }
+        if keyHasCredentialSegment(item.key) { return false }
+        if valueLooksLikeCredential(item.value) { return false }
         return true
+    }
+
+    static func isPrivateFlag(_ raw: String?) -> Bool {
+        guard let raw else { return false }
+        switch raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "true", "1", "yes": return true
+        default: return false
+        }
+    }
+
+    static func keyHasCredentialSegment(_ key: String) -> Bool {
+        let parts = key.lowercased().split { character in
+            character == "." || character == "_" || character == "-"
+        }.map(String.init)
+        return parts.contains { credentialKeySegments.contains($0) }
+    }
+
+    /// Narrow credential-value check — not a general classifier.
+    static func valueLooksLikeCredential(_ value: String) -> Bool {
+        let lowered = value.lowercased()
+        let phrases = [
+            "api key", "api_key", "apikey",
+            "access token", "secret key", "secret token",
+            "bearer ", "password:"
+        ]
+        if phrases.contains(where: { lowered.contains($0) }) { return true }
+        // Common key prefixes (sk-/pk-/api_) followed by a long token-like run.
+        let pattern = #"(sk|pk|api)[-_][a-z0-9]{16,}"#
+        return lowered.range(of: pattern, options: .regularExpression) != nil
     }
 
     static func sanitizedDeviceLine(_ line: String?) -> String? {
@@ -84,11 +206,6 @@ public enum CloudContextPolicy {
             return nil
         }
         let lowered = raw.lowercased()
-        if lowered.contains("diagnostic") || lowered.contains("nexus") { return nil }
-        if raw.contains("@") || raw.contains("://") { return nil }
-        if raw.unicodeScalars.contains(where: { CharacterSet.decimalDigits.contains($0) }) {
-            return nil
-        }
-        return raw
+        return allowedDeviceLines.contains(lowered) ? lowered : nil
     }
 }

@@ -3,6 +3,7 @@ import Core
 import Memory
 import Personas
 import Nexus
+import ServicesAI
 
 /// Pure composition helpers for MercuryBrain.
 ///
@@ -87,6 +88,7 @@ enum BrainComposition {
         return (systemHint.count + memoryChars + historyChars + query.count) / 4
     }
 
+    /// Cloud prompts never embed memories or raw Nexus device text — CloudContextPolicy owns that.
     static func systemPrompt(
         base: String,
         bias: String,
@@ -97,19 +99,53 @@ enum BrainComposition {
         destination: PromptComposer.Destination = .cloud,
         plainMode: Bool = false
     ) -> String {
-        let health = state.overallHealthScore
-        let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-        let device = "Device context (private): health \(health), battery \(battery)."
+        let includeLocal = destination == .onDevice
+        let memoryForPrompt = includeLocal ? memory : []
+        let device: String
+        if includeLocal {
+            let health = state.overallHealthScore
+            let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
+            device = "Device context (private): health \(health), battery \(battery)."
+        } else {
+            device = ""
+        }
         return PromptComposer.compose(
             core: PromptManager.coreIdentity(),
             aspect: base,
             bias: bias,
-            memory: memory,
+            memory: memoryForPrompt,
             device: device,
             aspectLabel: aspect.diagnosticLabel,
             plainMode: plainMode,
             owner: owner,
             destination: destination
         )
+    }
+
+    /// Build CloudContextPolicy blocks for one outbound Ask. `level` is already resolved.
+    static func cloudPayload(
+        question: String,
+        history: [Message],
+        memories: [MemoryItem],
+        state: NexusState,
+        level: CloudContextLevel
+    ) -> (level: CloudContextLevel, blocks: [CloudContextBlock], history: [Message], context: [GatewayContextBlock]) {
+        let deviceLine = CloudContextPolicy.coarseDeviceLine(
+            batteryLevel: state.batteryLevel,
+            thermalState: state.thermalState,
+            lowPowerMode: state.lowPowerMode
+        )
+        let blocks = CloudContextPolicy.assemble(
+            CloudContextInput(
+                question: question,
+                recentTurns: history.map(\.content),
+                memories: memories,
+                coarseDeviceLine: deviceLine
+            ),
+            level: level
+        )
+        let capped = CloudContextPolicy.cappedHistory(history, level: level)
+        let context = CloudContextPolicy.gatewayContext(from: blocks)
+        return (level, blocks, capped, context)
     }
 }
