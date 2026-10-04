@@ -3,7 +3,8 @@ import Core
 
 /// Pure system-prompt composition for Mercury.
 ///
-/// Order: core → aspect → (optional plain directive) → bias → memory → device → aspect label.
+/// Order: core → aspect → (optional plain directive) → bias → untrusted notes (memory, device)
+/// → aspect label. Memory and device context share one delimited `UntrustedNotes` block (M3-T12).
 /// `{{owner}}` resolves to the owner name on-device, or `"the owner"` for cloud-bound prompts
 /// so no identifier reaches a provider.
 public enum PromptComposer {
@@ -55,13 +56,9 @@ public enum PromptComposer {
             parts.append("Behavioral posture (internal): \(trimmedBias)")
         }
 
-        if !memory.isEmpty {
-            parts.append(memoryBlock(memory))
-        }
-
-        let trimmedDevice = device.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmedDevice.isEmpty {
-            parts.append(trimmedDevice)
+        let notes = notesBlock(memory: memory, device: device)
+        if !notes.isEmpty {
+            parts.append(notes)
         }
 
         let trimmedLabel = aspectLabel.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -95,13 +92,21 @@ public enum PromptComposer {
         return String(format: "%04d-%02d-%02d", year, month, day)
     }
 
-    private static func memoryBlock(_ memory: [MemoryItem]) -> String {
-        var lines = ["Relevant memory (private, ranked by importance):"]
-        for item in memory {
-            let date = formatMemoryDate(item.createdAt)
-            let snippet = String(item.value.prefix(180))
-            lines.append("- (\(date)) [\(item.category.rawValue)] \(snippet)")
+    public static let memorySectionTitle = "Relevant memory (private, ranked by importance):"
+    public static let deviceSectionTitle = "Device context (private):"
+
+    /// Memory and device context in one delimited untrusted-notes block (M3-T12).
+    /// Each note's text is capped at `UntrustedNotes.itemCharCap`; the date/category prefix is app metadata.
+    static func notesBlock(memory: [MemoryItem], device: String) -> String {
+        let memoryNotes = memory.map { item in
+            UntrustedNotes.Note(
+                prefix: "(\(formatMemoryDate(item.createdAt))) [\(item.category.rawValue)] ",
+                text: item.value
+            )
         }
-        return lines.joined(separator: "\n")
+        return UntrustedNotes.block([
+            UntrustedNotes.Section(title: memorySectionTitle, notes: memoryNotes),
+            UntrustedNotes.Section(title: deviceSectionTitle, notes: [UntrustedNotes.Note(text: device)])
+        ])
     }
 }

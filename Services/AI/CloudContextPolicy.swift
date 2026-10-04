@@ -53,7 +53,7 @@ public struct CloudContextInput: Sendable, Equatable {
 }
 
 public enum CloudContextPolicy {
-    public static let memoryCharCap = 180
+    public static let memoryCharCap = UntrustedNotes.itemCharCap
     public static let standardTurnCap = 4
     public static let minimalTurnCap = 2
     public static let standardMemoryCap = 3
@@ -106,11 +106,14 @@ public enum CloudContextPolicy {
         var blocks = [CloudContextBlock(kind: .question, text: input.question)]
         guard level == .standard else { return blocks }
 
-        let notes = shareableMemories(input.memories, cap: standardMemoryCap)
-        for note in notes {
-            blocks.append(
-                CloudContextBlock(kind: .memory, text: String(note.value.prefix(memoryCharCap)))
-            )
+        // Sanitize before capping the count so an empty note never takes a slot (backfill).
+        let notes = input.memories
+            .filter { isShareable($0) }
+            .map { UntrustedNotes.sanitizedItem($0.value, cap: memoryCharCap) }
+            .filter { !$0.isEmpty }
+            .prefix(standardMemoryCap)
+        for text in notes {
+            blocks.append(CloudContextBlock(kind: .memory, text: text))
         }
         if let line = sanitizedDeviceLine(input.coarseDeviceLine) {
             blocks.append(CloudContextBlock(kind: .device, text: line))
@@ -123,18 +126,18 @@ public enum CloudContextPolicy {
         Array(memories.filter { isShareable($0) }.prefix(max(0, cap)))
     }
 
+    public static let memorySectionTitle = "Relevant memory (cloud-safe):"
+    public static let deviceSectionTitle = "Device:"
+
     /// Appendix for direct providers that ignore `AIRequest.context` (e.g. Grok).
+    /// Wrapped in a delimited `UntrustedNotes` block, each note capped (M3-T12).
     public static func systemAppendix(from context: [GatewayContextBlock]) -> String {
-        var parts: [String] = []
-        let memories = context.filter { $0.kind == .memory }.map(\.text)
-        if !memories.isEmpty {
-            parts.append("Relevant memory (cloud-safe):")
-            parts.append(contentsOf: memories.map { "- \($0)" })
-        }
-        if let device = context.first(where: { $0.kind == .device })?.text {
-            parts.append("Device: \(device).")
-        }
-        return parts.joined(separator: "\n")
+        let memories = context.filter { $0.kind == .memory }.map { UntrustedNotes.Note(text: $0.text) }
+        let device = context.first(where: { $0.kind == .device }).map { [UntrustedNotes.Note(text: $0.text)] } ?? []
+        return UntrustedNotes.block([
+            UntrustedNotes.Section(title: memorySectionTitle, notes: memories),
+            UntrustedNotes.Section(title: deviceSectionTitle, notes: device)
+        ])
     }
 
     /// Map policy blocks to gateway wire context (question + turns stay in messages).
@@ -232,7 +235,9 @@ public enum CloudContextPolicy {
     }
 
     /// Markers produced by `systemAppendix` when appended after a blank line.
+    /// The legacy pre-M3-T12 headings stay so older-shaped prompts are still stripped.
     static let systemAppendixMarkers = [
+        "\n\n" + UntrustedNotes.openTag,
         "\n\nRelevant memory (cloud-safe):",
         "\n\nDevice: "
     ]

@@ -91,6 +91,7 @@ enum BrainComposition {
     }
 
     /// Cloud prompts never embed memories or raw Nexus device text — CloudContextPolicy owns that.
+    /// On-device, memory and device context land in one delimited `UntrustedNotes` block (M3-T12).
     static func systemPrompt(
         base: String,
         bias: String,
@@ -107,7 +108,7 @@ enum BrainComposition {
         if includeLocal {
             let health = state.overallHealthScore
             let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-            device = "Device context (private): health \(health), battery \(battery)."
+            device = "health \(health), battery \(battery)"
         } else {
             device = ""
         }
