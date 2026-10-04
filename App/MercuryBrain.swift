@@ -289,20 +289,11 @@ extension MercuryBrain {
         personality.recomputeForTurn(aspect: activeAspect)
         personality.noteInteraction()
         if turnRegister == .plain { personality.enterPlainRegister() }
-        // Oversample so private/credential notes can be backfilled by shareable ones.
         let memoryCandidates = retrieveSnapshot(limit: 12, text: query)
-        let system = BrainComposition.systemPrompt(
-            base: config.systemPrompt,
-            bias: personality.promptBias(register: turnRegister),
-            memory: memoryCandidates,
-            state: nexus.state,
-            aspect: activeAspect,
-            plainMode: turnRegister == .plain
-        )
-        // Live provider trainsOnPrompts is the force; non-training direct providers get .standard.
+        let trains = aiService.primaryTrainsOnPrompts
         let level = CloudContextPolicy.resolvedLevel(
-            requested: aiService.primaryTrainsOnPrompts ? .minimal : .standard,
-            trainsOnPrompts: aiService.primaryTrainsOnPrompts
+            requested: trains ? .minimal : .standard,
+            trainsOnPrompts: trains
         )
         let payload = BrainComposition.cloudPayload(
             question: query,
@@ -311,30 +302,50 @@ extension MercuryBrain {
             state: nexus.state,
             level: level
         )
-        var cloudSystem = system
-        // Direct providers (Grok/Gemini) ignore AIRequest.context — append filtered blocks.
-        if aiService.currentProviderID != "gateway" {
-            let appendix = CloudContextPolicy.systemAppendix(from: payload.context)
-            if !appendix.isEmpty {
-                cloudSystem = system + "\n\n" + appendix
-            }
-        }
+        let system = cloudSystemPrompt(
+            config: config,
+            register: turnRegister,
+            memories: memoryCandidates,
+            context: payload.context
+        )
+        let shareable = payload.level == .standard
+            ? CloudContextPolicy.shareableMemories(
+                memoryCandidates,
+                cap: CloudContextPolicy.standardMemoryCap
+            ) : []
         let tokens = BrainComposition.estimateContextTokens(
-            systemHint: cloudSystem,
-            memory: payload.level == .standard
-                ? CloudContextPolicy.shareableMemories(memoryCandidates, cap: CloudContextPolicy.standardMemoryCap)
-                : [],
+            systemHint: system,
+            memory: shareable,
             query: query,
             history: payload.history
         )
         let plan = try evaluateBrokerDecision(intent: intent, tokens: tokens)
         return PreparedAsk(
-            system: cloudSystem,
+            system: system,
             config: config,
             maxTokens: min(config.maxTokensHint, plan.maxOutputTokens),
             history: payload.history,
             context: payload.context
         )
+    }
+
+    private func cloudSystemPrompt(
+        config: PersonaConfiguration,
+        register: Register,
+        memories: [MemoryItem],
+        context: [GatewayContextBlock]
+    ) -> String {
+        let base = BrainComposition.systemPrompt(
+            base: config.systemPrompt,
+            bias: personality.promptBias(register: register),
+            memory: memories,
+            state: nexus.state,
+            aspect: activeAspect,
+            plainMode: register == .plain
+        )
+        guard aiService.currentProviderID != "gateway" else { return base }
+        let appendix = CloudContextPolicy.systemAppendix(from: context)
+        return appendix.isEmpty ? base : base + "\n\n" + appendix
     }
 
     private func completeAsk(query: String, turn: PreparedAsk) async throws -> String {
