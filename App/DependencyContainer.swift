@@ -75,6 +75,7 @@ final class DependencyContainer {
         self.brain = MercuryBrain(
             personaManager: personaManager,
             memoryManager: memoryManager,
+            memoryIndex: EmbeddingIndex(),
             aiService: aiService,
             nexus: self.nexus,
             eventBus: eventBus,
