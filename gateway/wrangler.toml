@@ -1,6 +1,7 @@
 # Mercury Gateway — Cloudflare Workers Free scaffold (M3-T15).
-# Free tier only: no KV, R2, D1, Queues, AI, or other paid bindings.
-# Workers AI binding arrives in M3-T19. DEVICE_TOKEN is a secret set at HG3
+# Free tier only: no KV, R2, D1, Queues, or other paid bindings.
+# The only binding is Workers AI (M3-T19, below), which is free on Workers Free.
+# DEVICE_TOKEN is a secret set at HG3
 # (`wrangler secret put DEVICE_TOKEN`); never put it here. Limits are in-isolate
 # counters (src/limits.ts), so no rate-limit or storage bindings.
 
@@ -8,6 +9,15 @@ name = "mercury-gateway"
 main = "src/index.ts"
 compatibility_date = "2025-09-01"
 workers_dev = true
+
+# Workers AI (last-resort cloud model, M3-T19). Included in Workers Free with a free
+# daily allocation (10,000 Neurons, resets 00:00 UTC). On Workers Free nothing is
+# billed: past the allocation, requests fail with error 3036 and the adapter reports
+# `budget_exhausted`. Only use models that do not require Workers Paid. Note that
+# `wrangler dev` always calls the remote Workers AI, so local runs use the same
+# free allocation.
+[ai]
+binding = "AI"
 
 # Observability: invocation metadata (method, path, status, timing) only.
 # Never log request/response bodies — handlers must not console.log payloads.
