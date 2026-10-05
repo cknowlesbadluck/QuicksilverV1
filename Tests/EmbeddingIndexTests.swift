@@ -35,6 +35,33 @@ private actor FakeEmbedder: MemoryEmbedder {
     }
 }
 
+/// Holds every `embed` call until `release()`, so tests can delete mid-embed.
+private actor GatedEmbedder: MemoryEmbedder {
+    private var gate: CheckedContinuation<Void, Never>?
+    private var arrival: CheckedContinuation<Void, Never>?
+    private var hasArrived = false
+
+    func currentRevision() async -> String? { "gated/r1" }
+
+    func embed(_ text: String) async -> MemoryEmbedding? {
+        hasArrived = true
+        arrival?.resume()
+        arrival = nil
+        await withCheckedContinuation { gate = $0 }
+        return MemoryEmbedding(revision: "gated/r1", vector: [1, 0])
+    }
+
+    func waitForArrival() async {
+        guard !hasArrived else { return }
+        await withCheckedContinuation { arrival = $0 }
+    }
+
+    func release() {
+        gate?.resume()
+        gate = nil
+    }
+}
+
 final class EmbeddingIndexTests: XCTestCase {
 
     private var directory: URL!
@@ -203,6 +230,38 @@ final class EmbeddingIndexTests: XCTestCase {
 
         XCTAssertFalse(FileManager.default.fileExists(atPath: index.fileURL.path))
         let stored = await index.count
+        XCTAssertEqual(stored, 0)
+    }
+
+    func testRemoveAllDuringPendingEmbedDoesNotRestoreVector() async {
+        let embedder = GatedEmbedder()
+        let index = EmbeddingIndex(embedder: embedder, directoryURL: directory)
+        let item = coffee
+        let pending = Task { await index.upsert(item) }
+        await embedder.waitForArrival()
+
+        await index.removeAll()
+        await embedder.release()
+        await pending.value
+
+        let stored = await index.count
+        XCTAssertEqual(stored, 0)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: index.fileURL.path))
+    }
+
+    func testRemoveDuringPendingRebuildDoesNotRestoreVector() async {
+        let embedder = GatedEmbedder()
+        let index = EmbeddingIndex(embedder: embedder, directoryURL: directory)
+        let snapshot = [coffee]
+        let pending = Task { await index.rebuild(from: snapshot) }
+        await embedder.waitForArrival()
+
+        await index.remove(id: coffee.id)
+        await embedder.release()
+        await pending.value
+
+        let reopened = EmbeddingIndex(embedder: FakeEmbedder(), directoryURL: directory)
+        let stored = await reopened.count
         XCTAssertEqual(stored, 0)
     }
 

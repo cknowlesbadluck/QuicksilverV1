@@ -83,10 +83,12 @@ public struct FallbackEmbedder: MemoryEmbedder {
         self.chain = chain
     }
 
+    /// Revision of the first tier with a model, or `nil` when none has one.
     public func currentRevision() async -> String? {
         await activeEmbedder()?.revision
     }
 
+    /// Embeds with the first tier that has a model.
     public func embed(_ text: String) async -> MemoryEmbedding? {
         await activeEmbedder()?.embedder.embed(text)
     }
@@ -101,6 +103,7 @@ public struct FallbackEmbedder: MemoryEmbedder {
     }
 }
 
+/// Factory for the production on-device embedding chain.
 public enum OnDeviceEmbedder {
     /// Input cap so very long memories cannot stall the model.
     public static let maximumInputCharacters = 2_000
@@ -114,6 +117,7 @@ public enum OnDeviceEmbedder {
         #endif
     }
 
+    /// Trimmed, length-capped input, or `nil` for blank text.
     static func prepared(_ text: String) -> String? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -145,10 +149,12 @@ public actor ContextualEmbedder: MemoryEmbedder {
         self.allowsAssetRequest = allowsAssetRequest
     }
 
+    /// Loads the model (requesting assets if needed) and returns its revision.
     public func currentRevision() async -> String? {
         await prepare()?.revision
     }
 
+    /// Mean-pooled, L2-normalized contextual vector for `text`.
     public func embed(_ text: String) async -> MemoryEmbedding? {
         guard let input = OnDeviceEmbedder.prepared(text) else { return nil }
         guard let loaded = await prepare(),
@@ -233,10 +239,12 @@ public actor SentenceEmbedder: MemoryEmbedder {
         self.language = language
     }
 
+    /// Revision of the sentence embedding, or `nil` when the OS has none for the language.
     public func currentRevision() async -> String? {
         prepare()?.revision
     }
 
+    /// L2-normalized sentence vector for `text`.
     public func embed(_ text: String) async -> MemoryEmbedding? {
         guard let input = OnDeviceEmbedder.prepared(text) else { return nil }
         guard let loaded = prepare(),

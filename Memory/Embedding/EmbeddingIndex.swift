@@ -14,11 +14,13 @@ public actor EmbeddingIndex {
     public static let fileName = "memory-embeddings.v1.json"
     static let formatVersion = 1
 
+    /// How a search was scored.
     public enum Method: Sendable, Equatable {
         case vector(revision: String)
         case termOverlap
     }
 
+    /// One ranked memory id with its similarity score (cosine, or term overlap in 0 ... 1).
     public struct Match: Sendable, Equatable {
         public let id: UUID
         public let score: Double
@@ -29,17 +31,20 @@ public actor EmbeddingIndex {
         }
     }
 
+    /// Ranked matches, best first, plus the scoring method used.
     public struct SearchResult: Sendable, Equatable {
         public let method: Method
         public let matches: [Match]
     }
 
+    /// One stored vector: model revision, content fingerprint, unit vector.
     struct Entry: Codable, Equatable, Sendable {
         var revision: String
         var fingerprint: String
         var vector: [Float]
     }
 
+    /// On-disk sidecar format, keyed by memory id string.
     struct Sidecar: Codable, Sendable {
         var format: Int
         var revision: String?
@@ -51,6 +56,9 @@ public actor EmbeddingIndex {
     private var revision: String?
     private var entries: [UUID: Entry] = [:]
     private var isLoaded = false
+    /// Bumped by `remove` / `removeAll`. Work that suspended in the embedder checks it
+    /// before writing, so a deletion can't be undone by an embed that was already running.
+    private var deletionGeneration = 0
 
     /// - Parameter directoryURL: sidecar directory; defaults to `Application Support/Mercury`.
     public init(
@@ -83,7 +91,10 @@ public actor EmbeddingIndex {
         if let entry = entries[item.id], entry.revision == revision, entry.fingerprint == fingerprint {
             return
         }
-        guard let embedding = await embedder.embed(text) else {
+        let generation = deletionGeneration
+        let embedding = await embedder.embed(text)
+        guard generation == deletionGeneration else { return }
+        guard let embedding else {
             if entries.removeValue(forKey: item.id) != nil { save() }
             return
         }
@@ -92,19 +103,25 @@ public actor EmbeddingIndex {
         save()
     }
 
-    /// Drops the vector for a deleted memory.
+    /// Drops the vector for a deleted memory. Embeds already in flight won't restore it.
     public func remove(id: UUID) {
         loadIfNeeded()
+        deletionGeneration += 1
         guard entries.removeValue(forKey: id) != nil else { return }
         save()
     }
 
-    /// Drops every vector and the sidecar file.
+    /// Drops every vector and the sidecar file. Embeds already in flight won't restore them.
+    /// If the file can't be deleted it is overwritten with an empty index instead.
     public func removeAll() {
+        deletionGeneration += 1
         entries.removeAll()
         revision = nil
         isLoaded = true
-        try? FileManager.default.removeItem(at: fileURL)
+        let fileManager = FileManager.default
+        if (try? fileManager.removeItem(at: fileURL)) == nil, fileManager.fileExists(atPath: fileURL.path) {
+            save()
+        }
     }
 
     /// Brings the sidecar in line with `items`: prunes vectors for memories that no longer
@@ -124,7 +141,11 @@ public actor EmbeddingIndex {
             if let entry = entries[item.id], entry.revision == revision, entry.fingerprint == fingerprint {
                 continue
             }
-            guard let embedding = await embedder.embed(text) else {
+            let generation = deletionGeneration
+            let embedding = await embedder.embed(text)
+            // A deletion ran while embedding: this snapshot of `items` is stale, so stop.
+            guard generation == deletionGeneration else { break }
+            guard let embedding else {
                 if entries.removeValue(forKey: item.id) != nil { changed = true }
                 continue
             }
@@ -149,6 +170,7 @@ public actor EmbeddingIndex {
 
         var scored: [Match] = []
         var changed = false
+        let generation = deletionGeneration
         for item in candidates {
             let text = Self.text(for: item)
             let fingerprint = Self.fingerprint(text)
@@ -156,14 +178,17 @@ public actor EmbeddingIndex {
             if let entry = entries[item.id], entry.revision == queryRevision, entry.fingerprint == fingerprint {
                 vector = entry.vector
             } else if let embedding = await embedder.embed(text), embedding.revision == queryRevision {
-                entries[item.id] = Entry(revision: queryRevision, fingerprint: fingerprint, vector: embedding.vector)
                 vector = embedding.vector
-                changed = true
+                // Score the caller's item, but only cache it if nothing was deleted meanwhile.
+                if generation == deletionGeneration {
+                    entries[item.id] = Entry(revision: queryRevision, fingerprint: fingerprint, vector: embedding.vector)
+                    changed = true
+                }
             }
             guard let vector else { continue }
             scored.append(Match(id: item.id, score: EmbeddingMath.cosine(queryEmbedding.vector, vector)))
         }
-        if changed { save() }
+        if changed, generation == deletionGeneration { save() }
         return SearchResult(method: .vector(revision: queryRevision), matches: Self.ranked(scored, limit: limit))
     }
 
