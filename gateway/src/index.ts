@@ -1,8 +1,10 @@
 /**
  * Mercury Gateway Worker.
  * M3-T15: health endpoint. M3-T16: device-token auth, per-token RPM limit, and
- * per-candidate daily budgets on `POST /v1/chat`. Streaming, providers, and the router
- * land in M3-T17..T20; until then an admitted chat request gets `upstream_unavailable`.
+ * per-candidate daily budgets on `POST /v1/chat`. M3-T17: protocol v1 stream layer
+ * (src/stream.ts) and a deterministic fake upstream behind local `FAKE_MODE`. Real
+ * providers and the router land in M3-T18..T20; until then an admitted chat request
+ * gets `upstream_unavailable` (or the fake stream when `FAKE_MODE` names a script).
  *
  * Privacy: never log request or response bodies or tokens — Workers Logs stay metadata-only.
  * Route policy: query, fragment, and userinfo are rejected so a device token cannot ride
@@ -17,10 +19,17 @@ import {
   routingConfig,
   type RoutingConfig,
 } from "./limits";
+import { FAKE_SCRIPTS, FakeProvider, fakeScenario } from "./providers/fake";
+import { errorResponse, openV1Stream, streamResponse, type ChatRequestV1 } from "./stream";
 
 export interface Env {
   /** Worker secret set by Christopher at HG3 (`wrangler secret put DEVICE_TOKEN`). */
   DEVICE_TOKEN?: string;
+  /**
+   * Local development only (`.dev.vars`, never a deployed var): names a script in
+   * `FAKE_SCRIPTS` (`1` / `true` = `happy`) so admitted chats stream from the fake.
+   */
+  FAKE_MODE?: string;
 }
 
 /** In-isolate limiter state (best-effort; see limits.ts). */
@@ -53,47 +62,55 @@ function plain(status: number, body: string): Response {
   });
 }
 
-type ErrorCode = "unauthorized" | "rate_limited" | "budget_exhausted" | "upstream_unavailable";
-
-/** A single protocol v1 `error` event (same bytes as gateway/fixtures/*.sse). */
-function sseError(
-  status: number,
-  code: ErrorCode,
-  extra: { retryAfter?: number; headers?: Record<string, string> } = {},
-): Response {
-  const data = extra.retryAfter === undefined ? { code } : { code, retryAfter: extra.retryAfter };
-  return new Response(`event: error\ndata: ${JSON.stringify(data)}\n\n`, {
-    status,
-    headers: {
-      "content-type": "text/event-stream; charset=utf-8",
-      "cache-control": "no-store",
-      ...extra.headers,
-    },
-  });
+/** Parses the JSON body as an object; full validation lands with the router (M3-T20). */
+async function readChatBody(request: Request): Promise<ChatRequestV1 | null> {
+  try {
+    const body: unknown = await request.json();
+    return typeof body === "object" && body !== null && !Array.isArray(body)
+      ? (body as ChatRequestV1)
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 async function handleChat(request: Request, env: Env, state: GatewayState, now: number) {
   const auth = await authenticate(request, env.DEVICE_TOKEN);
   if (!auth.ok) {
-    return sseError(401, "unauthorized", { headers: { "www-authenticate": "Bearer" } });
+    return errorResponse(401, { code: "unauthorized" }, { "www-authenticate": "Bearer" });
   }
 
   const rate = state.rpm.check(auth.tokenKey, now);
   if (!rate.ok) {
-    return sseError(429, "rate_limited", {
-      retryAfter: rate.retryAfter,
-      headers: { "retry-after": String(rate.retryAfter) },
-    });
+    return errorResponse(
+      429,
+      { code: "rate_limited", retryAfter: rate.retryAfter },
+      { "retry-after": String(rate.retryAfter) },
+    );
   }
 
   // 200 + typed error event: the app reads it and goes on-device.
   if (firstCandidateWithBudget(state.config, state.budgets, now) === null) {
-    return sseError(200, "budget_exhausted");
+    return errorResponse(200, { code: "budget_exhausted" });
   }
 
-  // No provider adapters yet (M3-T17..T20). The router will call
+  const scenario = fakeScenario(env.FAKE_MODE);
+  if (scenario !== null) {
+    const body = await readChatBody(request);
+    if (body === null) return errorResponse(400, { code: "bad_request" });
+    const provider = new FakeProvider(FAKE_SCRIPTS[scenario]);
+    const abort = new AbortController();
+    const opened = await openV1Stream(
+      provider.meta,
+      provider.stream({ request: body, signal: abort.signal }),
+      { abort },
+    );
+    return streamResponse(opened);
+  }
+
+  // No real provider adapters yet (M3-T18..T20). The router will call
   // `state.budgets.tryConsume(candidate, now)` before each upstream attempt.
-  return sseError(200, "upstream_unavailable");
+  return errorResponse(200, { code: "upstream_unavailable" });
 }
 
 /** Exported for unit tests (no network). */
