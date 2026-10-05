@@ -60,9 +60,9 @@ extension MercuryBrain {
         memoryIndexSyncTask?.cancel()
         memoryIndexSyncTask = Task { [weak self] in
             guard let self else { return }
-            // Register first so updates during rebuild are buffered. Use a large
-            // newest-buffer so a busy import/clear cannot drop IDs before apply.
-            let stream = await eventBus.events(bufferingNewest: 512) { event in
+            // Register first with lossless buffering so updates during rebuild
+            // cannot be dropped before the apply loop runs.
+            let stream = await eventBus.events(bufferingNewest: nil) { event in
                 if case .memoryDidUpdate = event { return true }
                 return false
             }
