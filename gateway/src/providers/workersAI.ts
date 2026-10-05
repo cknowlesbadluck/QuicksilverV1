@@ -65,8 +65,15 @@ const CODE_MAP: Record<string, ErrorCode> = {
  */
 export function classifyWorkersAIError(error: unknown): ErrorCode {
   const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
-  const code = /\b([35]\d{3})\b/.exec(message)?.[1];
-  if (code !== undefined && CODE_MAP[code] !== undefined) return CODE_MAP[code];
+  // Workers AI prefixes its code (`3036: You have used up ...`); trust that one first so
+  // an unmapped real code (5035) is never shadowed by a mapped number later in the text.
+  const prefixed = /(?:^|[\s:])([35]\d{3}):/.exec(message)?.[1];
+  if (prefixed !== undefined) return CODE_MAP[prefixed] ?? "upstream_unavailable";
+  // Otherwise take the first mapped code anywhere (other numbers must not shadow it).
+  for (const match of message.matchAll(/\b([35]\d{3})\b/g)) {
+    const mapped = CODE_MAP[match[1] ?? ""];
+    if (mapped !== undefined) return mapped;
+  }
   if (/daily free allocation/i.test(message)) return "budget_exhausted";
   if (/capacity temporarily exceeded/i.test(message)) return "rate_limited";
   return "upstream_unavailable";

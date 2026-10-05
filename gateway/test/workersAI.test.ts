@@ -204,6 +204,16 @@ describe("Workers AI binding errors", () => {
     );
     expect(classifyWorkersAIError(new Error("5007: No such model"))).toBe("upstream_unavailable");
     expect(classifyWorkersAIError("boom")).toBe("upstream_unavailable");
+  });
+
+  it("uses the prefixed Workers AI code, and other numbers never shadow a mapped code", () => {
+    // No prefix: the first *mapped* code wins over an unrelated number.
+    expect(classifyWorkersAIError(new Error("5000 tokens exceeds limit (3006)"))).toBe("bad_request");
+    // A prefixed unmapped code is final, even if the text mentions a mapped one.
+    expect(classifyWorkersAIError(new Error("AiError: 5035: paid plan required (see 3036 docs)"))).toBe(
+      "upstream_unavailable",
+    );
+    expect(classifyWorkersAIError(new Error("3040: busy, 5000 queued"))).toBe("rate_limited");
     expect(classifyWorkersAIError(undefined)).toBe("upstream_unavailable");
   });
 
