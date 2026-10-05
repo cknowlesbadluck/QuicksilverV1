@@ -3,8 +3,9 @@
  * M3-T15: health endpoint. M3-T16: device-token auth, per-token RPM limit, and
  * per-candidate daily budgets on `POST /v1/chat`. M3-T17: protocol v1 stream layer
  * (src/stream.ts) and a deterministic fake upstream behind local `FAKE_MODE`. M3-T18:
- * Gemini + OpenAI-compatible adapters (src/providers/), not wired here yet. The router
- * (M3-T20) wires them in; until then an admitted chat request gets
+ * Gemini + OpenAI-compatible adapters (src/providers/). M3-T19: Workers AI adapter over
+ * the free `env.AI` binding. None are wired here yet. The router (M3-T20) wires them in;
+ * until then an admitted chat request gets
  * `upstream_unavailable` (or the fake stream when `FAKE_MODE` names a script).
  *
  * Privacy: never log request or response bodies or tokens — Workers Logs stay metadata-only.
@@ -21,6 +22,7 @@ import {
   type RoutingConfig,
 } from "./limits";
 import { FAKE_SCRIPTS, FakeProvider, fakeScenario } from "./providers/fake";
+import type { WorkersAIBinding } from "./providers/workersAI";
 import { errorResponse, openV1Stream, streamResponse, type ChatRequestV1 } from "./stream";
 
 export interface Env {
@@ -31,6 +33,11 @@ export interface Env {
    * `FAKE_SCRIPTS` (`1` / `true` = `happy`) so admitted chats stream from the fake.
    */
   FAKE_MODE?: string;
+  /**
+   * Workers AI binding (`[ai]` in wrangler.toml, M3-T19): free daily allocation on
+   * Workers Free; past it requests fail (`budget_exhausted`) instead of billing.
+   */
+  AI?: WorkersAIBinding;
 }
 
 /** In-isolate limiter state (best-effort; see limits.ts). */
@@ -109,7 +116,7 @@ async function handleChat(request: Request, env: Env, state: GatewayState, now: 
     return streamResponse(opened);
   }
 
-  // The Gemini and OpenAI-compatible adapters (M3-T18) exist but are not wired into
+  // The Gemini, OpenAI-compatible (M3-T18) and Workers AI (M3-T19) adapters exist but are not wired into
   // POST /v1/chat until the router lands (M3-T20). The router will call
   // `state.budgets.tryConsume(candidate, now)` before each upstream attempt.
   return errorResponse(200, { code: "upstream_unavailable" });

@@ -6,8 +6,9 @@ gateway URL + device token only; provider keys live here (never in the iOS app).
 Landed so far: `GET /v1/health` (M3-T15); device-token auth, a per-token RPM
 limit, and per-candidate daily budgets on `POST /v1/chat` (M3-T16); and the protocol
 v1 stream layer plus a deterministic fake upstream (M3-T17); and the Gemini (main) and
-OpenAI-compatible (Groq backup) adapters (M3-T18). The Workers AI adapter and the router
-that wires adapters into `POST /v1/chat` land in M3-T19–T20; until then an admitted chat
+OpenAI-compatible (Groq backup) adapters (M3-T18); and the Workers AI adapter (last
+resort) over the free `env.AI` binding (M3-T19). The router that wires adapters into
+`POST /v1/chat` lands in M3-T20; until then an admitted chat
 request gets a typed `upstream_unavailable` event (or the fake stream in local `FAKE_MODE`).
 
 ## Route policy (fail closed)
@@ -75,6 +76,7 @@ per-candidate context redaction before each attempt).
 |---|---|---|
 | `src/providers/gemini.ts` (main) | `POST …/v1beta/models/{model}:streamGenerateContent?alt=sse` | `GEMINI_API_KEY` in the `x-goog-api-key` header |
 | `src/providers/openaiCompatible.ts` (Groq backup; xAI / OpenRouter / Mistral later via another base URL) | `POST {baseUrl}/chat/completions`, `stream: true` | `GROQ_API_KEY` as `Authorization: Bearer` |
+| `src/providers/workersAI.ts` (last resort, M3-T19) | `env.AI.run(model, { messages, stream: true, max_tokens }, { signal })` | None: the `[ai]` binding in `wrangler.toml` |
 
 Shared behaviour (`src/providers/upstream.ts`, `src/providers/sse.ts`):
 
@@ -101,16 +103,35 @@ Shared behaviour (`src/providers/upstream.ts`, `src/providers/sse.ts`):
 - **Privacy.** Bodies are never logged. Error bodies are read (at most 16 KiB) only for
   a retry delay or an invalid-key reason.
 
+### Workers AI (M3-T19)
+
+- **Free only.** Workers AI is included in Workers Free with 10,000 Neurons a day
+  (resets 00:00 UTC). With no payment method nothing is billed: past the allocation
+  the binding throws error `3036`, which the adapter reports as `budget_exhausted`.
+  Models that need Workers Paid (error `5035`) must not be configured; if one is, it
+  is `upstream_unavailable`.
+- **Stream.** `data: {"response": …}` chunks (or OpenAI-style
+  `choices[0].delta.content`) become deltas, `usage` on the final chunk becomes
+  `done` usage, and `[DONE]` ends the stream. An in-stream `error` / `errors` object or
+  malformed JSON is `upstream_unavailable`; EOF without `[DONE]` is incomplete.
+- **Binding errors** map by Workers AI code: `3036` → `budget_exhausted`, `3040`
+  (capacity) → `rate_limited`, `3007` → `timeout`, `3003` / `3006` → `bad_request`,
+  anything else (no such model, paid-only model, blocked account) →
+  `upstream_unavailable`. A missing `env.AI` is `upstream_unavailable` with no call.
+- **Cancellation.** The abort signal is passed to `run`, and the binding's stream is
+  cancelled when the v1 body is cancelled.
+
 Tests (`test/gemini.test.ts`, `test/openaiCompatible.test.ts`, `test/sse.test.ts`,
 `test/upstream.test.ts`) use an injected `fetch` and the streams in
-`fixtures/upstream/`. Those fixtures are hand-written in each provider's documented
+`fixtures/upstream/`; `test/workersAI.test.ts` uses a mocked `env.AI` binding. Those fixtures are hand-written in each provider's documented
 streaming format (no network and no keys are used here); HG3's eval run is the first
 check against the live APIs.
 
 ## Constraints (owner decisions)
 
 - **Free tier only.** No paid Cloudflare products. No payment method on the account.
-- **No paid bindings** in `wrangler.toml` (no KV / R2 / D1 / Queues / AI yet).
+- **No paid bindings** in `wrangler.toml` (no KV / R2 / D1 / Queues). The only binding
+  is Workers AI (`[ai]`), which is free on Workers Free and fails instead of billing.
 - **Workers Logs = metadata only.** Do not `console.log` request or response bodies.
 - **Agents never create accounts, deploy, or add secrets.** That is Christopher only (HG2 / HG3).
 
@@ -156,9 +177,10 @@ Secrets (`DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, …) are **HG3**, not
 | `src/limits.ts` | Per-token RPM limiter, per-candidate daily budgets |
 | `src/stream.ts` | Protocol v1 events, SSE encoding, stream grammar, provider interface |
 | `src/providers/fake.ts` | Deterministic fake upstream + `FAKE_MODE` scripts |
+| `src/providers/{gemini,openaiCompatible,workersAI}.ts` | Provider adapters (Gemini main, Groq backup, Workers AI last resort) |
 | `config/routing.json` | Candidate order, `dailyBudget`, `rpmPerToken` (no secrets) |
 | `test/*.test.ts` | Vitest coverage (no network) |
-| `wrangler.toml` | Free-tier Worker config + metadata-only observability |
+| `wrangler.toml` | Free-tier Worker config, free Workers AI binding, metadata-only observability |
 | `package.json` | `npm test` → Vitest |
 
 ## CI

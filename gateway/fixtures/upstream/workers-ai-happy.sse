@@ -1,0 +1,8 @@
+data: {"response":"Quick","p":"abcdefghij"}
+
+data: {"response":"silver.","p":"abcdefg"}
+
+data: {"response":"","usage":{"prompt_tokens":28,"completion_tokens":4,"total_tokens":32}}
+
+data: [DONE]
+
