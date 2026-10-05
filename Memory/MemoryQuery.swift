@@ -69,6 +69,23 @@ public struct MemoryQuery: Sendable {
         return result
     }
 
+    /// Drops items whose value matches a chat turn already carried in conversation history,
+    /// so Ask does not double-send the same text as both history and retrieved memory.
+    public static func excludingHistoryContents(
+        _ items: [MemoryItem],
+        historyContents: [String]
+    ) -> [MemoryItem] {
+        let excluded = Set(
+            historyContents
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        )
+        guard !excluded.isEmpty else { return items }
+        return items.filter {
+            !excluded.contains($0.value.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+    }
+
     /// On-device token overlap. Zero means the item does not match the user text.
     static func overlap(_ item: MemoryItem, tokens: [String]) -> Double {
         guard !tokens.isEmpty else { return 0 }
@@ -77,11 +94,27 @@ public struct MemoryQuery: Sendable {
         return Double(hits) / Double(tokens.count)
     }
 
+    /// Lexical rank used when no embedder is available: overlap × decayed importance.
     static func rank(_ item: MemoryItem, tokens: [String], now: Date) -> Double {
-        let overlap = overlap(item, tokens: tokens)
-        guard overlap > 0 else { return 0 }
-        let decayed = MemoryScorer.decayedImportance(for: item, now: now)
-        return overlap * 0.7 + decayed * 0.3
+        relevanceScore(item: item, cosine: nil, tokens: tokens, now: now)
+    }
+
+    /// Shared Ask score: cosine × decayedImportance when cosine is present,
+    /// otherwise term-overlap × decayedImportance.
+    public static func relevanceScore(
+        item: MemoryItem,
+        cosine: Double?,
+        tokens: [String],
+        now: Date
+    ) -> Double {
+        let similarity: Double
+        if let cosine, cosine > 0 {
+            similarity = cosine
+        } else {
+            similarity = overlap(item, tokens: tokens)
+        }
+        guard similarity > 0 else { return 0 }
+        return similarity * MemoryScorer.decayedImportance(for: item, now: now)
     }
 
     static func tokens(from text: String?) -> [String] {

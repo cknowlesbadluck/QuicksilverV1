@@ -82,4 +82,70 @@ final class MemoryRankFusionTests: XCTestCase {
         )
         XCTAssertTrue(fused.isEmpty)
     }
+
+    func testDecayLowersStaleMatchWithSameCosine() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        // temporary half-life is 2 days — 20 days old is heavily decayed.
+        let fresh = MemoryItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000006")!,
+            key: "note.fresh",
+            category: .temporary,
+            value: "vehicle parked downstairs",
+            createdAt: now,
+            updatedAt: now,
+            importance: 0.8
+        )
+        let stale = MemoryItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000007")!,
+            key: "note.stale",
+            category: .temporary,
+            value: "vehicle parked upstairs",
+            createdAt: now.addingTimeInterval(-20 * 86_400),
+            updatedAt: now.addingTimeInterval(-20 * 86_400),
+            importance: 0.8
+        )
+        let fused = MemoryRankFusion.fuse(
+            pool: [stale, fresh],
+            vectorMatches: [
+                EmbeddingIndex.Match(id: stale.id, score: 0.7),
+                EmbeddingIndex.Match(id: fresh.id, score: 0.7)
+            ],
+            text: "where is the vehicle",
+            limit: 2,
+            now: now
+        )
+        XCTAssertEqual(fused.map(\.id), [fresh.id, stale.id])
+    }
+
+    func testCosineTimesDecayBeatsImportantIrrelevant() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let relevant = MemoryItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000008")!,
+            key: "note.relevant",
+            category: .temporary,
+            value: "coupe lives in garage",
+            createdAt: now,
+            updatedAt: now,
+            importance: 0.2
+        )
+        // No shared tokens with the query (avoid stopwords like "is").
+        let important = MemoryItem(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000009")!,
+            key: "note.important",
+            category: .temporary,
+            value: "buy oat milk tomorrow",
+            createdAt: now,
+            updatedAt: now,
+            importance: 0.99
+        )
+        let fused = MemoryRankFusion.fuse(
+            pool: [important, relevant],
+            vectorMatches: [EmbeddingIndex.Match(id: relevant.id, score: 0.85)],
+            text: "where is the vehicle",
+            limit: 2,
+            now: now
+        )
+        XCTAssertEqual(fused.first?.id, relevant.id)
+        XCTAssertEqual(fused.map(\.id), [relevant.id])
+    }
 }

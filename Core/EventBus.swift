@@ -68,15 +68,23 @@ public actor EventBus {
     /// Cancellation of the consuming task finishes the underlying continuation.
     ///
     /// - Parameters:
-    ///   - bufferingNewest: Per-stream buffer size (newest events are kept).
+    ///   - bufferingNewest: Per-stream newest-event buffer size. Pass `nil` for
+    ///     unbounded (lossless) buffering — needed when a slow consumer must not
+    ///     drop events (e.g. embedding sidecar sync across a rebuild).
     ///   - isIncluded: Per-stream filter applied before buffering, so events this
     ///     consumer ignores can never evict ones it needs. Other subscribers are unaffected.
     public func events(
-        bufferingNewest limit: Int = 32,
+        bufferingNewest limit: Int? = 32,
         where isIncluded: @escaping @Sendable (Event) -> Bool = { _ in true }
     ) -> AsyncStream<Event> {
         let id = UUID()
-        let (stream, continuation) = AsyncStream<Event>.makeStream(bufferingPolicy: .bufferingNewest(max(1, limit)))
+        let policy: AsyncStream<Event>.Continuation.BufferingPolicy
+        if let limit {
+            policy = .bufferingNewest(max(1, limit))
+        } else {
+            policy = .unbounded
+        }
+        let (stream, continuation) = AsyncStream<Event>.makeStream(bufferingPolicy: policy)
         continuations[id] = StreamSubscription(continuation: continuation, isIncluded: isIncluded)
         continuation.onTermination = { [weak self] _ in
             Task { await self?.removeContinuation(id) }

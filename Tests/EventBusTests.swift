@@ -223,6 +223,29 @@ final class EventBusTests: XCTestCase {
         XCTAssertEqual(unfilteredCount, 41)
     }
 
+    func testUnboundedBufferRetainsEventsUnderBackpressure() async {
+        let bus = EventBus()
+        let stream = await bus.events(bufferingNewest: nil) { event in
+            if case .custom = event { return true }
+            return false
+        }
+
+        let total = 200
+        for index in 0..<total {
+            await bus.publish(.custom(name: "burst", payload: ["index": "\(index)"]))
+        }
+
+        var seen = 0
+        for await event in stream {
+            guard case .custom(let name, _) = event, name == "burst" else {
+                return XCTFail("Unexpected event \(event)")
+            }
+            seen += 1
+            if seen == total { break }
+        }
+        XCTAssertEqual(seen, total)
+    }
+
     func testCallbackAndStreamBothReceive() async {
         let bus = EventBus()
         let callbackExpectation = XCTestExpectation(description: "Callback received")

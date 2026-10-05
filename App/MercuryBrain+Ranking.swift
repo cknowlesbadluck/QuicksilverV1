@@ -3,13 +3,26 @@ import Core
 import Memory
 
 extension MercuryBrain {
-    /// Ask-path ranking. Vector hits can surface a note with no shared tokens.
-    /// Term-overlap fallback keeps the existing lexical query when no model is loaded.
-    func rankedMemories(for query: String, limit: Int) async -> [MemoryItem] {
+    /// Ask-path ranking. Score is cosine × decayedImportance when the embedder
+    /// is loaded; term-overlap × decayedImportance otherwise. Chat turns already
+    /// present in conversation history are dropped so they are not double-sent.
+    func rankedMemories(
+        for query: String,
+        limit: Int,
+        excludingHistory history: [Message] = []
+    ) async -> [MemoryItem] {
+        let historyContents = history.map(\.content)
         guard let memoryIndex else {
-            return retrieveSnapshot(limit: limit, text: query)
+            return lexicalMemories(for: query, limit: limit, excluding: historyContents)
         }
-        let pool = retrieveSnapshot(limit: 48, text: nil)
+        // Exclude history first, then cap the vector pool so history turns cannot
+        // crowd out eligible notes under the 48-candidate search budget.
+        let pool = Array(
+            MemoryQuery.excludingHistoryContents(
+                retrieveSnapshot(limit: 96, text: nil),
+                historyContents: historyContents
+            ).prefix(48)
+        )
         let result = await memoryIndex.search(query, in: pool, limit: nil)
         switch result.method {
         case .vector:
@@ -20,7 +33,50 @@ extension MercuryBrain {
                 limit: limit
             )
         case .termOverlap:
-            return retrieveSnapshot(limit: limit, text: query)
+            return lexicalMemories(for: query, limit: limit, excluding: historyContents)
+        }
+    }
+
+    /// Over-fetches, drops history matches, then applies `limit` so excluded turns
+    /// do not consume ranked slots.
+    private func lexicalMemories(
+        for query: String,
+        limit: Int,
+        excluding historyContents: [String]
+    ) -> [MemoryItem] {
+        guard limit > 0 else { return [] }
+        let overFetch = max(limit * 4, 24)
+        let eligible = MemoryQuery.excludingHistoryContents(
+            retrieveSnapshot(limit: overFetch, text: query),
+            historyContents: historyContents
+        )
+        return Array(eligible.prefix(limit))
+    }
+
+    /// Keeps the on-device vector sidecar aligned with MemoryManager via `memoryDidUpdate`.
+    /// Call after the initial `memoryManager.load()` so the first rebuild sees persisted items.
+    func startMemoryIndexSync() {
+        guard let memoryIndex else { return }
+        memoryIndexSyncTask?.cancel()
+        memoryIndexSyncTask = Task { [weak self] in
+            guard let self else { return }
+            // Register first with lossless buffering so updates during rebuild
+            // cannot be dropped before the apply loop runs.
+            let stream = await eventBus.events(bufferingNewest: nil) { event in
+                if case .memoryDidUpdate = event { return true }
+                return false
+            }
+            await memoryIndex.rebuild(from: memoryManager.items)
+            for await event in stream {
+                guard !Task.isCancelled else { break }
+                guard case .memoryDidUpdate(let itemID) = event,
+                      let id = UUID(uuidString: itemID) else { continue }
+                if let item = memoryManager.items.first(where: { $0.id == id }) {
+                    await memoryIndex.upsert(item)
+                } else {
+                    await memoryIndex.remove(id: id)
+                }
+            }
         }
     }
 }

@@ -1,11 +1,12 @@
 import Foundation
 import Core
 
-/// Fuses lexical overlap with on-device cosine hits.
+/// Ranks memories for Ask by relevance × decayed importance (M3-T14).
 ///
-/// Lexical ranking stays the floor. A vector hit can surface a note that shares
-/// no tokens with the question, but only above `vectorFloor`, so a weak cosine
-/// cannot drag an unrelated memory into the cloud payload.
+/// When a cosine hit clears `vectorFloor`, score = cosine × `decayedImportance`.
+/// Otherwise score = term-overlap × `decayedImportance` (the no-embedder path).
+/// Weak cosine cannot surface an unrelated note; decay keeps stale hits from
+/// crowding fresher ones with the same similarity.
 public enum MemoryRankFusion {
     /// Cosine below this is treated as no match. 0.22 is above noise for the
     /// short on-device embeddings used by `EmbeddingIndex` and below typical
@@ -27,17 +28,13 @@ public enum MemoryRankFusion {
 
         var ranked: [(item: MemoryItem, score: Double)] = []
         for item in pool {
-            let lexical = tokens.isEmpty ? 0 : MemoryQuery.rank(item, tokens: tokens, now: now)
             let cosine = vectors[item.id] ?? 0
-            let vector = cosine >= vectorFloor ? cosine : 0
-            let score: Double
-            if vector > 0 && lexical > 0 {
-                score = lexical * 0.4 + vector * 0.6
-            } else if vector > 0 {
-                score = vector
-            } else {
-                score = lexical
-            }
+            let score = MemoryQuery.relevanceScore(
+                item: item,
+                cosine: cosine >= Self.vectorFloor ? cosine : nil,
+                tokens: tokens,
+                now: now
+            )
             guard score > 0 else { continue }
             ranked.append((item, score))
         }

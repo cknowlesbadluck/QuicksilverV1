@@ -18,11 +18,11 @@ import Nexus
 final class MercuryBrain {
 
     private let personaManager: PersonaManager
-    private let memoryManager: MemoryManager
+    let memoryManager: MemoryManager
     let memoryIndex: EmbeddingIndex?
     private let aiService: AIService
     let nexus: NexusCoordinator
-    private let eventBus: EventBus
+    let eventBus: EventBus
     private let logger: LoggerService
 
     private let intentEngine = IntentEngine()
@@ -40,6 +40,7 @@ final class MercuryBrain {
     private var lastAspectChangeAt: Date?
     /// Prior turns only. Current prompt is sent separately. Capped at 8 pairs.
     private var conversation: [Message] = []
+    var memoryIndexSyncTask: Task<Void, Never>?
 
     init(
         personaManager: PersonaManager,
@@ -250,7 +251,6 @@ extension MercuryBrain {
         }
     }
 
-
     /// M3-T7: skip the gateway while disconnected. On-device route is M3.5-T3.
     private func rejectAskWhileDisconnected() throws {
         guard nexus.state.networkStatus == "disconnected" else { return }
@@ -292,7 +292,7 @@ extension MercuryBrain {
         personality.recomputeForTurn(aspect: activeAspect)
         personality.noteInteraction()
         if turnRegister == .plain { personality.enterPlainRegister() }
-        let memoryCandidates = await rankedMemories(for: query, limit: 12)
+        let memoryCandidates = await rankedMemories(for: query, limit: 12, excludingHistory: conversation)
         let trains = aiService.primaryTrainsOnPrompts
         let level = CloudContextPolicy.resolvedLevel(
             requested: trains ? .minimal : .standard,
