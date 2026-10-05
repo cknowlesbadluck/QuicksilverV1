@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: M3-T14 Query-relevant retrieval (cosine × decayed importance). M3-T13 On-device embeddings + sidecar vector index is done. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
+Current focus: M3-T17 Unified stream + fake upstream (gateway). M3-T16 gateway auth + daily budgets + rate limits is done. M3-T14 Query-relevant retrieval is in flight in another agent's PR #228. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 
