@@ -20,7 +20,12 @@ export interface Candidate {
   id: string;
   provider: string;
   model: string;
+  /** Client-safe model label for `GET /v1/config` (M3-T20). */
+  displayModel: string;
+  /** True when the provider may train on prompts: the router then sends minimal context. */
   trainsOnPrompts: boolean;
+  /** Ceiling on the output tokens the router asks this candidate for (M3-T20). */
+  maxOutputTokens: number;
   /** Requests per UTC day the gateway allows for this candidate. */
   dailyBudget: number;
   /** The provider's free daily request limit (reference for the budget rule). */
@@ -29,8 +34,17 @@ export interface Candidate {
   freeResetsAtUtcMidnight: boolean;
 }
 
+/** Router timeouts per upstream attempt (M3-T20). */
+export interface RouterTimeouts {
+  /** No first chunk within this window: abort the attempt and fail over (`timeout`). */
+  firstByteMs: number;
+  /** No next chunk within this window after output began: close with `timeout`. */
+  idleMs: number;
+}
+
 export interface RoutingConfig {
   rpmPerToken: number;
+  timeouts: RouterTimeouts;
   tiers: Record<Tier, Candidate[]>;
 }
 

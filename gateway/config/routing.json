@@ -1,12 +1,18 @@
 {
   "rpmPerToken": 20,
+  "timeouts": {
+    "firstByteMs": 6000,
+    "idleMs": 12000
+  },
   "tiers": {
     "main": [
       {
         "id": "gemini-flash",
         "provider": "gemini",
         "model": "gemini-3.7-flash",
+        "displayModel": "Gemini Flash",
         "trainsOnPrompts": true,
+        "maxOutputTokens": 1536,
         "dailyBudget": 9,
         "freeDailyRequests": 20,
         "freeResetsAtUtcMidnight": false
@@ -17,7 +23,9 @@
         "id": "groq-gpt-oss-120b",
         "provider": "groq",
         "model": "openai/gpt-oss-120b",
+        "displayModel": "Groq gpt-oss-120b",
         "trainsOnPrompts": false,
+        "maxOutputTokens": 1536,
         "dailyBudget": 450,
         "freeDailyRequests": 1000,
         "freeResetsAtUtcMidnight": false
@@ -28,7 +36,9 @@
         "id": "workers-ai-llama",
         "provider": "workersAI",
         "model": "@cf/meta/llama-3.1-8b-instruct-fp8-fast",
+        "displayModel": "Workers AI",
         "trainsOnPrompts": false,
+        "maxOutputTokens": 1024,
         "dailyBudget": 500,
         "freeDailyRequests": 680,
         "freeResetsAtUtcMidnight": true

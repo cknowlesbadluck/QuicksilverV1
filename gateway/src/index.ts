@@ -4,9 +4,10 @@
  * per-candidate daily budgets on `POST /v1/chat`. M3-T17: protocol v1 stream layer
  * (src/stream.ts) and a deterministic fake upstream behind local `FAKE_MODE`. M3-T18:
  * Gemini + OpenAI-compatible adapters (src/providers/). M3-T19: Workers AI adapter over
- * the free `env.AI` binding. None are wired here yet. The router (M3-T20) wires them in;
- * until then an admitted chat request gets
- * `upstream_unavailable` (or the fake stream when `FAKE_MODE` names a script).
+ * the free `env.AI` binding. M3-T20: the router (src/router.ts) validates the body, picks
+ * a candidate per `config/routing.json`, redacts per candidate, fails over before the
+ * first delta, and serves the client-safe `GET /v1/config`. Local `FAKE_MODE` still
+ * replaces every upstream with the deterministic fake.
  *
  * Privacy: never log request or response bodies or tokens — Workers Logs stay metadata-only.
  * Route policy: query, fragment, and userinfo are rejected so a device token cannot ride
@@ -22,10 +23,18 @@ import {
   type RoutingConfig,
 } from "./limits";
 import { FAKE_SCRIPTS, FakeProvider, fakeScenario } from "./providers/fake";
-import type { WorkersAIBinding } from "./providers/workersAI";
+import {
+  clientConfig,
+  envProviders,
+  routeChat,
+  validateChatRequest,
+  type ProviderEnv,
+  type ProviderResolver,
+} from "./router";
 import { errorResponse, openV1Stream, streamResponse, type ChatRequestV1 } from "./stream";
 
-export interface Env {
+/** Secrets: `DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, optional `XAI_API_KEY` (HG3). */
+export interface Env extends ProviderEnv {
   /** Worker secret set by Christopher at HG3 (`wrangler secret put DEVICE_TOKEN`). */
   DEVICE_TOKEN?: string;
   /**
@@ -33,11 +42,6 @@ export interface Env {
    * `FAKE_SCRIPTS` (`1` / `true` = `happy`) so admitted chats stream from the fake.
    */
   FAKE_MODE?: string;
-  /**
-   * Workers AI binding (`[ai]` in wrangler.toml, M3-T19): free daily allocation on
-   * Workers Free; past it requests fail (`budget_exhausted`) instead of billing.
-   */
-  AI?: WorkersAIBinding;
 }
 
 /** In-isolate limiter state (best-effort; see limits.ts). */
@@ -45,13 +49,19 @@ export interface GatewayState {
   config: RoutingConfig;
   rpm: RpmLimiter;
   budgets: DailyBudgets;
+  /** Test seam: replaces the env-backed adapters (`envProviders`). */
+  providers?: ProviderResolver;
 }
 
-export function createState(config: RoutingConfig = routingConfig): GatewayState {
+export function createState(
+  config: RoutingConfig = routingConfig,
+  providers?: ProviderResolver,
+): GatewayState {
   return {
     config,
     rpm: new RpmLimiter(config.rpmPerToken),
     budgets: new DailyBudgets(),
+    providers,
   };
 }
 
@@ -59,6 +69,8 @@ const defaultState = createState();
 
 const HEALTH_PATH = "/v1/health";
 const CHAT_PATH = "/v1/chat";
+const CONFIG_PATH = "/v1/config";
+const ROUTES = new Set([HEALTH_PATH, CHAT_PATH, CONFIG_PATH]);
 
 function plain(status: number, body: string): Response {
   return new Response(body, {
@@ -70,13 +82,10 @@ function plain(status: number, body: string): Response {
   });
 }
 
-/** Parses the JSON body as an object; full validation lands with the router (M3-T20). */
+/** Parses and validates the JSON body (protocol v1); null means `bad_request`. */
 async function readChatBody(request: Request): Promise<ChatRequestV1 | null> {
   try {
-    const body: unknown = await request.json();
-    return typeof body === "object" && body !== null && !Array.isArray(body)
-      ? (body as ChatRequestV1)
-      : null;
+    return validateChatRequest(await request.json());
   } catch {
     return null;
   }
@@ -102,10 +111,11 @@ async function handleChat(request: Request, env: Env, state: GatewayState, now: 
     return errorResponse(200, { code: "budget_exhausted" });
   }
 
+  const body = await readChatBody(request);
+  if (body === null) return errorResponse(400, { code: "bad_request" });
+
   const scenario = fakeScenario(env.FAKE_MODE);
   if (scenario !== null) {
-    const body = await readChatBody(request);
-    if (body === null) return errorResponse(400, { code: "bad_request" });
     const provider = new FakeProvider(FAKE_SCRIPTS[scenario]);
     const abort = new AbortController();
     const opened = await openV1Stream(
@@ -116,10 +126,26 @@ async function handleChat(request: Request, env: Env, state: GatewayState, now: 
     return streamResponse(opened);
   }
 
-  // The Gemini, OpenAI-compatible (M3-T18) and Workers AI (M3-T19) adapters exist but are not wired into
-  // POST /v1/chat until the router lands (M3-T20). The router will call
-  // `state.budgets.tryConsume(candidate, now)` before each upstream attempt.
-  return errorResponse(200, { code: "upstream_unavailable" });
+  const opened = await routeChat(body, {
+    config: state.config,
+    budgets: state.budgets,
+    providers: state.providers ?? envProviders(env),
+    now,
+    signal: request.signal,
+  });
+  return streamResponse(opened);
+}
+
+/** `GET /v1/config`: device token required; client-safe routing only (no keys, budgets). */
+async function handleConfig(request: Request, env: Env, state: GatewayState): Promise<Response> {
+  const auth = await authenticate(request, env.DEVICE_TOKEN);
+  if (!auth.ok) {
+    return errorResponse(401, { code: "unauthorized" }, { "www-authenticate": "Bearer" });
+  }
+  return Response.json(clientConfig(state.config), {
+    status: 200,
+    headers: { "cache-control": "no-store" },
+  });
 }
 
 /** Exported for unit tests (no network). */
@@ -140,7 +166,7 @@ export async function handleRequest(
     return plain(400, "Bad Request");
   }
 
-  if (url.pathname !== HEALTH_PATH && url.pathname !== CHAT_PATH) {
+  if (!ROUTES.has(url.pathname)) {
     return plain(404, "Not Found");
   }
 
@@ -157,6 +183,10 @@ export async function handleRequest(
 
   if (request.method !== "GET") {
     return plain(405, "Method Not Allowed");
+  }
+
+  if (url.pathname === CONFIG_PATH) {
+    return handleConfig(request, env, state);
   }
 
   return Response.json(

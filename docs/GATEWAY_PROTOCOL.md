@@ -1,6 +1,6 @@
 # Mercury Gateway wire protocol v1
 
-Status: contract + fixtures + client (`GatewayAIProvider`, M3-T3) + routing config decode (`AIRoutingConfig` / `RoutingConfigStore`, M3-T4). The Worker serves `GET /v1/health` and an auth- and limit-gated `POST /v1/chat` (M3-T16: `unauthorized`, `rate_limited`, `budget_exhausted`; `upstream_unavailable` until providers land). M3-T17 adds the Worker's stream layer (`gateway/src/stream.ts`) and a deterministic fake upstream whose scripts reproduce every fixture byte for byte. M3-T18 adds the Gemini (main) and OpenAI-compatible (Groq backup) adapters; an upstream 401 / invalid provider key is reported as `upstream_unavailable`, never `unauthorized`, because `unauthorized` is reserved for the app's device token. M3-T19 adds the Workers AI (last resort) adapter over the free `env.AI` binding; its daily free allocation running out (error 3036) is `budget_exhausted`. Full gateway router is M3-T20.
+Status: contract + fixtures + client (`GatewayAIProvider`, M3-T3) + routing config decode (`AIRoutingConfig` / `RoutingConfigStore`, M3-T4). The Worker serves `GET /v1/health` and an auth- and limit-gated `POST /v1/chat` (M3-T16: `unauthorized`, `rate_limited`, `budget_exhausted`; `upstream_unavailable` until providers land). M3-T17 adds the Worker's stream layer (`gateway/src/stream.ts`) and a deterministic fake upstream whose scripts reproduce every fixture byte for byte. M3-T18 adds the Gemini (main) and OpenAI-compatible (Groq backup) adapters; an upstream 401 / invalid provider key is reported as `upstream_unavailable`, never `unauthorized`, because `unauthorized` is reserved for the app's device token. M3-T19 adds the Workers AI (last resort) adapter over the free `env.AI` binding; its daily free allocation running out (error 3036) is `budget_exhausted`. M3-T20 adds the router: per-candidate redaction (a `trainsOnPrompts` tier gets minimal context), failover only before the first delta, per-attempt timeouts, abort propagation, and `GET /v1/config`. `meta.route` is the tier that answered (`main`, `backup`, `lastResort`).
 
 ## Auth
 
@@ -89,7 +89,7 @@ Auth required (`Authorization: Bearer <device token>`). Returns the routing poli
 - `tasks.*.route`: `onDevice` or `cloud` (cloud requires `tier`: `main` | `backup` | `lastResort`).
 - `tiers.*.contextLevel`: `standard` | `minimal`. Any tier with `trainsOnPrompts: true` **must** use `minimal`.
 - `retry.maxAttempts`: `0` or `1` in this cut.
-- Not fully implemented on the Worker yet (M3-T20). The client tolerates fetch failure and keeps the bundled / cached copy (`RoutingConfigStore`).
+- Served by the Worker since M3-T20 (built from `gateway/config/routing.json`; must match `gateway/fixtures/config.json` for the default config). The client tolerates fetch failure and keeps the bundled / cached copy (`RoutingConfigStore`).
 
 ## Fixtures
 

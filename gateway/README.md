@@ -7,13 +7,14 @@ Landed so far: `GET /v1/health` (M3-T15); device-token auth, a per-token RPM
 limit, and per-candidate daily budgets on `POST /v1/chat` (M3-T16); and the protocol
 v1 stream layer plus a deterministic fake upstream (M3-T17); and the Gemini (main) and
 OpenAI-compatible (Groq backup) adapters (M3-T18); and the Workers AI adapter (last
-resort) over the free `env.AI` binding (M3-T19). The router that wires adapters into
-`POST /v1/chat` lands in M3-T20; until then an admitted chat
-request gets a typed `upstream_unavailable` event (or the fake stream in local `FAKE_MODE`).
+resort) over the free `env.AI` binding (M3-T19); and the router that wires them into
+`POST /v1/chat`, plus the client-safe `GET /v1/config` (M3-T20). With no provider
+secrets set, an admitted chat request gets a typed `upstream_unavailable` event (or the
+fake stream in local `FAKE_MODE`).
 
 ## Route policy (fail closed)
 
-- Only `GET /v1/health` and `POST /v1/chat` are routed.
+- Only `GET /v1/health`, `GET /v1/config` and `POST /v1/chat` are routed.
 - Query string, fragment, and userinfo return 400. A device token must not ride in the URL.
 - Other methods on those paths return 405.
 - Every other path returns 404 and the body does not echo the path.
@@ -68,9 +69,8 @@ then stream from the fake. Auth, the RPM limit and budgets still apply. Never se
 ## Provider adapters (M3-T18)
 
 Each adapter implements `Provider` from `src/stream.ts` and yields `delta` / `done` /
-`error` chunks; the stream layer adds `meta` and enforces the grammar. They are not
-wired into `POST /v1/chat` yet (the router does that in M3-T20, including
-per-candidate context redaction before each attempt).
+`error` chunks; the stream layer adds `meta` and enforces the grammar. The router
+(below) calls them, after per-candidate context redaction.
 
 | Adapter | Upstream | Key |
 |---|---|---|
@@ -127,6 +127,50 @@ Tests (`test/gemini.test.ts`, `test/openaiCompatible.test.ts`, `test/sse.test.ts
 streaming format (no network and no keys are used here); HG3's eval run is the first
 check against the live APIs.
 
+## Router (M3-T20)
+
+`src/router.ts` handles every admitted `POST /v1/chat` (after auth, the RPM limit and
+the budget check):
+
+1. **Validate** the body against protocol v1 (roles, context kinds, privacy values, a
+   positive integer `maxTokens`, size bounds). Anything else is 400 + `bad_request`.
+   Unknown fields are dropped, never forwarded.
+2. **Pick candidates in `config/routing.json` order:** Gemini Flash (main) → Groq
+   `openai/gpt-oss-120b` (backup) → Workers AI (last resort). After the last one the app
+   goes on-device. A candidate whose secret or binding is missing is **skipped**
+   (`GEMINI_API_KEY`, `GROQ_API_KEY`, optional `XAI_API_KEY` for a `provider: "xai"`
+   candidate, `env.AI`), and so is one with no daily budget left. Each real attempt
+   spends one request of that candidate's budget.
+3. **Redact per candidate** before each attempt. A `trainsOnPrompts` candidate (Gemini
+   free tier) gets `minimal`: system messages, the question and the last 2 turns, and
+   **no context blocks** (no memory, device, summary or history). Other candidates get
+   `standard`: the last 4 turns plus up to 3 memory, 1 device and 1 summary block.
+   `maxTokens` is clamped to the candidate's `maxOutputTokens`. Failing over can never
+   widen what a training provider sees.
+4. **Fail over only before the first delta**, on `rate_limited`, `upstream_unavailable`,
+   `timeout` or `budget_exhausted` (and a provider throw). `bad_request` is returned as
+   is. Once output has begun the stream is committed, and a later failure closes it
+   with a typed `error` (partial text kept).
+5. **Timeouts** (`timeouts` in `routing.json`): no first chunk within `firstByteMs`
+   (6 s) aborts the attempt and fails over; no next chunk within `idleMs` (12 s) after
+   output began closes the stream with `timeout`. Both sit inside the app's own
+   first-event (20 s, across all three candidates) and idle (15 s) timeouts.
+6. **Cancellation.** Each attempt has its own `AbortController`. Cancelling the
+   response body, or the client's request signal, aborts the upstream request; an
+   abandoned attempt is always aborted.
+
+`meta.route` is the tier that answered (`main`, `backup`, `lastResort`) and
+`meta.model` / `meta.trainsOnPrompts` come from the candidate. When every candidate
+fails, the app gets the last attempt's error (or `budget_exhausted` when budgets were the
+only reason nothing ran, or `upstream_unavailable` when nothing is configured).
+
+`GET /v1/config` needs the device token and returns the client-safe routing policy in
+`docs/GATEWAY_PROTOCOL.md` (tier labels, `trainsOnPrompts`, context level, client
+timeouts). It never includes provider ids, budgets, keys or tokens.
+
+Tests: `test/router.test.ts` (scripted fakes, plus the real adapters over an injected
+`fetch` and a mocked `env.AI` to pin the exact payload each provider receives).
+
 ## Constraints (owner decisions)
 
 - **Free tier only.** No paid Cloudflare products. No payment method on the account.
@@ -175,10 +219,11 @@ Secrets (`DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, …) are **HG3**, not
 | `src/index.ts` | Fetch handler and fail-closed route policy |
 | `src/auth.ts` | Bearer `DEVICE_TOKEN` check, constant-time compare |
 | `src/limits.ts` | Per-token RPM limiter, per-candidate daily budgets |
+| `src/router.ts` | Request validation, candidate order, per-candidate redaction, failover, timeouts, `/v1/config` |
 | `src/stream.ts` | Protocol v1 events, SSE encoding, stream grammar, provider interface |
 | `src/providers/fake.ts` | Deterministic fake upstream + `FAKE_MODE` scripts |
 | `src/providers/{gemini,openaiCompatible,workersAI}.ts` | Provider adapters (Gemini main, Groq backup, Workers AI last resort) |
-| `config/routing.json` | Candidate order, `dailyBudget`, `rpmPerToken` (no secrets) |
+| `config/routing.json` | Candidate order, `dailyBudget`, `maxOutputTokens`, router timeouts, `rpmPerToken` (no secrets) |
 | `test/*.test.ts` | Vitest coverage (no network) |
 | `wrangler.toml` | Free-tier Worker config, free Workers AI binding, metadata-only observability |
 | `package.json` | `npm test` → Vitest |
