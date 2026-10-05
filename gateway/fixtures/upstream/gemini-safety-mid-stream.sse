@@ -1,0 +1,4 @@
+data: {"candidates":[{"content":{"parts":[{"text":"Here is"}],"role":"model"},"index":0}]}
+
+data: {"candidates":[{"content":{"parts":[],"role":"model"},"finishReason":"SAFETY","index":0}]}
+

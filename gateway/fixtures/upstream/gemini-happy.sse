@@ -1,0 +1,6 @@
+data: {"candidates":[{"content":{"parts":[{"text":"Forge "}],"role":"model"},"index":0}],"usageMetadata":{"promptTokenCount":21,"candidatesTokenCount":1,"totalTokenCount":22},"modelVersion":"gemini-3.7-flash"}
+
+data: {"candidates":[{"content":{"parts":[{"text":"is "}],"role":"model"},"index":0}],"usageMetadata":{"promptTokenCount":21,"candidatesTokenCount":2,"totalTokenCount":23},"modelVersion":"gemini-3.7-flash"}
+
+data: {"candidates":[{"content":{"parts":[{"text":"awake."}],"role":"model"},"finishReason":"STOP","index":0}],"usageMetadata":{"promptTokenCount":21,"candidatesTokenCount":3,"totalTokenCount":24},"modelVersion":"gemini-3.7-flash"}
+

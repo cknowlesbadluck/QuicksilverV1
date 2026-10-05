@@ -1,0 +1,4 @@
+data: {"candidates":[{"content":{"parts":[{"text":"weighing it","thought":true}],"role":"model"},"index":0}],"usageMetadata":{"promptTokenCount":9,"candidatesTokenCount":0,"thoughtsTokenCount":4}}
+
+data: {"candidates":[{"content":{"parts":[{"text":"Eternal."}],"role":"model"},"finishReason":"MAX_TOKENS","index":0}],"usageMetadata":{"promptTokenCount":9,"candidatesTokenCount":2,"thoughtsTokenCount":4}}
+

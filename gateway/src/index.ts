@@ -2,9 +2,10 @@
  * Mercury Gateway Worker.
  * M3-T15: health endpoint. M3-T16: device-token auth, per-token RPM limit, and
  * per-candidate daily budgets on `POST /v1/chat`. M3-T17: protocol v1 stream layer
- * (src/stream.ts) and a deterministic fake upstream behind local `FAKE_MODE`. Real
- * providers and the router land in M3-T18..T20; until then an admitted chat request
- * gets `upstream_unavailable` (or the fake stream when `FAKE_MODE` names a script).
+ * (src/stream.ts) and a deterministic fake upstream behind local `FAKE_MODE`. M3-T18:
+ * Gemini + OpenAI-compatible adapters (src/providers/), not wired here yet. The router
+ * (M3-T20) wires them in; until then an admitted chat request gets
+ * `upstream_unavailable` (or the fake stream when `FAKE_MODE` names a script).
  *
  * Privacy: never log request or response bodies or tokens — Workers Logs stay metadata-only.
  * Route policy: query, fragment, and userinfo are rejected so a device token cannot ride
