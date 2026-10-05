@@ -1,0 +1,4 @@
+data: {"id":"chatcmpl-2","object":"chat.completion.chunk","model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{"content":"partial"},"finish_reason":null}]}
+
+data: {"error":{"message":"Service Unavailable","type":"internal_server_error"}}
+

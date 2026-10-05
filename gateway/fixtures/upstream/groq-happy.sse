@@ -1,0 +1,14 @@
+: keep-alive
+
+data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1,"model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1,"model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{"reasoning":"The user wants a name."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1,"model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{"content":"Quick"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1,"model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{"content":"silver."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-1","object":"chat.completion.chunk","created":1,"model":"openai/gpt-oss-120b","choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"x_groq":{"id":"req_1","usage":{"prompt_tokens":30,"completion_tokens":11,"total_tokens":41}}}
+
+data: [DONE]
+

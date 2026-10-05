@@ -5,9 +5,10 @@ gateway URL + device token only; provider keys live here (never in the iOS app).
 
 Landed so far: `GET /v1/health` (M3-T15); device-token auth, a per-token RPM
 limit, and per-candidate daily budgets on `POST /v1/chat` (M3-T16); and the protocol
-v1 stream layer plus a deterministic fake upstream (M3-T17). Real provider adapters
-and the router land in M3-T18–T20; until then an admitted chat request gets a typed
-`upstream_unavailable` event (or the fake stream in local `FAKE_MODE`).
+v1 stream layer plus a deterministic fake upstream (M3-T17); and the Gemini (main) and
+OpenAI-compatible (Groq backup) adapters (M3-T18). The Workers AI adapter and the router
+that wires adapters into `POST /v1/chat` land in M3-T19–T20; until then an admitted chat
+request gets a typed `upstream_unavailable` event (or the fake stream in local `FAKE_MODE`).
 
 ## Route policy (fail closed)
 
@@ -62,6 +63,49 @@ byte (`test/stream.test.ts`).
 (git-ignored; never commit it) and run `npm run dev`. Admitted chats
 then stream from the fake. Auth, the RPM limit and budgets still apply. Never set
 `FAKE_MODE` on the deployed Worker.
+
+## Provider adapters (M3-T18)
+
+Each adapter implements `Provider` from `src/stream.ts` and yields `delta` / `done` /
+`error` chunks; the stream layer adds `meta` and enforces the grammar. They are not
+wired into `POST /v1/chat` yet (the router does that in M3-T20, including
+per-candidate context redaction before each attempt).
+
+| Adapter | Upstream | Key |
+|---|---|---|
+| `src/providers/gemini.ts` (main) | `POST …/v1beta/models/{model}:streamGenerateContent?alt=sse` | `GEMINI_API_KEY` in the `x-goog-api-key` header |
+| `src/providers/openaiCompatible.ts` (Groq backup; xAI / OpenRouter / Mistral later via another base URL) | `POST {baseUrl}/chat/completions`, `stream: true` | `GROQ_API_KEY` as `Authorization: Bearer` |
+
+Shared behaviour (`src/providers/upstream.ts`, `src/providers/sse.ts`):
+
+- **Prompt.** `system` messages become the system instruction; `context` blocks are
+  rendered after it in one delimited `<untrusted_notes>` block that mirrors the app's
+  M3-T12 format (one line per note, angle brackets neutralized, 180-character cap).
+  Gemini gets `user` / `model` turns; OpenAI-compatible gets `system` / `user` /
+  `assistant` messages. `maxTokens` becomes `maxOutputTokens` / `max_completion_tokens`.
+- **Stream.** Text parts / `delta.content` become deltas. Gemini thought parts and
+  OpenAI-style `reasoning` fields are skipped. Gemini `STOP` / `MAX_TOKENS` and
+  OpenAI `[DONE]` (or a finish reason then EOF) end with `done` + usage. A blocked
+  prompt, a safety stop or `content_filter` is `bad_request`. An in-stream error
+  object or malformed JSON is `upstream_unavailable`. A stream that ends without a
+  finish is reported as incomplete by the stream layer.
+- **HTTP errors.** 429 → `rate_limited` with `Retry-After` (or Gemini's `RetryInfo`
+  delay); 408 / 504 → `timeout`; 400 / 413 / 422 → `bad_request`; 401 / 403 / 404,
+  other 4xx and 5xx → `upstream_unavailable`. An upstream 401 (or Gemini's 400
+  `API_KEY_INVALID`) means the **gateway's** provider key is wrong, not the app's
+  device token, so it is never sent to the app as `unauthorized`, and the router can
+  fail over to the backup. A missing key yields `upstream_unavailable` without a
+  network call.
+- **Cancellation.** The abort signal goes to `fetch`, and the upstream body is
+  cancelled when the stream stops early. An aborted attempt ends instead of reporting.
+- **Privacy.** Bodies are never logged. Error bodies are read (at most 16 KiB) only for
+  a retry delay or an invalid-key reason.
+
+Tests (`test/gemini.test.ts`, `test/openaiCompatible.test.ts`, `test/sse.test.ts`,
+`test/upstream.test.ts`) use an injected `fetch` and the streams in
+`fixtures/upstream/`. Those fixtures are hand-written in each provider's documented
+streaming format (no network and no keys are used here); HG3's eval run is the first
+check against the live APIs.
 
 ## Constraints (owner decisions)
 
