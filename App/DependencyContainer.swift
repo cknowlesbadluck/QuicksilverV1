@@ -89,7 +89,11 @@ final class DependencyContainer {
 
         // SideStore first-run: warm memory so Ask / Intents / Home don't wait
         // for MemoryView to open. Failures are logged inside MemoryManager.
-        Task { await memoryManager.load() }
+        // Rebuild the embedding sidecar after load, then keep it on memoryDidUpdate.
+        Task {
+            await memoryManager.load()
+            brain.startMemoryIndexSync()
+        }
 
         logger.info(
             "DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)",

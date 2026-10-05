@@ -56,4 +56,47 @@ final class MemoryQueryTests: XCTestCase {
         let ranked = MemoryQuery(text: "sidestore").apply(to: [item], now: now)
         XCTAssertTrue(ranked.isEmpty)
     }
+
+    func testExcludingHistoryContentsDropsMatchingTurns() {
+        let kept = MemoryItem(key: "note.kept", category: .temporary, value: "coupe in garage", importance: 0.5)
+        let prior = MemoryItem(key: "chat.1", category: .conversation, value: "where is the coupe", importance: 0.4)
+        let filtered = MemoryQuery.excludingHistoryContents(
+            [kept, prior],
+            historyContents: ["where is the coupe", "it is downstairs"]
+        )
+        XCTAssertEqual(filtered.map(\.key), ["note.kept"])
+    }
+
+    func testRelevanceScoreIsCosineTimesDecayedImportance() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let item = MemoryItem(
+            key: "note.car",
+            category: .temporary,
+            value: "coupe",
+            createdAt: now,
+            updatedAt: now,
+            importance: 0.5
+        )
+        let score = MemoryQuery.relevanceScore(item: item, cosine: 0.8, tokens: ["coupe"], now: now)
+        let expected = 0.8 * MemoryScorer.decayedImportance(for: item, now: now)
+        XCTAssertEqual(score, expected, accuracy: 0.0001)
+    }
+
+    func testRelevanceScoreFallsBackToOverlapTimesDecay() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let item = MemoryItem(
+            key: "note.car",
+            category: .temporary,
+            value: "vehicle parked",
+            createdAt: now,
+            updatedAt: now,
+            importance: 1.0
+        )
+        let tokens = MemoryQuery.tokens(from: "vehicle")
+        let score = MemoryQuery.relevanceScore(item: item, cosine: nil, tokens: tokens, now: now)
+        let overlap = MemoryQuery.overlap(item, tokens: tokens)
+        let expected = overlap * MemoryScorer.decayedImportance(for: item, now: now)
+        XCTAssertEqual(score, expected, accuracy: 0.0001)
+        XCTAssertGreaterThan(score, 0)
+    }
 }
