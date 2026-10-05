@@ -109,7 +109,8 @@ async function handleChat(request: Request, env: Env, state: GatewayState, now: 
     return streamResponse(opened);
   }
 
-  // No real provider adapters yet (M3-T18..T20). The router will call
+  // The Gemini and OpenAI-compatible adapters (M3-T18) exist but are not wired into
+  // POST /v1/chat until the router lands (M3-T20). The router will call
   // `state.budgets.tryConsume(candidate, now)` before each upstream attempt.
   return errorResponse(200, { code: "upstream_unavailable" });
 }
