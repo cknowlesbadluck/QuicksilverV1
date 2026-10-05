@@ -3,10 +3,11 @@
 Cloudflare Workers Free reverse proxy for Quicksilver cloud AI. The app binds a
 gateway URL + device token only; provider keys live here (never in the iOS app).
 
-Landed so far: `GET /v1/health` (M3-T15) and device-token auth, a per-token RPM
-limit, and per-candidate daily budgets on `POST /v1/chat` (M3-T16). Streaming,
-provider adapters, and the router land in M3-T17–T20; until then an admitted chat
-request gets a typed `upstream_unavailable` event.
+Landed so far: `GET /v1/health` (M3-T15); device-token auth, a per-token RPM
+limit, and per-candidate daily budgets on `POST /v1/chat` (M3-T16); and the protocol
+v1 stream layer plus a deterministic fake upstream (M3-T17). Real provider adapters
+and the router land in M3-T18–T20; until then an admitted chat request gets a typed
+`upstream_unavailable` event (or the fake stream in local `FAKE_MODE`).
 
 ## Route policy (fail closed)
 
@@ -37,6 +38,30 @@ Counters are **best-effort and in-isolate**: each isolate counts on its own and 
 on eviction. There are no KV or storage writes per request and no paid bindings. The
 Workers Rate Limiting binding is not used because its docs don't say it is part of
 Workers Free.
+
+## Stream layer and fake upstream (M3-T17)
+
+`src/stream.ts` turns provider chunks (`delta` / `done` / `error`) into protocol v1
+SSE and enforces the grammar in `docs/GATEWAY_PROTOCOL.md`:
+
+- An error, throw, or empty upstream **before any output** comes back as
+  `{ ok: false, error }` with nothing sent, so the router (M3-T20) can fail over.
+- Otherwise the body is `meta` → deltas → `done`. A provider that throws or ends
+  without a terminal chunk after output has begun is closed with an
+  `upstream_unavailable` error (partial text kept).
+- `retryAfter` and token counts are written as integers; `rate_limited` always has a
+  `retryAfter`.
+- Cancelling the response body aborts the upstream through its `AbortController`.
+
+`src/providers/fake.ts` is a deterministic fake with scripted chunks, errors, throws
+and delays. Each script in `FAKE_SCRIPTS` reproduces one `fixtures/*.sse` file byte for
+byte (`test/stream.test.ts`).
+
+**Local `FAKE_MODE` (development only).** Put `DEVICE_TOKEN=<any local value>` and
+`FAKE_MODE=1` (or a script name such as `mid-stream-error`) in `gateway/.dev.vars`
+(git-ignored; never commit it) and run `npm run dev`. Admitted chats
+then stream from the fake. Auth, the RPM limit and budgets still apply. Never set
+`FAKE_MODE` on the deployed Worker.
 
 ## Constraints (owner decisions)
 
@@ -85,6 +110,8 @@ Secrets (`DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, …) are **HG3**, not
 | `src/index.ts` | Fetch handler and fail-closed route policy |
 | `src/auth.ts` | Bearer `DEVICE_TOKEN` check, constant-time compare |
 | `src/limits.ts` | Per-token RPM limiter, per-candidate daily budgets |
+| `src/stream.ts` | Protocol v1 events, SSE encoding, stream grammar, provider interface |
+| `src/providers/fake.ts` | Deterministic fake upstream + `FAKE_MODE` scripts |
 | `config/routing.json` | Candidate order, `dailyBudget`, `rpmPerToken` (no secrets) |
 | `test/*.test.ts` | Vitest coverage (no network) |
 | `wrangler.toml` | Free-tier Worker config + metadata-only observability |

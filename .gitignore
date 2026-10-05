@@ -77,6 +77,7 @@ Quicksilver/Integration/events.json
 
 # Mercury Gateway (Cloudflare Worker)
 gateway/node_modules/
+gateway/.dev.vars
 gateway/.wrangler/
 gateway/dist/
 gateway/coverage/

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
+import badRequestSse from "../fixtures/bad-request.sse?raw";
 import budgetExhaustedSse from "../fixtures/budget-exhausted.sse?raw";
+import chatRequestJson from "../fixtures/chat-request.json?raw";
+import happySse from "../fixtures/happy.sse?raw";
+import midStreamErrorSse from "../fixtures/mid-stream-error.sse?raw";
 import unauthorizedSse from "../fixtures/unauthorized.sse?raw";
 import upstreamUnavailableSse from "../fixtures/upstream-unavailable.sse?raw";
 import { createState, handleRequest, type Env } from "../src/index";
@@ -99,5 +103,64 @@ describe("POST /v1/chat limits", () => {
     while (state.budgets.tryConsume(main, T0));
     const response = await handleRequest(chat(TOKEN), ENV, state, T0);
     await expect(response.text()).resolves.toBe(upstreamUnavailableSse);
+  });
+});
+
+describe("POST /v1/chat FAKE_MODE (local dev only)", () => {
+  function chatWithBody(body: string): Request {
+    return new Request(URL_CHAT, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${TOKEN}` },
+      body,
+    });
+  }
+
+  it("streams the happy fixture when FAKE_MODE=1", async () => {
+    const response = await handleRequest(
+      chatWithBody(chatRequestJson),
+      { ...ENV, FAKE_MODE: "1" },
+      createState(),
+      T0,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/^text\/event-stream/);
+    await expect(response.text()).resolves.toBe(happySse);
+  });
+
+  it("runs a named script", async () => {
+    const response = await handleRequest(
+      chatWithBody(chatRequestJson),
+      { ...ENV, FAKE_MODE: "mid-stream-error" },
+      createState(),
+      T0,
+    );
+    await expect(response.text()).resolves.toBe(midStreamErrorSse);
+  });
+
+  it("stays off for an unknown FAKE_MODE value", async () => {
+    const response = await handleRequest(
+      chatWithBody(chatRequestJson),
+      { ...ENV, FAKE_MODE: "yes please" },
+      createState(),
+      T0,
+    );
+    await expect(response.text()).resolves.toBe(upstreamUnavailableSse);
+  });
+
+  it("still requires the device token", async () => {
+    const response = await handleRequest(chat(), { ...ENV, FAKE_MODE: "1" }, createState(), T0);
+    expect(response.status).toBe(401);
+    await expect(response.text()).resolves.toBe(unauthorizedSse);
+  });
+
+  it("rejects a non-object JSON body with bad_request", async () => {
+    const response = await handleRequest(
+      chatWithBody("not json"),
+      { ...ENV, FAKE_MODE: "1" },
+      createState(),
+      T0,
+    );
+    expect(response.status).toBe(400);
+    await expect(response.text()).resolves.toBe(badRequestSse);
   });
 });
