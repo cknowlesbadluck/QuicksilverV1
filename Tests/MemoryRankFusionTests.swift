@@ -123,16 +123,17 @@ final class MemoryRankFusionTests: XCTestCase {
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000008")!,
             key: "note.relevant",
             category: .temporary,
-            value: "coupe lives in the garage",
+            value: "coupe lives in garage",
             createdAt: now,
             updatedAt: now,
             importance: 0.2
         )
+        // No shared tokens with the query (avoid stopwords like "is").
         let important = MemoryItem(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000009")!,
             key: "note.important",
             category: .temporary,
-            value: "oat milk is running low",
+            value: "buy oat milk tomorrow",
             createdAt: now,
             updatedAt: now,
             importance: 0.99
@@ -145,5 +146,6 @@ final class MemoryRankFusionTests: XCTestCase {
             now: now
         )
         XCTAssertEqual(fused.first?.id, relevant.id)
+        XCTAssertEqual(fused.map(\.id), [relevant.id])
     }
 }
