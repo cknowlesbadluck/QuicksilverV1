@@ -19,6 +19,7 @@ final class MercuryBrain {
 
     private let personaManager: PersonaManager
     private let memoryManager: MemoryManager
+    private let memoryIndex: EmbeddingIndex?
     private let aiService: AIService
     let nexus: NexusCoordinator
     private let eventBus: EventBus
@@ -43,6 +44,7 @@ final class MercuryBrain {
     init(
         personaManager: PersonaManager,
         memoryManager: MemoryManager,
+        memoryIndex: EmbeddingIndex? = nil,
         aiService: AIService,
         nexus: NexusCoordinator,
         eventBus: EventBus,
@@ -50,6 +52,7 @@ final class MercuryBrain {
     ) {
         self.personaManager = personaManager
         self.memoryManager = memoryManager
+        self.memoryIndex = memoryIndex
         self.aiService = aiService
         self.nexus = nexus
         self.eventBus = eventBus
@@ -108,7 +111,7 @@ final class MercuryBrain {
 
     /// Ranked memory snapshot for capability reads and diagnostics.
     /// Text queries drop the retention floor so a relevant low-importance note can surface.
-    /// Limit stays at 4 on the ask path. No vectors, no cloud.
+    /// Ask-path ranking goes through `rankedMemories`, which fuses the on-device index when present.
     func retrieveSnapshot(limit: Int = 5, text: String? = nil) -> [MemoryItem] {
         let policy = personaManager.activeMemoryPolicy
         let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -120,6 +123,27 @@ final class MercuryBrain {
             limit: limit
         )
         return memoryManager.items(matching: memoryQuery)
+    }
+
+    /// Ask-path ranking. Vector hits can surface a note with no shared tokens.
+    /// Term-overlap fallback keeps the existing lexical query when no model is loaded.
+    private func rankedMemories(for query: String, limit: Int) async -> [MemoryItem] {
+        guard let memoryIndex else {
+            return retrieveSnapshot(limit: limit, text: query)
+        }
+        let pool = retrieveSnapshot(limit: 48, text: nil)
+        let result = await memoryIndex.search(query, in: pool, limit: nil)
+        switch result.method {
+        case .vector:
+            return MemoryRankFusion.fuse(
+                pool: pool,
+                vectorMatches: result.matches,
+                text: query,
+                limit: limit
+            )
+        case .termOverlap:
+            return retrieveSnapshot(limit: limit, text: query)
+        }
     }
 }
 
@@ -289,7 +313,7 @@ extension MercuryBrain {
         personality.recomputeForTurn(aspect: activeAspect)
         personality.noteInteraction()
         if turnRegister == .plain { personality.enterPlainRegister() }
-        let memoryCandidates = retrieveSnapshot(limit: 12, text: query)
+        let memoryCandidates = await rankedMemories(for: query, limit: 12)
         let trains = aiService.primaryTrainsOnPrompts
         let level = CloudContextPolicy.resolvedLevel(
             requested: trains ? .minimal : .standard,
