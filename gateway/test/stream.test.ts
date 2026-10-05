@@ -125,6 +125,22 @@ describe("stream grammar", () => {
     );
   });
 
+  it("releases the upstream as soon as a terminal chunk arrives", async () => {
+    let released = false;
+    async function* upstream(): AsyncGenerator<ProviderChunk> {
+      try {
+        yield { type: "delta", text: "a" };
+        yield { type: "done" };
+        yield { type: "delta", text: "never read" };
+      } finally {
+        released = true;
+      }
+    }
+    const opened = await openV1Stream(META, upstream());
+    await streamResponse(opened).text();
+    expect(released).toBe(true);
+  });
+
   it("writes integral numbers only", () => {
     expect(normalizeError("rate_limited", 1.2)).toEqual({ code: "rate_limited", retryAfter: 2 });
     expect(normalizeError("rate_limited")).toEqual({ code: "rate_limited", retryAfter: 1 });

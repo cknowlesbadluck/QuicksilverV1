@@ -153,39 +153,45 @@ function chunkEvent(chunk: ProviderChunk): V1Event | null {
   }
 }
 
-async function* frames(
-  meta: Meta,
-  first: ProviderChunk,
-  upstream: AsyncIterator<ProviderChunk>,
-): AsyncGenerator<string> {
-  yield encodeEvent({ event: "meta", data: meta });
-  let chunk = first;
-  for (;;) {
-    const event = chunkEvent(chunk);
-    if (event !== null) yield encodeEvent(event);
-    if (chunk.type !== "delta") return;
-
-    let next: IteratorResult<ProviderChunk>;
-    try {
-      next = await upstream.next();
-    } catch {
-      yield encodeEvent({ event: "error", data: UPSTREAM_UNAVAILABLE });
-      return;
-    }
-    if (next.done) {
-      // Ended without `done` or `error`: incomplete, so close it with a typed error.
-      yield encodeEvent({ event: "error", data: UPSTREAM_UNAVAILABLE });
-      return;
-    }
-    chunk = next.value;
-  }
-}
-
 function closeQuietly(upstream: AsyncIterator<ProviderChunk>): void {
   try {
     void upstream.return?.()?.catch(() => undefined);
   } catch {
     // Best effort: the upstream is being abandoned.
+  }
+}
+
+async function* frames(
+  meta: Meta,
+  first: ProviderChunk,
+  upstream: AsyncIterator<ProviderChunk>,
+): AsyncGenerator<string> {
+  try {
+    yield encodeEvent({ event: "meta", data: meta });
+    let chunk = first;
+    for (;;) {
+      const event = chunkEvent(chunk);
+      if (event !== null) yield encodeEvent(event);
+      if (chunk.type !== "delta") return;
+
+      let next: IteratorResult<ProviderChunk>;
+      try {
+        next = await upstream.next();
+      } catch {
+        yield encodeEvent({ event: "error", data: UPSTREAM_UNAVAILABLE });
+        return;
+      }
+      if (next.done) {
+        // Ended without `done` or `error`: incomplete, so close it with a typed error.
+        yield encodeEvent({ event: "error", data: UPSTREAM_UNAVAILABLE });
+        return;
+      }
+      chunk = next.value;
+    }
+  } finally {
+    // A terminal chunk may arrive before the provider's own body ends. Release it so
+    // the adapter's cleanup (fetch body, reader) runs now, not at garbage collection.
+    closeQuietly(upstream);
   }
 }
 
