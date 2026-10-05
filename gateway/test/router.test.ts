@@ -21,6 +21,7 @@ import {
   envProviders,
   redactFor,
   routeChat,
+  recentTurns,
   validateChatRequest,
   withTimeouts,
   type ProviderResolver,
@@ -335,6 +336,30 @@ describe("per-candidate redaction", () => {
       "What now?",
     ]);
     expect(standard.context.map((b) => b.kind)).toEqual(["memory", "device", "summary"]);
+  });
+
+  it("bounds minimal history per role even when it doesn't alternate", () => {
+    const msg = (role: string, content: string) => ({ role, content });
+    const repeated: ChatRequestV1 = {
+      ...REQUEST,
+      messages: [
+        msg("system", "S"),
+        msg("assistant", "x1"),
+        msg("assistant", "x2"),
+        msg("assistant", "x3"),
+        msg("assistant", "x4"),
+        msg("user", "Q"),
+      ],
+    };
+    expect(redactFor(repeated, GEMINI).messages.map((m) => m.content)).toEqual(["S", "x3", "x4", "Q"]);
+    // A failed turn leaves two user messages in a row; still at most 2 per role.
+    expect(
+      recentTurns(
+        [msg("user", "u1"), msg("assistant", "a1"), msg("user", "u2"), msg("user", "u3"), msg("assistant", "a3"), msg("user", "Q")],
+        MINIMAL_TURN_CAP,
+      ).map((m) => m.content),
+    ).toEqual(["a1", "u2", "u3", "a3", "Q"]);
+    expect(recentTurns([msg("user", "Q")], MINIMAL_TURN_CAP)).toEqual([msg("user", "Q")]);
   });
 
   it("caps standard memory blocks at 3 and never mutates the input", () => {

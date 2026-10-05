@@ -132,9 +132,33 @@ const STANDARD_BLOCK_CAPS: Record<ContextKind, number> = {
 };
 
 /**
+ * The question (last message) plus the longest contiguous run of earlier messages with at
+ * most `turnCap` user and at most `turnCap` assistant messages. Counting each role keeps
+ * the bound even when the history doesn't alternate (a failed turn leaves two user
+ * messages in a row; a crafted body could repeat assistant messages), so a minimal
+ * candidate never sees more than 2 user and 2 assistant messages before the question.
+ */
+export function recentTurns(
+  conversation: ChatRequestV1["messages"],
+  turnCap: number,
+): ChatRequestV1["messages"] {
+  const question = conversation[conversation.length - 1];
+  if (question === undefined) return [];
+  const used = { user: 0, assistant: 0 };
+  let start = conversation.length - 1;
+  while (start > 0) {
+    const role = conversation[start - 1]?.role === "assistant" ? "assistant" : "user";
+    if (used[role] >= turnCap) break;
+    used[role] += 1;
+    start -= 1;
+  }
+  return conversation.slice(start);
+}
+
+/**
  * The request this candidate may see. System messages are kept; the conversation is cut
  * to the question plus the last N prior turns (N = 2 minimal, 4 standard; a turn is a
- * user + assistant pair). `minimal` drops every context block (memory, device, summary
+ * user + assistant pair, bounded per role by `recentTurns`). `minimal` drops every context block (memory, device, summary
  * and history); `standard` keeps them up to the app's caps. `maxTokens` is clamped to the
  * candidate's `maxOutputTokens`. The input is never mutated.
  */
@@ -143,7 +167,7 @@ export function redactFor(request: ChatRequestV1, candidate: Candidate): ChatReq
   const turnCap = level === "minimal" ? MINIMAL_TURN_CAP : STANDARD_TURN_CAP;
   const system = request.messages.filter((message) => message.role === "system");
   const conversation = request.messages.filter((message) => message.role !== "system");
-  const kept = conversation.slice(-(turnCap * 2 + 1));
+  const kept = recentTurns(conversation, turnCap);
 
   let context: ChatRequestV1["context"] = [];
   if (level === "standard") {
