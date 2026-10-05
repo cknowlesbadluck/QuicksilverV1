@@ -13,12 +13,15 @@ extension MercuryBrain {
     ) async -> [MemoryItem] {
         let historyContents = history.map(\.content)
         guard let memoryIndex else {
-            let lexical = retrieveSnapshot(limit: limit, text: query)
-            return MemoryQuery.excludingHistoryContents(lexical, historyContents: historyContents)
+            return lexicalMemories(for: query, limit: limit, excluding: historyContents)
         }
-        let pool = MemoryQuery.excludingHistoryContents(
-            retrieveSnapshot(limit: 48, text: nil),
-            historyContents: historyContents
+        // Exclude history first, then cap the vector pool so history turns cannot
+        // crowd out eligible notes under the 48-candidate search budget.
+        let pool = Array(
+            MemoryQuery.excludingHistoryContents(
+                retrieveSnapshot(limit: 96, text: nil),
+                historyContents: historyContents
+            ).prefix(48)
         )
         let result = await memoryIndex.search(query, in: pool, limit: nil)
         switch result.method {
@@ -30,9 +33,24 @@ extension MercuryBrain {
                 limit: limit
             )
         case .termOverlap:
-            let lexical = retrieveSnapshot(limit: limit, text: query)
-            return MemoryQuery.excludingHistoryContents(lexical, historyContents: historyContents)
+            return lexicalMemories(for: query, limit: limit, excluding: historyContents)
         }
+    }
+
+    /// Over-fetches, drops history matches, then applies `limit` so excluded turns
+    /// do not consume ranked slots.
+    private func lexicalMemories(
+        for query: String,
+        limit: Int,
+        excluding historyContents: [String]
+    ) -> [MemoryItem] {
+        guard limit > 0 else { return [] }
+        let overFetch = max(limit * 4, 24)
+        let eligible = MemoryQuery.excludingHistoryContents(
+            retrieveSnapshot(limit: overFetch, text: query),
+            historyContents: historyContents
+        )
+        return Array(eligible.prefix(limit))
     }
 
     /// Keeps the on-device vector sidecar aligned with MemoryManager via `memoryDidUpdate`.
@@ -42,7 +60,9 @@ extension MercuryBrain {
         memoryIndexSyncTask?.cancel()
         memoryIndexSyncTask = Task { [weak self] in
             guard let self else { return }
-            let stream = await eventBus.events(bufferingNewest: 16) { event in
+            // Register first so updates during rebuild are buffered. Use a large
+            // newest-buffer so a busy import/clear cannot drop IDs before apply.
+            let stream = await eventBus.events(bufferingNewest: 512) { event in
                 if case .memoryDidUpdate = event { return true }
                 return false
             }
