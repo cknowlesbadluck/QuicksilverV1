@@ -3,16 +3,40 @@
 Cloudflare Workers Free reverse proxy for Quicksilver cloud AI. The app binds a
 gateway URL + device token only; provider keys live here (never in the iOS app).
 
-This directory is the **M3-T15 scaffold**: `GET /v1/health` and CI unit tests.
-Auth, budgets, streaming, and provider adapters land in M3-T16–T20.
+Landed so far: `GET /v1/health` (M3-T15) and device-token auth, a per-token RPM
+limit, and per-candidate daily budgets on `POST /v1/chat` (M3-T16). Streaming,
+provider adapters, and the router land in M3-T17–T20; until then an admitted chat
+request gets a typed `upstream_unavailable` event.
 
 ## Route policy (fail closed)
 
-- Only `GET /v1/health` is allowed.
+- Only `GET /v1/health` and `POST /v1/chat` are routed.
 - Query string, fragment, and userinfo return 400. A device token must not ride in the URL.
-- Other methods on the health path return 405.
+- Other methods on those paths return 405.
 - Every other path returns 404 and the body does not echo the path.
 - Workers Logs stay metadata-only. Do not log request or response bodies.
+
+## Auth and limits (M3-T16)
+
+`POST /v1/chat` checks, in order (each failure is one protocol v1 `error` event):
+
+| Check | Failure |
+|---|---|
+| `Authorization: Bearer <token>` matches the `DEVICE_TOKEN` secret (SHA-256 digests compared in constant time; unset secret fails closed) | 401 + `unauthorized` |
+| Per-token requests per minute (`rpmPerToken` in `config/routing.json`, sliding 60 s window) | 429 + `rate_limited` with `retryAfter` and `Retry-After` |
+| At least one candidate still has `dailyBudget` left today (UTC) | 200 + `budget_exhausted`, so the app goes on-device |
+
+`config/routing.json` lists candidates in the owner's order: Gemini Flash (main,
+`trainsOnPrompts: true`) → Groq `openai/gpt-oss-120b` (backup) → Workers AI (last
+resort). xAI is absent (optional, own credits only). Each `dailyBudget` stays below the
+provider's free daily limit (`freeDailyRequests`), and under half of it when the
+provider resets on another clock (Gemini resets at midnight Pacific). The free numbers
+are public estimates; Christopher records the real ones from his consoles at HG3.
+
+Counters are **best-effort and in-isolate**: each isolate counts on its own and resets
+on eviction. There are no KV or storage writes per request and no paid bindings. The
+Workers Rate Limiting binding is not used because its docs don't say it is part of
+Workers Free.
 
 ## Constraints (owner decisions)
 
@@ -59,7 +83,10 @@ Secrets (`DEVICE_TOKEN`, `GEMINI_API_KEY`, `GROQ_API_KEY`, …) are **HG3**, not
 | Path | Role |
 |---|---|
 | `src/index.ts` | Fetch handler and fail-closed route policy |
-| `test/health.test.ts` | Vitest coverage (no network) |
+| `src/auth.ts` | Bearer `DEVICE_TOKEN` check, constant-time compare |
+| `src/limits.ts` | Per-token RPM limiter, per-candidate daily budgets |
+| `config/routing.json` | Candidate order, `dailyBudget`, `rpmPerToken` (no secrets) |
+| `test/*.test.ts` | Vitest coverage (no network) |
 | `wrangler.toml` | Free-tier Worker config + metadata-only observability |
 | `package.json` | `npm test` → Vitest |
 
