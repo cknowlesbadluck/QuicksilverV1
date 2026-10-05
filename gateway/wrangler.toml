@@ -1,6 +1,8 @@
 # Mercury Gateway — Cloudflare Workers Free scaffold (M3-T15).
 # Free tier only: no KV, R2, D1, Queues, AI, or other paid bindings.
-# Workers AI binding arrives in M3-T19. Secrets arrive in HG3 / M3-T16.
+# Workers AI binding arrives in M3-T19. DEVICE_TOKEN is a secret set at HG3
+# (`wrangler secret put DEVICE_TOKEN`); never put it here. Limits are in-isolate
+# counters (src/limits.ts), so no rate-limit or storage bindings.
 
 name = "mercury-gateway"
 main = "src/index.ts"

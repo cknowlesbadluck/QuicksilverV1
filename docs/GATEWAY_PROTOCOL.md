@@ -1,6 +1,6 @@
 # Mercury Gateway wire protocol v1
 
-Status: contract + fixtures + client (`GatewayAIProvider`, M3-T3) + routing config decode (`AIRoutingConfig` / `RoutingConfigStore`, M3-T4). The Worker still serves only `GET /v1/health`. Full gateway router is M3-T20.
+Status: contract + fixtures + client (`GatewayAIProvider`, M3-T3) + routing config decode (`AIRoutingConfig` / `RoutingConfigStore`, M3-T4). The Worker serves `GET /v1/health` and an auth- and limit-gated `POST /v1/chat` (M3-T16: `unauthorized`, `rate_limited`, `budget_exhausted`; `upstream_unavailable` until providers land). Full gateway router is M3-T20.
 
 ## Auth
 

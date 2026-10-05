@@ -3,7 +3,7 @@ import { handleRequest } from "../src/index";
 
 describe("GET /v1/health", () => {
   it("returns 200 with healthy JSON and no-store", async () => {
-    const response = handleRequest(
+    const response = await handleRequest(
       new Request("https://mercury-gateway.example/v1/health", {
         method: "GET",
       }),
@@ -18,7 +18,7 @@ describe("GET /v1/health", () => {
   });
 
   it("returns 404 for unknown paths and does not echo the path", async () => {
-    const response = handleRequest(
+    const response = await handleRequest(
       new Request("https://mercury-gateway.example/secret-path", {
         method: "GET",
       }),
@@ -27,8 +27,8 @@ describe("GET /v1/health", () => {
     await expect(response.text()).resolves.toBe("Not Found");
   });
 
-  it("returns 405 for non-GET on /v1/health", () => {
-    const response = handleRequest(
+  it("returns 405 for non-GET on /v1/health", async () => {
+    const response = await handleRequest(
       new Request("https://mercury-gateway.example/v1/health", {
         method: "POST",
       }),
@@ -36,8 +36,8 @@ describe("GET /v1/health", () => {
     expect(response.status).toBe(405);
   });
 
-  it("rejects query strings so a device token cannot ride in the URL", () => {
-    const response = handleRequest(
+  it("rejects query strings so a device token cannot ride in the URL", async () => {
+    const response = await handleRequest(
       new Request("https://mercury-gateway.example/v1/health?token=device", {
         method: "GET",
       }),
@@ -45,8 +45,8 @@ describe("GET /v1/health", () => {
     expect(response.status).toBe(400);
   });
 
-  it("rejects fragments", () => {
-    const fragment = handleRequest(
+  it("rejects fragments", async () => {
+    const fragment = await handleRequest(
       new Request("https://mercury-gateway.example/v1/health#token", {
         method: "GET",
       }),
@@ -56,8 +56,8 @@ describe("GET /v1/health", () => {
 
   // Fetch Request forbids credentialed URLs (throws before the handler runs).
   // Exercise the userinfo guard with a minimal { url, method } stand-in.
-  it("rejects userinfo", () => {
-    const userinfo = handleRequest({
+  it("rejects userinfo", async () => {
+    const userinfo = await handleRequest({
       url: "https://device:token@mercury-gateway.example/v1/health",
       method: "GET",
     } as Request);
