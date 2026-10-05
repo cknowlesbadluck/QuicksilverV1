@@ -145,27 +145,7 @@ struct SpatialSanctum: View {
 
     private var topPresence: some View {
         HStack(spacing: 8) {
-            Circle()
-                .fill(accent)
-                .frame(width: 7, height: 7)
-                .shadow(color: accent.opacity(0.8), radius: 4)
-                .accessibilityHidden(true)
-
-            Text("SANCTUM")
-                .font(.caption.weight(.semibold))
-                .tracking(1.6)
-                .foregroundStyle(PersonaTheme.readableText)
-                .accessibilityLabel("Quicksilver's Sanctum")
-
-            Text("\u{00B7}")
-                .foregroundStyle(PersonaTheme.readableSecondary)
-                .accessibilityHidden(true)
-
-            Text(visualState.rawValue.uppercased())
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(PersonaTheme.readableSecondary)
-                .accessibilityHidden(true)
-
+            headerIdentity
             Spacer()
 
             Button(action: onInvoke) {
@@ -182,6 +162,33 @@ struct SpatialSanctum: View {
             .accessibilityLabel("Open conversation")
             .accessibilityHint("Same action as Speak with Quicksilver")
         }
+    }
+
+    /// One accessibility element. `accessibilityHidden` was not enough: the
+    /// middot and IDLE label still audited as StaticText (contrast on `\u{00B7}`,
+    /// Dynamic Type on caption2). Same collapse SpatialPortalButton already uses.
+    private var headerIdentity: some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(accent)
+                .frame(width: 7, height: 7)
+                .shadow(color: accent.opacity(0.8), radius: 4)
+
+            Text("SANCTUM")
+                .font(.caption.weight(.semibold))
+                .tracking(1.6)
+                .foregroundStyle(PersonaTheme.readableText)
+
+            Text("\u{00B7}")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PersonaTheme.readableText)
+
+            Text(visualState.rawValue.uppercased())
+                .font(.caption.weight(.medium))
+                .foregroundStyle(PersonaTheme.readableSecondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Quicksilver's Sanctum, \(visualState.rawValue)")
     }
 
     private var greeting: some View {
