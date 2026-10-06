@@ -190,7 +190,7 @@ export async function handleRequest(
   }
 
   return Response.json(
-    { ok: true, service: "mercury-gateway" },
+    { ok: true, service: "mercury-gateway", contractRevision: "2026-10-06-eval-landed" },
     {
       status: 200,
       headers: { "cache-control": "no-store" },

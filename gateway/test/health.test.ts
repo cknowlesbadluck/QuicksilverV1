@@ -14,6 +14,7 @@ describe("GET /v1/health", () => {
     await expect(response.json()).resolves.toEqual({
       ok: true,
       service: "mercury-gateway",
+      contractRevision: "2026-10-06-eval-landed",
     });
   });
 
@@ -64,3 +65,14 @@ describe("GET /v1/health", () => {
     expect(userinfo.status).toBe(400);
   });
 });
+
+  it("health stamp is a revision name, never a secret", async () => {
+    const response = await handleRequest(
+      new Request("https://mercury-gateway.example/v1/health", { method: "GET" }),
+    );
+    const body = await response.json();
+    const serialized = JSON.stringify(body);
+    expect(serialized).toContain("2026-10-06-eval-landed");
+    expect(serialized).not.toMatch(/postgres:|eyJ|api_key|DEVICE_TOKEN/i);
+  });
+
