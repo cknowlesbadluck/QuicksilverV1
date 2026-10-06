@@ -17,7 +17,7 @@ const T0 = Date.parse("2026-10-05T12:00:00.000Z");
 function chat(token?: string, method = "POST", url = URL_CHAT): Request {
   const headers = new Headers({ "content-type": "application/json" });
   if (token !== undefined) headers.set("authorization", `Bearer ${token}`);
-  return new Request(url, { method, headers, body: method === "POST" ? "{}" : undefined });
+  return new Request(url, { method, headers, body: method === "POST" ? chatRequestJson : undefined });
 }
 
 describe("POST /v1/chat auth", () => {
@@ -40,7 +40,7 @@ describe("POST /v1/chat auth", () => {
     expect(response.status).toBe(401);
   });
 
-  it("admits the right token (no providers yet -> upstream_unavailable)", async () => {
+  it("admits the right token (no provider secrets set -> upstream_unavailable)", async () => {
     const response = await handleRequest(chat(TOKEN), ENV, createState(), T0);
     expect(response.status).toBe(200);
     await expect(response.text()).resolves.toBe(upstreamUnavailableSse);
