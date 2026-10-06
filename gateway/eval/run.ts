@@ -48,9 +48,15 @@ export function parseArgs(argv: readonly string[]): EvalArgs {
     };
     if (arg === "--fake") args.fake = true;
     else if (arg === "--candidates") {
-      args.candidates = value(arg).split(",").map((id) => id.trim()).filter((id) => id.length > 0);
-    } else if (arg === "--out") args.outDir = value(arg);
-    else throw new Error(`unknown argument: ${arg}`);
+      const ids = value(arg).split(",").map((id) => id.trim()).filter((id) => id.length > 0);
+      if (ids.length === 0) throw new Error(`${arg} needs at least one candidate`);
+      args.candidates = ids;
+    } else if (arg === "--out") {
+      // Rejected up front: an empty directory would fail only after the run spent quota.
+      const outDir = value(arg).trim().replace(/\/+$/, "");
+      if (outDir.length === 0) throw new Error(`${arg} needs a non-empty directory`);
+      args.outDir = outDir;
+    } else throw new Error(`unknown argument: ${arg}`);
   }
   return args;
 }

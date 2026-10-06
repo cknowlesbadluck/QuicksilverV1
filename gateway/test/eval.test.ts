@@ -226,6 +226,11 @@ describe("npm run eval", () => {
     });
     expect(() => parseArgs(["--bogus"])).toThrow(/unknown argument/);
     expect(() => parseArgs(["--candidates"])).toThrow(/needs a value/);
+    expect(() => parseArgs(["--candidates", " , "])).toThrow(/at least one candidate/);
+    expect(() => parseArgs(["--out", ""])).toThrow(/non-empty directory/);
+    expect(() => parseArgs(["--out", "  "])).toThrow(/non-empty directory/);
+    expect(() => parseArgs(["--out", "/"])).toThrow(/non-empty directory/);
+    expect(parseArgs(["--out", "tmp/"]).outDir).toBe("tmp");
 
     const pool = orderedCandidates(routingConfig);
     const [known, groq, gemini] = resolveCandidates(["gemini-flash", "groq:llama-x", "gemini:pro-x"], pool);
