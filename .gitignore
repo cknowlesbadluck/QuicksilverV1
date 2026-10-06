@@ -78,6 +78,8 @@ Quicksilver/Integration/events.json
 # Mercury Gateway (Cloudflare Worker)
 gateway/node_modules/
 gateway/.dev.vars
+# Eval smoke reports from `npm run eval -- --fake` (live reports may be committed)
+gateway/eval/results/*-fake.md
 gateway/.wrangler/
 gateway/dist/
 gateway/coverage/

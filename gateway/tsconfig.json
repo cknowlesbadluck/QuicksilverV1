@@ -16,5 +16,5 @@
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "config/**/*.json"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "eval/**/*.ts", "eval/**/*.json", "config/**/*.json"]
 }

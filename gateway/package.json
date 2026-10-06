@@ -2,16 +2,18 @@
   "name": "mercury-gateway",
   "version": "0.1.0",
   "private": true,
-  "description": "Mercury Gateway — Cloudflare Workers Free reverse proxy for Quicksilver cloud AI (scaffold).",
+  "description": "Mercury Gateway \u2014 Cloudflare Workers Free reverse proxy for Quicksilver cloud AI (scaffold).",
   "type": "module",
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "eval": "esbuild eval/cli.ts --bundle --platform=node --format=esm --target=node22 --outfile=eval/.build/cli.mjs --log-level=warning && node eval/.build/cli.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261002.1",
+    "esbuild": "0.28.1",
     "typescript": "5.9.3",
     "vitest": "5.0.3",
     "wrangler": "4.147.0"

@@ -1,0 +1,25 @@
+{
+  "aspect": "eternal",
+  "cases": [
+    {
+      "id": "exact-recall",
+      "prompt": "What did I decide about the main cloud model?",
+      "context": [
+        { "kind": "memory", "text": "Decision: Gemini free tier is the main cloud model; Groq is the backup.", "privacy": "cloud" }
+      ]
+    },
+    {
+      "id": "rewriting-loop",
+      "prompt": "I keep rewriting the same screen. Is that a problem?",
+      "history": [
+        { "role": "user", "content": "I rebuilt the Sanctum header again." },
+        { "role": "assistant", "content": "Again. The seasons turn, and so does that header." }
+      ]
+    },
+    {
+      "id": "free-for-good",
+      "prompt": "Should the gateway stay on free tiers for good?",
+      "maxTokens": 256
+    }
+  ]
+}

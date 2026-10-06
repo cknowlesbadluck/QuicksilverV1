@@ -1,0 +1,28 @@
+{
+  "aspect": "forge",
+  "cases": [
+    {
+      "id": "scroll-stutter",
+      "prompt": "The memory archive list stutters when I scroll. Where do I start?",
+      "history": [
+        { "role": "user", "content": "I added on-device embeddings to the archive today." },
+        { "role": "assistant", "content": "Then every row may now be paying for a vector lookup. Suspect that first." }
+      ],
+      "context": [
+        { "kind": "memory", "text": "Prefers measuring with Instruments before refactoring.", "privacy": "cloud" },
+        { "kind": "device", "text": "Thermal state nominal. Low Power Mode off.", "privacy": "cloud" }
+      ]
+    },
+    {
+      "id": "no-invented-api",
+      "prompt": "Write the Swift call that reads the iPhone battery's exact temperature in Celsius."
+    },
+    {
+      "id": "actor-or-lock",
+      "prompt": "Should the gateway client be an actor or a final class with a lock? Pick one.",
+      "context": [
+        { "kind": "summary", "text": "Earlier: streaming SSE client with cancellation and one bounded retry.", "privacy": "cloud" }
+      ]
+    }
+  ]
+}

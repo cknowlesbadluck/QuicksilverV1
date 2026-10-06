@@ -8,7 +8,8 @@ limit, and per-candidate daily budgets on `POST /v1/chat` (M3-T16); and the prot
 v1 stream layer plus a deterministic fake upstream (M3-T17); and the Gemini (main) and
 OpenAI-compatible (Groq backup) adapters (M3-T18); and the Workers AI adapter (last
 resort) over the free `env.AI` binding (M3-T19); and the router that wires them into
-`POST /v1/chat`, plus the client-safe `GET /v1/config` (M3-T20). With no provider
+`POST /v1/chat`, plus the client-safe `GET /v1/config` (M3-T20); and the model
+evaluation harness, `npm run eval` (M3-T21, see `eval/README.md`). With no provider
 secrets set, an admitted chat request gets a typed `upstream_unavailable` event (or the
 fake stream in local `FAKE_MODE`).
 
@@ -171,6 +172,14 @@ timeouts). It never includes provider ids, budgets, keys or tokens.
 Tests: `test/router.test.ts` (scripted fakes, plus the real adapters over an injected
 `fetch` and a mocked `env.AI` to pin the exact payload each provider receives).
 
+## Model evaluation (M3-T21)
+
+`npm run eval` runs the Forge and Eternal cases (`eval/cases/`) through the router
+against chosen candidates and writes `eval/results/<date>.md` with latency, length,
+errors and voice-rule checks. Keys come only from the developer's shell environment.
+CI runs it against fake candidates only (`test/eval.test.ts`). Details:
+[`eval/README.md`](eval/README.md).
+
 ## Constraints (owner decisions)
 
 - **Free tier only.** No paid Cloudflare products. No payment method on the account.
@@ -186,6 +195,7 @@ cd gateway
 npm ci
 npm test
 npm run typecheck   # optional
+npm run eval -- --fake   # optional: eval harness smoke (no network)
 ```
 
 ## HUMAN GATE HG2 — deploy (Christopher only)
