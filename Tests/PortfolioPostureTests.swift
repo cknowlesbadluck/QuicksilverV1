@@ -40,5 +40,26 @@ final class PortfolioPostureTests: XCTestCase {
         let posture = PortfolioPosture.parse(plane: .resonance, httpStatus: 200, json: Data("not-json".utf8))
         XCTAssertFalse(posture.ready)
         XCTAssertFalse(posture.deployLag)
+        XCTAssertFalse(posture.aliasAbsent)
+    }
+
+    func testVercel404IsAliasAbsenceNotOwnerGate() {
+        let body = Data("The deployment could not be found on Vercel. DEPLOYMENT_NOT_FOUND".utf8)
+        let posture = PortfolioPosture.parse(plane: .resonance, httpStatus: 404, json: body)
+        XCTAssertTrue(posture.aliasAbsent)
+        XCTAssertFalse(posture.ready)
+        XCTAssertFalse(posture.ownerActionRequired)
+        XCTAssertFalse(posture.deployLag)
+    }
+
+    func testSaturationClosesBoltNoiseWithoutOpeningWork() {
+        XCTAssertEqual(
+            PortfolioPosture.saturationMutation(ownerBlocked: true, roadmapOpen: true, boltOpen: true),
+            "close_noise"
+        )
+        XCTAssertEqual(
+            PortfolioPosture.saturationMutation(ownerBlocked: true, roadmapOpen: true, boltOpen: false),
+            "refresh_in_place"
+        )
     }
 }

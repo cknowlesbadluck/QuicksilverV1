@@ -21,6 +21,9 @@ public struct PortfolioPosture: Equatable, Sendable {
     /// True only for a Resonance body that has a status and no contractRevision.
     /// That is a stale host, not a closed owner gate and not device acceptance.
     public let deployLag: Bool
+    /// True when a 404 body is DEPLOYMENT_NOT_FOUND. That is an absent alias,
+    /// not an owner secret and not a device failure.
+    public let aliasAbsent: Bool
 
     public init(
         plane: Plane,
@@ -30,7 +33,8 @@ public struct PortfolioPosture: Equatable, Sendable {
         missingRequired: [String],
         version: String?,
         contractRevision: String?,
-        deployLag: Bool
+        deployLag: Bool,
+        aliasAbsent: Bool = false
     ) {
         self.plane = plane
         self.httpStatus = httpStatus
@@ -40,27 +44,40 @@ public struct PortfolioPosture: Equatable, Sendable {
         self.version = version
         self.contractRevision = contractRevision
         self.deployLag = deployLag
+        self.aliasAbsent = aliasAbsent
     }
 
     public static func parse(plane: Plane, httpStatus: Int, json: Data) -> PortfolioPosture {
+        let raw = String(data: json, encoding: .utf8) ?? ""
+        let aliasAbsent = httpStatus == 404 && raw.contains("DEPLOYMENT_NOT_FOUND")
         let object = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any] ?? [:]
         let status = object["status"] as? String
         let missing = object["missingRequired"] as? [String] ?? []
         let explicitOwner = object["ownerActionRequired"] as? Bool
         let version = object["version"] as? String
         let revision = object["contractRevision"] as? String
-        let ready = httpStatus == 200 && status == "ready"
+        let ready = httpStatus == 200 && status == "ready" && !aliasAbsent
         let ownerAction = explicitOwner ?? (!missing.isEmpty && !ready)
-        let deployLag = plane == .resonance && status != nil && revision == nil
+        let deployLag = plane == .resonance && status != nil && revision == nil && !aliasAbsent
         return PortfolioPosture(
             plane: plane,
             httpStatus: httpStatus,
             ready: ready && missing.isEmpty,
-            ownerActionRequired: ownerAction && !ready,
+            ownerActionRequired: ownerAction && !ready && !aliasAbsent,
             missingRequired: missing,
             version: version,
             contractRevision: revision,
-            deployLag: deployLag
+            deployLag: deployLag,
+            aliasAbsent: aliasAbsent
         )
+    }
+
+    /// Single allowed mutation while the product host is owner-blocked.
+    /// A classifier is not device acceptance and does not invent a secret.
+    public static func saturationMutation(ownerBlocked: Bool, roadmapOpen: Bool, boltOpen: Bool) -> String {
+        if ownerBlocked && roadmapOpen && boltOpen { return "close_noise" }
+        if ownerBlocked && roadmapOpen { return "refresh_in_place" }
+        if ownerBlocked { return "owner_only" }
+        return "hold"
     }
 }
