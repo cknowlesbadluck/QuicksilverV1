@@ -1,54 +1,53 @@
-# Portfolio 10-phase roadmap — 2026-10-06 19:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-06 23:00 EDT
 
-Live probes at 2026-10-06T23:01:40Z. No secrets invented. A classifier is not production proof.
+Live probes at 2026-10-07T03:01:29Z. No secrets invented. A classifier is not production proof.
 
 Evidence:
-- Resonance `GET https://resonancenexus.netlify.app/api/ready` returned **503**. Body still omits `ownerActionRequired` and `contractRevision`. `missingRequired` is exactly `SUPABASE_SERVICE_ROLE_KEY`. Auth mode required and ok. Persistence and GitHub adapter not configured.
-- Source on main already emits those fields (`src/deploy/health.ts`). The public host is deploy-lagged. `#150` is the contract-pin PR. Do not open a third ready-body change.
-- Conduit `GET /health` and `GET /ready` both returned 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, persistence postgres. Diagnostics ok. Bound agent `grok`, no binding conflict.
-- QuicksilverV1 main is `182d1334`. Open: `#238` degrade planner, `#209` dependabot checkout 4 to 7. CHR-55 device HG on iPhone 16e remains the product gate. Simulator CI is not that gate.
-- Legacy `cknowlesbadluck/Quicksilver` is not the product. Its open PRs were closed this pass as superseded. Archiving the repo still needs an owner token; this pass cannot archive it.
-- `cknowlesbadluck/mcp` is already archived.
-- Entropy at probe time: Resonance 5 open, Conduit 8 open, QuicksilverV1 2 open. Keep red: Conduit `#119` `#120`. Do not merge `#155` `#162` until the Render TLS env is set.
+- This repo is the product. Legacy `cknowlesbadluck/Quicksilver` is not. Archive of the legacy repo still returns 403.
+- Main is `182d1334`. Open: `#239` roadmap, `#238` degrade planner, `#209` dependabot checkout 4 to 7.
+- Orphan `harden/admission-collapse-1000` deleted this pass.
+- CHR-55 device HG on iPhone 16e remains the product gate. Simulator CI is not that gate.
+- Conduit ready is 200 version 0.8.0. Resonance public ready is 503 missing exactly `SUPABASE_SERVICE_ROLE_KEY`.
+- Host posture classifier landed on Conduit `#183`. It does not belong in the iOS target.
 
 ## Phase 1 — Owner gate
 
-Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus` only. Do not invent it. Exit: public `GET /api/ready` is 200 and `ownerActionRequired` is false.
+Not this repo. Exit: Netlify `resonancenexus` has `SUPABASE_SERVICE_ROLE_KEY` set by the owner. Do not invent it.
 
 ## Phase 2 — Kill the split-brain deploy
 
-`#150` stays the only ready-body pin. Exit: public Netlify body contains `contractRevision` and `ownerActionRequired`. A green Vercel alias does not close this phase.
+Not this repo. A Vercel 404 is alias absence.
 
 ## Phase 3 — Admission gate
 
-Ship the project-agnostic `work_admission` classifier on Conduit. Exit: unit tests green; the tool does not mutate records and does not accept secrets. Live host still on 0.8.0 until this merges and deploys.
+Do not open a new Quicksilver witness PR while `#238` or `#239` is open. Exit: open PR count does not rise.
 
 ## Phase 4 — Entropy prune
 
-Close stale pre-October Resonance counsel PRs and Bolt micro-opts. Keep red drafts and secret-blocked TLS PRs stay open. Exit: open PR count drops, and no keep-red PR is closed.
+Admission-collapse branch deleted. Exit: no orphan harden branch remains.
 
-## Phase 5 — Quicksilver device gate
+## Phase 5 — Device gate
 
-Do not treat simulator CI as release. Exit: CHR-55 archive IPA installed on iPhone 16e, or an explicit owner waiver. `#209` rebases only after checkout 7 is proven on the iOS job.
+Exit: CHR-55 archive IPA installed on iPhone 16e, or an explicit owner waiver.
 
 ## Phase 6 — One degrade planner
 
-`#151` / `#182` / `#238` are the same invariant. Merge one after CI, close the duplicates. Exit: one degrade-planner implementation on each default branch, not three drifting copies.
+`#238` is the Quicksilver copy. Merge only after the iOS job is green. Exit: one implementation on main.
 
-## Phase 7 — Chamber fail-closed stays
+## Phase 7 — Sense-Think-Express stays
 
-No new provider. Execution stays denied when a capability is not executable. Exit: chamber tests stay red-free on Resonance main.
+No boundary violation to chase a portfolio probe. Exit: Core protocol ownership unchanged.
 
-## Phase 8 — One iOS target
+## Phase 8 — One app target
 
-Do not start a second Resonance client. `#134` was closed this pass as diverged from current main. Exit: a single app target rebuilt on current main, or no iOS app PR.
+Do not start a second client. Exit: existing app target still builds.
 
-## Phase 9 — Grants stay deny-by-default
+## Phase 9 — Privacy stays on device
 
-Conduit resource records hold no secrets. TLS verify stays unmerged until Render env is set. Exit: grant tests green; `#155` and `#162` still closed-to-merge.
+No new network exfil for coordination probes. Exit: PrivacyInfo.xcprivacy unchanged by this pass.
 
 ## Phase 10 — Cross-plane acceptance
 
-One probe covers Conduit ready, public Resonance ready, and Quicksilver device posture. Exit: all three green on their real hosts. A unit test is not that proof.
+Exit: device HG evidence, not a simulator log.
 
-Binding constraint: owner secret on Netlify, plus a deploy that actually reaches that host. Agent work cannot close Phase 1.
+Binding constraint for this repo: device acceptance. Agent work cannot close Phase 5 from this host.
