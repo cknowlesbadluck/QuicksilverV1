@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
+import { claimDeviceAcceptance, healthBody } from "../src/device-acceptance";
 import { handleRequest } from "../src/index";
+
+describe("device acceptance fence", () => {
+  it("never accepts a claim from the gateway", () => {
+    expect(claimDeviceAcceptance()).toEqual({
+      accepted: false,
+      reason:
+        "gateway health is liveness only; device acceptance is an iPhone 16e archive IPA and is never recorded here",
+    });
+  });
+
+  it("health body names the gate and does not record acceptance", () => {
+    const body = healthBody();
+    expect(body.deviceAcceptance).toBe("not_recorded");
+    expect(body.acceptanceGate).toBe("CHR-55");
+    expect(JSON.stringify(body)).not.toMatch(/accepted.:true|iphone-16e archive passed/i);
+  });
+});
 
 describe("GET /v1/health", () => {
   it("returns 200 with healthy JSON and no-store", async () => {
@@ -11,11 +29,7 @@ describe("GET /v1/health", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
-    await expect(response.json()).resolves.toEqual({
-      ok: true,
-      service: "mercury-gateway",
-      contractRevision: "2026-10-06-eval-landed",
-    });
+    await expect(response.json()).resolves.toEqual(healthBody());
   });
 
   it("returns 404 for unknown paths and does not echo the path", async () => {
@@ -64,15 +78,15 @@ describe("GET /v1/health", () => {
     } as Request);
     expect(userinfo.status).toBe(400);
   });
-});
 
-  it("health stamp is a revision name, never a secret", async () => {
+  it("health stamp is a revision name, never a secret or a device proof", async () => {
     const response = await handleRequest(
       new Request("https://mercury-gateway.example/v1/health", { method: "GET" }),
     );
     const body = await response.json();
     const serialized = JSON.stringify(body);
-    expect(serialized).toContain("2026-10-06-eval-landed");
+    expect(serialized).toContain("2026-10-07-device-fence");
+    expect(serialized).toContain("not_recorded");
     expect(serialized).not.toMatch(/postgres:|eyJ|api_key|DEVICE_TOKEN/i);
   });
-
+});
