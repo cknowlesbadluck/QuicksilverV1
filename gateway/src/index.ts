@@ -15,6 +15,7 @@
  */
 
 import { authenticate } from "./auth";
+import { healthBody } from "./device-acceptance";
 import {
   DailyBudgets,
   RpmLimiter,
@@ -189,13 +190,10 @@ export async function handleRequest(
     return handleConfig(request, env, state);
   }
 
-  return Response.json(
-    { ok: true, service: "mercury-gateway", contractRevision: "2026-10-06-eval-landed" },
-    {
-      status: 200,
-      headers: { "cache-control": "no-store" },
-    },
-  );
+  return Response.json(healthBody(), {
+    status: 200,
+    headers: { "cache-control": "no-store" },
+  });
 }
 
 export default {

@@ -1,20 +1,27 @@
-# Portfolio 10-phase roadmap — 2026-10-09 14:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-09 15:00 EDT
 
-Probe at 2026-10-09T18:01Z. Conduit `/health` and `/ready` 200, version 0.8.0, contractRevision `2026-10-03-ready-surface`, postgres. Resonance `/api/ready` 503, missing exactly `SUPABASE_SERVICE_ROLE_KEY`, body omits `ownerActionRequired` and `contractRevision`. Vercel alias `resonance-nexus.vercel.app` returned 404 `DEPLOYMENT_NOT_FOUND`, classified `alias_absent`. Supabase Resonance, Quicksilver, WhereamI are INACTIVE. Device HG on iPhone 16e unrecorded. No secret invented.
+Live probes at 2026-10-09T19:01Z. No secrets invented. Merging `main` into the lattice branch is stabilization, not phase admission, and not a pull merge.
 
-Audit revision `2026-10-09-audit-hardening`. Prior spine `2026-10-09-phase-spine`. Current phase is 0. This stamp is not a phase advance.
+Evidence:
+- Conduit `GET /health` and `GET /ready` returned 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, ready `persistence=postgres`.
+- Resonance `GET /api/ready` returned 503 missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body omitted `ownerActionRequired` and `contractRevision`.
+- Vercel alias returned 404 `DEPLOYMENT_NOT_FOUND`, classified `alias_absent`.
+- Supabase projects Resonance, Quicksilver, and WhereamI remain INACTIVE from the prior owner-gate classification. This pass did not unpause them.
+- Device HG on iPhone 16e is unrecorded.
+- Before this pass, lattice pulls were dirty: Conduit `#187` behind 1 (`40aeb11`), Resonance `#154` behind 1 (`278bc39`), QuicksilverV1 `#242` behind 2 (`8bc9b57`). The only merge conflict was this file.
+- This pass merged `main` into `feat/cutover-lattice-1000` on each repo. The pulls stay open.
 
 ## Phase 0 — Owner gate
 
-Unpause Resonance Supabase, then set `SUPABASE_SERVICE_ROLE_KEY` on Netlify `resonancenexus` only. Do not invent it. Exit: public `GET /api/ready` is 200 and the project is not paused. Blocked.
+Unpause Resonance Supabase, then set `SUPABASE_SERVICE_ROLE_KEY` on Netlify `resonancenexus` only. Record device HG on iPhone 16e. A branch merge does not clear this. Blocked.
 
-## Phase 1 — Entropy collapse
+## Phase 1 — Lattice current
 
-Discretionary open pulls stay at or under 2 per active repo. Automation holds (`#188`, `#209`) and keep-red (`#119`, `#120`, `#155`, `#162`) do not count. Live discretionary counts: Conduit 2, Resonance 2, QuicksilverV1 1. No orphan ref remains, so pruneThisPass is empty. Already-pruned fence names stay closed: `feat/pause-before-secret`, `feat/phase-admission-1000`, `hygiene/platform-drift-fence`, `hygiene/chunk-advisory-fence`, `hygiene/roadmap-1200-refresh`. Satisfied only while that inventory holds.
+Lattice branches contain `main`. Dirty base is recorded, then closed by branch merge, not by merging `#187`, `#154`, or `#242`. Exit of this pass: branch contains main. Pull merge is still refused.
 
 ## Phase 2 — Ready parity
 
-Public Netlify ready body matches the known 503 contract. A Vercel alias 404 is `alias_absent`. Satisfied at this probe.
+Public Netlify ready body matches the known 503 contract until the owner sets the key. A Vercel alias 404 stays `alias_absent`.
 
 ## Phase 3 — Persistence proof
 
@@ -38,10 +45,10 @@ One capability model on web and iOS. Do not revive closed cockpit pulls. Blocked
 
 ## Phase 8 — Device acceptance
 
-Owner records the iPhone 16e human gate. A merged device-fence pull is not this exit. Simulator CI is not CHR-55. Unrecorded.
+HG recorded on iPhone 16e. Simulator CI and gateway health are not this exit. Blocked.
 
-## Phase 9 — Release hardening
+## Phase 9 — Release surface
 
-SideStore IPA evidence and Postgres TLS only after the owner sets Render env. `#155` and `#162` stay unmerged. `release/0.8.0` is hold-not-delete. Archived `Quicksilver` and `mcp` stay archived.
+Privacy manifest, SideStore evidence, and deny-by-default grants still hold. `#155` and `#162` stay unmerged until the Render Postgres TLS env is set. `#119` and `#120` stay draft red. `release/0.8.0` is hold-not-delete.
 
-Not merged: `#119` `#120` `#155` `#162` `#187` `#188` `#190` `#154` `#157` `#242` `#209`.
+Binding constraint: the Resonance owner secret and the unrecorded device gate. Conduit coordination surface is ready and is not production-proven for TLS or grants.

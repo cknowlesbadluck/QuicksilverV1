@@ -21,6 +21,8 @@ public struct PortfolioPosture: Equatable, Sendable {
     /// True only for a Resonance body that has a status and no contractRevision.
     /// That is a stale host, not a closed owner gate and not device acceptance.
     public let deployLag: Bool
+    /// Vercel alias 404 / DEPLOYMENT_NOT_FOUND. Not an owner gate and not device acceptance.
+    public let aliasAbsent: Bool
 
     public init(
         plane: Plane,
@@ -30,7 +32,8 @@ public struct PortfolioPosture: Equatable, Sendable {
         missingRequired: [String],
         version: String?,
         contractRevision: String?,
-        deployLag: Bool
+        deployLag: Bool,
+        aliasAbsent: Bool = false
     ) {
         self.plane = plane
         self.httpStatus = httpStatus
@@ -40,6 +43,7 @@ public struct PortfolioPosture: Equatable, Sendable {
         self.version = version
         self.contractRevision = contractRevision
         self.deployLag = deployLag
+        self.aliasAbsent = aliasAbsent
     }
 
     public static func parse(plane: Plane, httpStatus: Int, json: Data) -> PortfolioPosture {
@@ -51,16 +55,19 @@ public struct PortfolioPosture: Equatable, Sendable {
         let revision = object["contractRevision"] as? String
         let ready = httpStatus == 200 && status == "ready"
         let ownerAction = explicitOwner ?? (!missing.isEmpty && !ready)
-        let deployLag = plane == .resonance && status != nil && revision == nil
+        let deployLag = plane == .resonance && status != nil && revision == nil && httpStatus != 404
+        let raw = String(data: json, encoding: .utf8) ?? ""
+        let aliasAbsent = httpStatus == 404 || raw.contains("DEPLOYMENT_NOT_FOUND")
         return PortfolioPosture(
             plane: plane,
             httpStatus: httpStatus,
-            ready: ready && missing.isEmpty,
-            ownerActionRequired: ownerAction && !ready,
+            ready: ready && missing.isEmpty && !aliasAbsent,
+            ownerActionRequired: ownerAction && !ready && !aliasAbsent,
             missingRequired: missing,
             version: version,
             contractRevision: revision,
-            deployLag: deployLag
+            deployLag: deployLag && !aliasAbsent,
+            aliasAbsent: aliasAbsent
         )
     }
 }
