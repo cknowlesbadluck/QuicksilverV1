@@ -7,7 +7,9 @@
  * project cannot be turned into persistence proof by setting a key.
  */
 
-export const HYGIENE_REVISION = "2026-10-09-hygiene-prune";
+export const HYGIENE_REVISION = "2026-10-09-automation-hold";
+
+import { classifyPull } from "./automation-hold";
 
 export const KEEP_RED = [119, 120, 155, 162] as const;
 
@@ -44,6 +46,7 @@ export type PruneDisposition =
   | "keep_unmerged"
   | "hold_not_delete"
   | "hold_until_ci"
+  | "automation_hold"
   | "refresh_in_place"
   | "owner_unpause";
 
@@ -114,11 +117,20 @@ export function decideHygiene(input: HygieneInput): HygieneDecision {
       });
       continue;
     }
-    if (pull.title.toLowerCase().includes("cutover lattice")) {
+    const klass = classifyPull(pull);
+    if (klass === "lattice") {
       dispositions.push({
         target: `${pull.repo}#${pull.number}`,
         disposition: "refresh_in_place",
         reason: "Canonical lattice. Do not open another witness family.",
+      });
+      continue;
+    }
+    if (klass === "automation") {
+      dispositions.push({
+        target: `${pull.repo}#${pull.number}`,
+        disposition: "automation_hold",
+        reason: "Bolt or Dependabot diff. Do not merge while unstable. Do not close as a superseded witness.",
       });
       continue;
     }
