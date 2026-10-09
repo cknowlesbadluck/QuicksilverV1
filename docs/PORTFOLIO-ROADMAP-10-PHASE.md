@@ -1,15 +1,16 @@
-# Portfolio 10-phase roadmap — 2026-10-09 15:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-09 16:00 EDT
 
-Live probes at 2026-10-09T19:01Z. No secrets invented. Merging `main` into the lattice branch is stabilization, not phase admission, and not a pull merge.
+Live probes at 2026-10-09T20:01Z. No secrets invented. This pass did not merge pulls and did not merge main. Lattice heads were already current with main.
 
 Evidence:
 - Conduit `GET /health` and `GET /ready` returned 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, ready `persistence=postgres`.
-- Resonance `GET /api/ready` returned 503 missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body omitted `ownerActionRequired` and `contractRevision`.
+- Diagnostics: health, protected-resource metadata, authorization server, JWKS, and scope parity ok.
+- Resonance `GET /api/ready` returned 503. `missingRequired` was exactly `["SUPABASE_SERVICE_ROLE_KEY"]`. Body omitted `ownerActionRequired` and `contractRevision`. Timestamp `2026-10-09T20:01:33.328Z`. Leak fence classified that body safe-to-record and not phase-admitted.
 - Vercel alias returned 404 `DEPLOYMENT_NOT_FOUND`, classified `alias_absent`.
-- Supabase projects Resonance, Quicksilver, and WhereamI remain INACTIVE from the prior owner-gate classification. This pass did not unpause them.
+- Supabase projects re-listed this pass: Resonance INACTIVE, Quicksilver: Mercurial intelligence INACTIVE, WhereamI? INACTIVE. Not unpaused.
 - Device HG on iPhone 16e is unrecorded.
-- Before this pass, lattice pulls were dirty: Conduit `#187` behind 1 (`40aeb11`), Resonance `#154` behind 1 (`278bc39`), QuicksilverV1 `#242` behind 2 (`8bc9b57`). The only merge conflict was this file.
-- This pass merged `main` into `feat/cutover-lattice-1000` on each repo. The pulls stay open.
+- Branch inventory: every non-main ref is hold-not-delete. `pruneThisPass` is empty. `feat/admission-clock` backs `#190` and was not deleted. `release/0.8.0` is hold-not-delete.
+- Not merged: `#119` `#120` `#155` `#162` `#187` `#188` `#190` `#154` `#157` `#242` `#209`.
 
 ## Phase 0 — Owner gate
 
@@ -17,15 +18,15 @@ Unpause Resonance Supabase, then set `SUPABASE_SERVICE_ROLE_KEY` on Netlify `res
 
 ## Phase 1 — Lattice current
 
-Lattice branches contain `main`. Dirty base is recorded, then closed by branch merge, not by merging `#187`, `#154`, or `#242`. Exit of this pass: branch contains main. Pull merge is still refused.
+Lattice branches contain `main`. This pass found no new base drift. Pull merge of `#187`, `#154`, and `#242` stays refused.
 
 ## Phase 2 — Ready parity
 
-Public Netlify ready body matches the known 503 contract until the owner sets the key. A Vercel alias 404 stays `alias_absent`.
+Public Netlify ready body matches the known 503 contract until the owner sets the key. A Vercel alias 404 stays `alias_absent`. Secret-shaped bodies are refused by the leak fence and are never written into this file.
 
 ## Phase 3 — Persistence proof
 
-Apply `supabase/migrations` on the unpaused Resonance project and smoke `resonancenexus`. Blocked by phase 0.
+Apply `supabase/migrations` on the unpaused Resonance project and smoke `resonancenexus`. Blocked by phase 0. Inactive projects are not persistence.
 
 ## Phase 4 — Idempotent execution
 
