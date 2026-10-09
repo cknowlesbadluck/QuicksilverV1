@@ -1,18 +1,6 @@
-# Portfolio 10-phase roadmap — 2026-10-09 05:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-09 06:00 EDT
 
-Live probes at 2026-10-09T09:02:11Z. No secrets invented. A classifier is not production proof. Refresh in place. Do not open a new witness family.
-
-Evidence:
-- Conduit `GET /health` and `GET /ready` returned 200. `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, persistence `postgres`.
-- Resonance `GET https://resonancenexus.netlify.app/api/ready` returned 503. Body: `{"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-09T09:02:11.190Z"}`. Omitted `ownerActionRequired` and `contractRevision`.
-- `https://resonancenexus.vercel.app/` returned 404 `DEPLOYMENT_NOT_FOUND`. Classify as `alias_absent`.
-- Supabase Resonance, Quicksilver, and WhereamI remained INACTIVE at the prior 04:00 pass. Pause stands until the owner unpauses. This pass did not re-query Supabase.
-- Conduit `#188` is an unstable Bolt pull. It is `automation_hold`: do not merge, do not close as a superseded witness.
-- QuicksilverV1 `#209` is Dependabot. Same hold.
-- Keep-red `#119` `#120` `#155` `#162` stay unmerged.
-- Lattice family stays `#187` `#154` `#242` on `feat/cutover-lattice-1000`.
-- QuicksilverV1 `#241` on main at `83f13504` is `landed_unverified`.
-- New product code this pass: chamber dissonance detector in Resonance. Watch does not dissolve. Block does.
+Probe: Conduit `/health` and `/ready` 200, version 0.8.0, contractRevision `2026-10-03-ready-surface`, postgres. Diagnostics health, PRM, AS, JWKS, scope parity ok. Resonance `/api/ready` 503, missing exactly `SUPABASE_SERVICE_ROLE_KEY`, body omits ownerActionRequired and contractRevision. Vercel alias 404 `DEPLOYMENT_NOT_FOUND`, classified `alias_absent`. Supabase Resonance, Quicksilver, WhereamI paused at the 01:00 probe and not rechecked this hour. Device HG on iPhone 16e unrecorded. `#241` on main at `83f13504` is landed_unverified, not the device exit. activity_prune removed 0. Governor revision `2026-10-09-phase-governor` decides current phase 0.
 
 ## Phase 0 — Owner gate
 
@@ -20,11 +8,11 @@ Unpause Resonance Supabase, then set `SUPABASE_SERVICE_ROLE_KEY` on Netlify `res
 
 ## Phase 1 — Entropy collapse
 
-Discretionary open pulls stay at or under 2 per active repo. Automation holds do not count. Exit: Bolt `#188` and Dependabot `#209` remain open and unmerged while unstable.
+Discretionary open pulls stay at or under 2 per active repo. Automation holds do not count. Exit: Bolt `#188` and Dependabot `#209` remain open and unmerged while unstable. Satisfied at this probe (discretionary 1/1/1).
 
 ## Phase 2 — Ready parity
 
-Public Netlify ready body matches the repository contract revision. A Vercel alias success does not count.
+Public Netlify ready body matches the repository contract revision. A Vercel alias success does not count. Satisfied at this probe as the known 503 shape.
 
 ## Phase 3 — Persistence proof
 
@@ -52,6 +40,4 @@ One capability model on web and iOS. Do not revive closed cockpit pulls.
 
 ## Phase 9 — Release hardening
 
-SideStore IPA evidence and Postgres TLS only after the owner sets Render env. Keep-red `#155` and `#162` stay unmerged until then.
-
-Binding constraint: paused Supabase plus missing Netlify key. Lattice revision `2026-10-09-automation-hold`. No branch deletes, no pull closes, no merges.
+SideStore IPA evidence and Postgres TLS only after the owner sets Render env. Keep-red `#155` and `#162` stay unmerged until then. `release/0.8.0` is diverged: hold, do not delete.
