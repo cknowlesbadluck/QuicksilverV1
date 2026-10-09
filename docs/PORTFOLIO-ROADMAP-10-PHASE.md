@@ -1,16 +1,19 @@
-# Portfolio 10-phase roadmap — 2026-10-09 17:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-09 18:00 EDT
 
-Live probes at 2026-10-09T21:01Z. No secrets invented. This pass did not merge pulls and did not merge main. Lattice heads were already current with main.
+Live probes at 2026-10-09T22:02Z. No secrets invented. This pass did not merge pulls and did not delete refs. Lattice heads were already current with main. `pruneThisPass` is empty.
 
 Evidence:
 - Conduit `GET /health` and `GET /ready` returned 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, ready `persistence=postgres`.
-- Diagnostics checks present and ok: health, protectedResourceRoot, protectedResourcePath, authorizationServer (`metadata_valid`), jwks, issuer. `scopeParity` was not a key in this payload. Not invented.
-- Resonance `GET /api/ready` returned 503. `missingRequired` was exactly `["SUPABASE_SERVICE_ROLE_KEY"]`. Body omitted `ownerActionRequired` and `contractRevision`. Timestamp `2026-10-09T21:01:45.380Z`.
-- Stranger-alias fence: `resonancenexus.vercel.app` and `quicksilverv1.vercel.app` returned 404 `DEPLOYMENT_NOT_FOUND`, classified `alias_absent`. `resonance.vercel.app` returned 200 HTML titled Detail Framework, classified `stranger_occupant`. `quicksilver.vercel.app` returned 200 HTML titled Canawan, classified `stranger_occupant`. A stranger 200 is not our deployment and is not phase admission.
-- Supabase projects re-listed this pass: Resonance INACTIVE, Quicksilver: Mercurial intelligence INACTIVE, WhereamI? INACTIVE. Not unpaused.
+- Public diagnostics checks ok: health, protectedResourceRoot, protectedResourcePath, authorizationServer (`metadata_valid`), authorizationServerStandard, jwks, issuer. `scopeParity` is a top-level key, `ok=true`, `missing=[]`. `discovery.cimd=true`, `discovery.dcr=true`. The prior note that `scopeParity` was absent was wrong for this payload.
+- Resonance `GET /api/ready` returned 503. `missingRequired` was exactly `["SUPABASE_SERVICE_ROLE_KEY"]`. Body omitted `ownerActionRequired` and `contractRevision`. Timestamp `2026-10-09T22:02:05.838Z`. `authMode=required`, `authModeOk=true`, `persistenceConfigured=false`, `githubAdapterConfigured=false`.
+- `resonancenexus.vercel.app` and `quicksilverv1.vercel.app` returned 404 `DEPLOYMENT_NOT_FOUND`, classified `alias_absent`.
+- `resonance.vercel.app` returned 200 HTML titled Detail Framework (`data-cruncher`), classified `stranger_occupant`.
+- `quicksilver.vercel.app` returned 200 HTML titled Canawan with analytics id `UA-160004791-1`, classified `stranger_occupant`.
+- Supabase projects re-listed this pass: Resonance INACTIVE, Quicksilver: Mercurial intelligence INACTIVE, WhereamI? INACTIVE. Not unpaused. Inactive is not persistence.
 - Device HG on iPhone 16e is unrecorded.
-- Branch inventory: every non-main ref is hold-not-delete. `pruneThisPass` is empty. `feat/admission-clock` backs `#190` and was not deleted. `release/0.8.0` is hold-not-delete.
+- Branch inventory: every non-main ref is hold-not-delete. `release/0.8.0` is hold-not-delete. `feat/admission-clock` backs `#190` and was not deleted.
 - Not merged: `#119` `#120` `#155` `#162` `#187` `#188` `#190` `#154` `#157` `#242` `#209`. Archived `Quicksilver` `#1` `#2` left untouched.
+- Innovation this pass: inactive-fingerprint fence. A known stranger title or analytics id beats a spoofed portfolio marker. `phaseAdmitted` stays false.
 
 ## Phase 0 — Owner gate
 
@@ -22,7 +25,7 @@ Lattice branches contain `main`. This pass found no new base drift. Pull merge o
 
 ## Phase 2 — Ready parity
 
-Public Netlify ready body matches the known 503 contract until the owner sets the key. A 404 `DEPLOYMENT_NOT_FOUND` stays `alias_absent`. A 200 HTML page on a guessed host without a portfolio marker stays `stranger_occupant`. Neither admits a phase.
+Public Netlify ready body matches the known 503 contract until the owner sets the key. A 404 `DEPLOYMENT_NOT_FOUND` stays `alias_absent`. A 200 HTML page on a guessed host stays `stranger_occupant`, including when it copies an owned marker but still carries Detail Framework, Canawan, data-cruncher, or `UA-160004791-1`. Neither admits a phase.
 
 ## Phase 3 — Persistence proof
 
