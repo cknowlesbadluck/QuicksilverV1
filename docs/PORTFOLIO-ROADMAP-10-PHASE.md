@@ -1,42 +1,58 @@
-# Portfolio 10-phase roadmap — 2026-10-09 08:02 EDT
+# Portfolio 10-phase roadmap — 2026-10-09 18:00 EDT
 
-Live probes at 2026-10-09T12:02:13Z. No secrets invented. A classifier test is not production proof. This pass did not merge #242.
+Live probes at 2026-10-09T22:02Z. No secrets invented. This pass did not merge pulls and did not delete refs. Lattice heads were already current with main. `pruneThisPass` is empty.
 
 Evidence:
-- Resonance `GET https://resonancenexus.netlify.app/api/ready` returned 503. Body missing exactly `SUPABASE_SERVICE_ROLE_KEY`. `ownerActionRequired` and `contractRevision` omitted on the host. Source on Resonance main already stamps both. Deploy lag plus owner gate.
-- `https://resonanceplane.vercel.app/api/ready` returned 404 `DEPLOYMENT_NOT_FOUND`. Alias absent. `PortfolioPosture.aliasAbsent` must not treat that as an owner gate.
-- Conduit health and ready returned 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, ready `persistence=postgres`.
-- QuicksilverV1 gateway health is liveness only. `deviceAcceptance` stays `not_recorded`. Acceptance gate is CHR-55, an iPhone 16e archive IPA. `mercury-gateway.cknowlesbadluck.workers.dev` did not resolve in this pass.
-- Held: #242 says do not merge. #209 is the dependabot checkout bump.
+- Conduit `GET /health` and `GET /ready` returned 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, ready `persistence=postgres`.
+- Public diagnostics checks ok: health, protectedResourceRoot, protectedResourcePath, authorizationServer (`metadata_valid`), authorizationServerStandard, jwks, issuer. `scopeParity` is a top-level key, `ok=true`, `missing=[]`. `discovery.cimd=true`, `discovery.dcr=true`. The prior note that `scopeParity` was absent was wrong for this payload.
+- Resonance `GET /api/ready` returned 503. `missingRequired` was exactly `["SUPABASE_SERVICE_ROLE_KEY"]`. Body omitted `ownerActionRequired` and `contractRevision`. Timestamp `2026-10-09T22:02:05.838Z`. `authMode=required`, `authModeOk=true`, `persistenceConfigured=false`, `githubAdapterConfigured=false`.
+- `resonancenexus.vercel.app` and `quicksilverv1.vercel.app` returned 404 `DEPLOYMENT_NOT_FOUND`, classified `alias_absent`.
+- `resonance.vercel.app` returned 200 HTML titled Detail Framework (`data-cruncher`), classified `stranger_occupant`.
+- `quicksilver.vercel.app` returned 200 HTML titled Canawan with analytics id `UA-160004791-1`, classified `stranger_occupant`.
+- Supabase projects re-listed this pass: Resonance INACTIVE, Quicksilver: Mercurial intelligence INACTIVE, WhereamI? INACTIVE. Not unpaused. Inactive is not persistence.
+- Device HG on iPhone 16e is unrecorded.
+- Branch inventory: every non-main ref is hold-not-delete. `release/0.8.0` is hold-not-delete. `feat/admission-clock` backs `#190` and was not deleted.
+- Not merged: `#119` `#120` `#155` `#162` `#187` `#188` `#190` `#154` `#157` `#242` `#209`. Archived `Quicksilver` `#1` `#2` left untouched.
+- Innovation this pass: inactive-fingerprint fence. A known stranger title or analytics id beats a spoofed portfolio marker. `phaseAdmitted` stays false.
 
-## Phase 1 — Owner gate is not this repo
-Do not invent `SUPABASE_SERVICE_ROLE_KEY`. Exit: posture parse of the live 503 stays owner-blocked.
+## Phase 0 — Owner gate
 
-## Phase 2 — Alias absent is not the gate
-Vercel 404 is `aliasAbsent`. Exit: `PortfolioPostureTests` rejects treating it as owner action or device acceptance.
+Unpause Resonance Supabase, then set `SUPABASE_SERVICE_ROLE_KEY` on Netlify `resonancenexus` only. Record device HG on iPhone 16e. A branch merge does not clear this. Blocked.
 
-## Phase 3 — Device fence stay
-`claimDeviceAcceptance()` always rejects. Exit: health body keeps `deviceAcceptance=not_recorded` and `acceptanceGate=CHR-55`.
+## Phase 1 — Lattice current
 
-## Phase 4 — CHR-55 remains the device gate
-Simulator CI and a workers.dev 200 are not acceptance. Exit: Linear CHR-55 stays open until an archive IPA is on the iPhone 16e.
+Lattice branches contain `main`. This pass found no new base drift. Pull merge of `#187`, `#154`, and `#242` stays refused.
 
-## Phase 5 — Conversation budget stay
-Brain still sends a bounded prior-turn window. Exit: AppTests green on the recording provider. Device HG still open.
+## Phase 2 — Ready parity
 
-## Phase 6 — Gateway contract stay
-Do not add paid Workers bindings. Exit: `wrangler.toml` still has no KV, R2, D1, or Queues.
+Public Netlify ready body matches the known 503 contract until the owner sets the key. A 404 `DEPLOYMENT_NOT_FOUND` stays `alias_absent`. A 200 HTML page on a guessed host stays `stranger_occupant`, including when it copies an owned marker but still carries Detail Framework, Canawan, data-cruncher, or `UA-160004791-1`. Neither admits a phase.
 
-## Phase 7 — Hygiene prune
-No hourly audit files. One roadmap file. Do not merge #242 in this pass. Archived `cknowlesbadluck/Quicksilver` is not the product.
+## Phase 3 — Persistence proof
 
-## Phase 8 — Resonance cockpit waits
-No second client. iOS Resonance work waits until the Netlify ready body carries the contract stamp.
+Apply `supabase/migrations` on the unpaused Resonance project and smoke `resonancenexus`. Blocked by phase 0. Inactive projects are not persistence.
 
-## Phase 9 — Privacy stay
-Privacy manifest and metadata-only gateway logs stay. Exit: no request or response body logging in the gateway.
+## Phase 4 — Idempotent execution
 
-## Phase 10 — Cross-plane acceptance
-One probe covers Conduit ready, Resonance ready, and a real device archive. Exit: production verdict accepted. A fixture test is not that proof.
+Duplicate requests do not double-execute. Exit: Idempotency-Key replay does not double-write on the production host. Blocked.
 
-Binding constraint: CHR-55 device archive, and the Resonance owner secret. Neither is closed by a simulator job.
+## Phase 5 — Adapter substitution
+
+A second provider satisfies the same capability contract. Conduit stays project-agnostic. Blocked.
+
+## Phase 6 — Chamber lifecycle
+
+Form, work, dissolve, audit intact. Watch cannot dissolve. Dissonance can. `#157` stays unmerged until durable evidence exists. Blocked on phase 3.
+
+## Phase 7 — iOS peer contract
+
+One capability model on web and iOS. Do not revive closed cockpit pulls. Blocked.
+
+## Phase 8 — Device acceptance
+
+HG recorded on iPhone 16e. Simulator CI and gateway health are not this exit. Blocked.
+
+## Phase 9 — Release surface
+
+Privacy manifest, SideStore evidence, and deny-by-default grants still hold. `#155` and `#162` stay unmerged until the Render Postgres TLS env is set. `#119` and `#120` stay draft red. `release/0.8.0` is hold-not-delete.
+
+Binding constraint: the Resonance owner secret and the unrecorded device gate. Guessed Vercel hosts that answer 200 are strangers. Conduit coordination surface is ready and is not production-proven for TLS or grants.
