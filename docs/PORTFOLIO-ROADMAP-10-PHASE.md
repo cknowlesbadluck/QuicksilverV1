@@ -1,21 +1,21 @@
-# Portfolio 10-phase roadmap — 2026-10-08 23:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-09 00:00 EDT
 
-Live probes at 2026-10-09T03:01:18Z. No secrets invented. A classifier is not production proof. This file is the in-place roadmap. Do not add hourly audit files. Do not open a new witness family.
+Live probes at 2026-10-09T04:01:23Z. No secrets invented. A classifier is not production proof. This file is the in-place roadmap. Do not add hourly audit files. Do not open a new witness family.
 
 Evidence:
-- Conduit `GET /health` and `GET /ready` returned 200. `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, persistence `postgres`. Bound agent `grok`, no binding conflict.
+- Conduit `GET /health` and `GET /ready` returned 200. `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, persistence `postgres`. Diagnostics: health, protected resource, authorization server, JWKS, and scope parity all ok. Bound agent `grok`, no binding conflict.
 - Resonance `GET https://resonancenexus.netlify.app/api/ready` returned 503. `missingRequired` is exactly `SUPABASE_SERVICE_ROLE_KEY`. Body omitted `ownerActionRequired` and `contractRevision`.
-- `https://resonancenexus.vercel.app/api/ready` returned 404 `DEPLOYMENT_NOT_FOUND`. Classify as `alias_absent`, not an owner gate.
-- Legacy `cknowlesbadluck/Quicksilver` is already archived.
-- Collapse receipt `2026-10-08-2300-collapse` closes superseded witness families and deletes their heads. Keep-red `#119` `#120` `#155` `#162` stay open and their branches stay. Canonical lattice pulls stay open: Conduit `#187`, Resonance `#154`, QuicksilverV1 `#242`. Device-acceptance `#241` and Dependabot `#209` stay open.
+- `https://resonancenexus.vercel.app/` returned 404 `DEPLOYMENT_NOT_FOUND`. Classify as `alias_absent`, not an owner gate.
+- Legacy `cknowlesbadluck/Quicksilver` is archived. Do not retry archive.
+- Open non-archived pulls: Conduit `#187` plus keep-red `#119` `#120` `#155` `#162`; Resonance `#154`; QuicksilverV1 `#242` `#241` `#209`. No new witness pull.
 
 ## Phase 0 — Owner gate
 
-Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus` only. Do not invent it. Exit: public `GET /api/ready` is 200. Agent work cannot close this phase.
+Set `SUPABASE_SERVICE_ROLE_KEY` on Netlify site `resonancenexus` only. Do not invent it. Exit: public `GET /api/ready` is 200 and still omits `ownerActionRequired` until the contract says otherwise. Agent work cannot close this phase.
 
 ## Phase 1 — Entropy collapse
 
-Exit: superseded pulls closed, their heads deleted, keep-red untouched, no new witness family. This pass executes that exit. Remaining open non-keep-red work is the lattice family, `#241`, and `#209`.
+Exit: discretionary open pulls per active repo are at most 2. Keep-red pulls do not count. Archived repos do not count. This pass does not close `#241` or `#209` and does not merge keep-red. QuicksilverV1 still has 3 discretionary pulls, so the breach remains after Phase 0.
 
 ## Phase 2 — Ready parity
 
@@ -49,4 +49,4 @@ iPhone 16e human gate. Simulator CI is not this gate. `#241` stays open until th
 
 SideStore IPA evidence, privacy manifest, Postgres TLS only after the owner sets Render env. Exit: keep-red `#155` and `#162` either merged against a prepared env or still explicitly unmerged.
 
-Binding constraint: owner secret on Netlify. The collapse receipt does not pretend otherwise.
+Binding constraint: owner secret on Netlify. Entropy fence revision `2026-10-09-entropy-fence` does not pretend otherwise.
