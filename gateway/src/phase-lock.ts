@@ -1,5 +1,5 @@
 /**
- * Phase lock. Pure disposition for the 18:00 EDT portfolio pass.
+ * Phase lock. Pure disposition for the 23:00 EDT portfolio pass.
  *
  * Does not call hosts, invent secrets, merge pull requests, or archive repos.
  * Callers pass already-observed facts. The lock refuses a new witness family
@@ -7,7 +7,7 @@
  * keep-red numbers.
  */
 
-export const PHASE_LOCK_REVISION = "2026-10-08-phase-lock";
+export const PHASE_LOCK_REVISION = "2026-10-08-2300-collapse";
 
 export const KEEP_RED = [119, 120, 155, 162] as const;
 
@@ -47,7 +47,7 @@ function familyOf(title: string): string {
   if (normalized.includes("cutover lattice")) return CANONICAL_FAMILY;
   if (normalized.includes("entropy governor")) return "entropy-governor";
   if (normalized.includes("degrade planner")) return "degrade-planner";
-  if (normalized.includes("work admission") || normalized.includes("admission")) return "work-admission";
+  if (normalized.includes("work admission")) return "work-admission";
   if (normalized.includes("phase clock")) return "phase-clock";
   if (normalized.includes("ready body") || normalized.includes("ready pin")) return "public-ready-pin";
   if (normalized.includes("device acceptance")) return "device-acceptance";
@@ -72,7 +72,7 @@ export function decidePhaseLock(input: PhaseLockInput): PhaseLockDecision {
         : disposition === "canonical"
           ? "Current lattice witness. Refresh in place. Do not open another family."
           : disposition === "close_superseded"
-            ? "Superseded by the open cutover lattice. Close the pull request. Leave the branch."
+            ? "Superseded by the open cutover lattice. Close the pull request and delete the head branch."
             : "Hold. Not a superseded witness family and not keep-red.";
     return { ...pull, disposition, reason };
   });
