@@ -4,20 +4,16 @@
  * Pure decision function. It does not call hosts, invent secrets, merge pull
  * requests, or archive repositories. Callers pass already-observed facts.
  *
- * The lattice admits exactly one next action. Later phases stay closed while
- * an owner gate or an entropy breach is open.
+ * Keep-red pulls are excluded from the entropy budget. They are an owner hold,
+ * not discretionary scope. A lattice family that is already open is refreshed
+ * in place. This function never admits a second witness family.
  */
 
-export const LATTICE_REVISION = "2026-10-08-cutover-lattice";
+export const LATTICE_REVISION = "2026-10-09-entropy-fence";
 
 export const OPEN_PR_BUDGET = 2;
 
-export type HostClass =
-  | "ready"
-  | "owner_gated"
-  | "alias_absent"
-  | "unprobed"
-  | "unexpected";
+export type HostClass = "ready" | "owner_gated" | "alias_absent" | "unprobed" | "unexpected";
 
 export type PhaseId =
   | "p0_owner_gates"
@@ -46,11 +42,14 @@ export type RepoEntropy = {
   repo: string;
   openPullRequests: number;
   keepRed: number;
+  archived?: boolean;
 };
 
 export type LatticeInput = {
   hosts: HostProbe[];
   repos: RepoEntropy[];
+  legacyQuicksilverArchived?: boolean;
+  latticeFamilyOpen?: boolean;
   persistenceProof?: boolean;
   readyParityProof?: boolean;
   executionProof?: boolean;
@@ -69,6 +68,8 @@ export type LatticeDecision = {
   ownerActions: string[];
   refusedPhases: PhaseId[];
   entropyBreach: boolean;
+  discretionaryOpen: number;
+  refreshInPlace: boolean;
 };
 
 export const PHASES: readonly PhaseId[] = [
@@ -95,6 +96,11 @@ export function classifyHost(probe: HostProbe): HostClass {
   return "unexpected";
 }
 
+export function discretionaryOpen(repo: RepoEntropy): number {
+  if (repo.archived) return 0;
+  return Math.max(0, repo.openPullRequests - Math.max(0, repo.keepRed));
+}
+
 export function ownerGateOpen(hosts: HostProbe[]): boolean {
   return hosts.some((host) => {
     const missing = host.missingRequired ?? [];
@@ -110,10 +116,10 @@ export function publicContractDrift(hosts: HostProbe[]): boolean {
 }
 
 export function entropyBreach(repos: RepoEntropy[]): boolean {
-  return repos.some((repo) => repo.openPullRequests > OPEN_PR_BUDGET);
+  return repos.some((repo) => discretionaryOpen(repo) > OPEN_PR_BUDGET);
 }
 
-export function decideCutover(input: LatticeInput): LatticeDecision {
+function ownerActionsFor(input: LatticeInput): string[] {
   const ownerActions: string[] = [];
   const resonanceGated = input.hosts.some((host) => (host.missingRequired ?? []).includes(OWNER_SECRET));
   if (resonanceGated) {
@@ -122,130 +128,45 @@ export function decideCutover(input: LatticeInput): LatticeDecision {
   if (input.hosts.some((host) => classifyHost(host) === "alias_absent")) {
     ownerActions.push("Treat resonancenexus.vercel.app 404 DEPLOYMENT_NOT_FOUND as alias_absent, not an owner gate.");
   }
-  ownerActions.push("Archive cknowlesbadluck/Quicksilver. Agent archive attempts return 403.");
+  if (input.legacyQuicksilverArchived === false) {
+    ownerActions.push("Archive cknowlesbadluck/Quicksilver. Do not retry a 403 as if it were success.");
+  } else {
+    ownerActions.push("Legacy cknowlesbadluck/Quicksilver is archived. Do not retry archive.");
+  }
   ownerActions.push("Device acceptance remains an iPhone 16e human gate. Simulator CI is not that gate.");
+  ownerActions.push("Keep-red Conduit #119 #120 #155 #162 stay unmerged until the owner sets Render Postgres TLS env.");
+  return ownerActions;
+}
 
+export function decideCutover(input: LatticeInput): LatticeDecision {
+  const ownerActions = ownerActionsFor(input);
   const refused = (admitted: PhaseId): PhaseId[] => PHASES.filter((phase) => phase !== admitted);
-
-  if (ownerGateOpen(input.hosts) || publicContractDrift(input.hosts)) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p0_owner_gates",
-      admission: "owner_only",
-      reason: publicContractDrift(input.hosts)
-        ? "Public ready body drifted: ownerActionRequired or contractRevision must stay omitted until the owner key is set."
-        : "Owner gate is open. Later phases are refused until the missing key is set by the owner.",
-      ownerActions,
-      refusedPhases: refused("p0_owner_gates"),
-      entropyBreach: entropyBreach(input.repos),
-    };
-  }
-
-  if (entropyBreach(input.repos)) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p1_entropy_collapse",
-      admission: "implement",
-      reason: `Open pull requests exceed the budget of ${OPEN_PR_BUDGET} per repository. Collapse or keep-red before new scope.`,
-      ownerActions,
-      refusedPhases: refused("p1_entropy_collapse"),
-      entropyBreach: true,
-    };
-  }
-
-  if (!input.readyParityProof) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p2_ready_parity",
-      admission: "implement",
-      reason: "Owner gate is closed and entropy is inside budget. Next proof is ready-contract parity.",
-      ownerActions,
-      refusedPhases: refused("p2_ready_parity"),
-      entropyBreach: false,
-    };
-  }
-
-  if (!input.persistenceProof) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p3_persistence_proof",
-      admission: "implement",
-      reason: "Ready parity is proved. Persistence migrations are next. Do not invent the service-role key.",
-      ownerActions,
-      refusedPhases: refused("p3_persistence_proof"),
-      entropyBreach: false,
-    };
-  }
-
-  if (!input.executionProof) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p4_idempotent_execution",
-      admission: "implement",
-      reason: "Persistence is proved. Idempotent execution is next. Do not open a second adapter yet.",
-      ownerActions,
-      refusedPhases: refused("p4_idempotent_execution"),
-      entropyBreach: false,
-    };
-  }
-
-  if (!input.adapterSubstitutionProof) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p5_adapter_substitution",
-      admission: "implement",
-      reason: "Execution proof exists. Provider substitution is the next product proof.",
-      ownerActions,
-      refusedPhases: refused("p5_adapter_substitution"),
-      entropyBreach: false,
-    };
-  }
-
-  if (!input.chamberProof) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p6_chamber_lifecycle",
-      admission: "implement",
-      reason: "Substitution is proved. Chamber form, work, dissolve, and audit are next.",
-      ownerActions,
-      refusedPhases: refused("p6_chamber_lifecycle"),
-      entropyBreach: false,
-    };
-  }
-
-  if (!input.iosContractProof) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p7_ios_peer_contract",
-      admission: "implement",
-      reason: "Chamber proof exists. Next is one capability model on web and iOS.",
-      ownerActions,
-      refusedPhases: refused("p7_ios_peer_contract"),
-      entropyBreach: false,
-    };
-  }
-
-  if (!input.deviceAcceptanceProof) {
-    return {
-      revision: LATTICE_REVISION,
-      admittedPhase: "p8_device_acceptance",
-      admission: "owner_only",
-      reason: "Native contract is recorded. Device acceptance is an iPhone 16e human gate, not simulator CI.",
-      ownerActions,
-      refusedPhases: refused("p8_device_acceptance"),
-      entropyBreach: false,
-    };
-  }
-
-  return {
+  const discretionary = input.repos.reduce((sum, repo) => sum + discretionaryOpen(repo), 0);
+  const refreshInPlace = input.latticeFamilyOpen === true;
+  const breach = entropyBreach(input.repos);
+  const finish = (admittedPhase: PhaseId, admission: Admission, reason: string): LatticeDecision => ({
     revision: LATTICE_REVISION,
-    admittedPhase: "p9_release_hardening",
-    admission: input.releaseEvidence ? "hold" : "implement",
-    reason: input.releaseEvidence
-      ? "Release evidence is recorded. Hold for adversarial review. Do not open a new phase."
-      : "Device acceptance is recorded. Release hardening is next: SideStore IPA evidence, privacy manifest, and TLS only after owner env.",
+    admittedPhase,
+    admission: refreshInPlace && admission === "implement" ? "hold" : admission,
+    reason: refreshInPlace && admission === "implement"
+      ? `${reason} Lattice family is already open. Refresh in place. Do not open a new witness pull.`
+      : reason,
     ownerActions,
-    refusedPhases: refused("p9_release_hardening"),
-    entropyBreach: false,
-  };
+    refusedPhases: refused(admittedPhase),
+    entropyBreach: breach,
+    discretionaryOpen: discretionary,
+    refreshInPlace,
+  });
+  if (ownerGateOpen(input.hosts) || publicContractDrift(input.hosts)) {
+    return finish("p0_owner_gates", "owner_only", publicContractDrift(input.hosts) ? "Public ready body drifted: ownerActionRequired or contractRevision must stay omitted until the owner key is set." : "Owner gate is open. Later phases are refused until the missing key is set by the owner.");
+  }
+  if (breach) return finish("p1_entropy_collapse", "implement", `Discretionary open pull requests exceed the budget of ${OPEN_PR_BUDGET} per repository. Keep-red pulls do not count. Collapse before new scope.`);
+  if (!input.readyParityProof) return finish("p2_ready_parity", "implement", "Owner gate is closed and discretionary entropy is inside budget. Next proof is ready-contract parity.");
+  if (!input.persistenceProof) return finish("p3_persistence_proof", "implement", "Ready parity is proved. Persistence migrations are next. Do not invent the service-role key.");
+  if (!input.executionProof) return finish("p4_idempotent_execution", "implement", "Persistence is proved. Idempotent execution is next. Do not open a second adapter yet.");
+  if (!input.adapterSubstitutionProof) return finish("p5_adapter_substitution", "implement", "Execution proof exists. Provider substitution is the next product proof.");
+  if (!input.chamberProof) return finish("p6_chamber_lifecycle", "implement", "Substitution is proved. Chamber form, work, dissolve, and audit are next.");
+  if (!input.iosContractProof) return finish("p7_ios_peer_contract", "implement", "Chamber proof exists. Next is one capability model on web and iOS.");
+  if (!input.deviceAcceptanceProof) return finish("p8_device_acceptance", "owner_only", "Native contract is recorded. Device acceptance is an iPhone 16e human gate, not simulator CI.");
+  return finish("p9_release_hardening", input.releaseEvidence ? "hold" : "implement", input.releaseEvidence ? "Release evidence is recorded. Hold for adversarial review. Do not open a new phase." : "Device acceptance is recorded. Release hardening is next: SideStore IPA evidence, privacy manifest, and TLS only after owner env.");
 }
