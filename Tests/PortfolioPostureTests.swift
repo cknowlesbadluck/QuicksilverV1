@@ -42,3 +42,22 @@ final class PortfolioPostureTests: XCTestCase {
         XCTAssertFalse(posture.deployLag)
     }
 }
+
+    func testVercelAlias404IsNotAnOwnerGate() {
+        let body = "The deployment could not be found on Vercel. DEPLOYMENT_NOT_FOUND".data(using: .utf8)!
+        let posture = PortfolioPosture.parse(plane: .resonance, httpStatus: 404, json: body)
+        XCTAssertFalse(posture.ready)
+        XCTAssertFalse(posture.ownerActionRequired)
+        XCTAssertFalse(posture.deployLag)
+        XCTAssertTrue(posture.aliasAbsent)
+    }
+
+    func testGatewayHealthIsNotDeviceAcceptance() {
+        let body = """
+        {"ok":true,"service":"mercury-gateway","contractRevision":"2026-10-07-device-fence","deviceAcceptance":"not_recorded","acceptanceGate":"CHR-55"}
+        """.data(using: .utf8)!
+        let posture = PortfolioPosture.parse(plane: .quicksilver, httpStatus: 200, json: body)
+        XCTAssertFalse(posture.ready)
+        XCTAssertFalse(posture.aliasAbsent)
+        XCTAssertFalse(posture.ownerActionRequired)
+    }
