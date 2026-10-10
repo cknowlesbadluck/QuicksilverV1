@@ -1,9 +1,9 @@
-# Portfolio 10-phase roadmap — 2026-10-09 20:00 EDT
+# Portfolio 10-phase roadmap — 2026-10-09 22:00 EDT
 
-Live probes at ~2026-10-10T00:00Z. No secrets invented. Classifier tests are not production proof. This pass did not merge #242 or #209.
+Live probes at ~2026-10-10T02:01Z. No secrets invented. Classifier tests are not production proof. This pass did not merge #242 or #209.
 
 Evidence:
-- Resonance `GET https://resonancenexus.netlify.app/api/ready` still 503 missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body omits `ownerActionRequired` and `contractRevision` on the live host (source stamps them; deploy lag + owner gate).
+- Resonance `GET https://resonancenexus.netlify.app/api/ready` still 503 missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body omits `ownerActionRequired` and `contractRevision` on the live host (source stamps them; deploy lag + owner gate). Status body: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"]}.
 - Vercel aliases return 404 `DEPLOYMENT_NOT_FOUND` or stranger occupants. Classify as `aliasAbsent` or `stranger_occupant`; never as owner gate or device acceptance.
 - Conduit `/health` and `/ready` 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, `persistence=postgres`. Diagnostics scopeParity ok.
 - QuicksilverV1 gateway remains liveness-only. `deviceAcceptance=not_recorded`. Gate is CHR-55 real iPhone 16e archive IPA.
@@ -47,3 +47,4 @@ Innovation notes (this pass):
 - Add optional HMAC cursor secret path in Conduit once env is ready (see #162).
 - Device-side validation script for CHR-55 that records acceptance only after real IPA install + health check.
 - Chamber dissolve audit token hardening already in #157; land after owner gate clears.
+- Cross-plane probe script that fails closed on any missing stamp or device evidence before claiming Phase 10.
