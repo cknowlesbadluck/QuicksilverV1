@@ -26,6 +26,7 @@ CONDUIT_CODE=$(echo "$CONDUIT_READY" | tail -n 1)
 CONDUIT_OK=false
 if [[ "$CONDUIT_CODE" == "200" ]] && echo "$CONDUIT_BODY" | grep -q '"status":"ready"' && echo "$CONDUIT_BODY" | grep -q 'contractRevision'; then
   CONDUIT_OK=true
+  echo "NOTE: Conduit /health may timeout on cold start; /ready is the acceptance surface."
   echo "OK: Conduit ready + stamped"
   echo "DETAIL: $CONDUIT_BODY"
 else
@@ -59,7 +60,7 @@ if [[ "$RES_CODE" == "200" ]] && echo "$RES_BODY" | grep -q '"status":"ready"' &
  fi
 
 # Optional diagnostics check (non-blocking but logged)
-DIAG=$(curl -sS https://conduit-feco.onrender.com/diagnostics || echo "DIAG_UNAVAILABLE")
+DIAG=$(curl -sS --max-time 15 https://conduit-feco.onrender.com/diagnostics || echo "DIAG_UNAVAILABLE")
 DIAG_OK=false
 WARN_COUNT=0
 if echo "$DIAG" | grep -q 'scopeParity'; then
