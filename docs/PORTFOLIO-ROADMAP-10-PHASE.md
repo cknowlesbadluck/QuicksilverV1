@@ -1,15 +1,15 @@
-# Portfolio 10-phase roadmap — 2026-10-10 03:01 EDT
+# Portfolio 10-phase roadmap — 2026-10-10 04:02 EDT
 
-Live probes at 2026-10-10T03:00Z. No secrets invented. Classifier tests are not production proof. This pass pruned stale audit artifacts and did not merge held PRs (#242, #209, etc.).
+Live probes at 2026-10-10T04:01Z. No secrets invented. Classifier tests are not production proof. This pass confirmed live state, noted additional Dependabot, and did not merge held PRs.
 
 Evidence:
-- Resonance `GET https://resonancenexus.netlify.app/api/ready` 503 missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body omits `ownerActionRequired` and `contractRevision` on the live host (source stamps them; deploy lag + owner gate). Status body: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-10T03:00:51.056Z"}.
+- Resonance `GET https://resonancenexus.netlify.app/api/ready` 503 missing exactly `SUPABASE_SERVICE_ROLE_KEY`. Body still omits `ownerActionRequired` and `contractRevision` (deploy lag + owner gate). Health 200. Status body: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-10T04:01:31.139Z"}.
 - Vercel aliases return 404 `DEPLOYMENT_NOT_FOUND` or stranger occupants. Classify as `aliasAbsent` or `stranger_occupant`; never as owner gate or device acceptance.
-- Conduit `/health` and `/ready` 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, `persistence=postgres`. Diagnostics scopeParity ok.
+- Conduit `/health` and `/ready` 200, `version=0.8.0`, `contractRevision=2026-10-03-ready-surface`, `persistence=postgres`. `/diagnostics` scopeParity ok, resource metadata valid.
 - QuicksilverV1 gateway remains liveness-only. `deviceAcceptance=not_recorded`. Gate is CHR-55 real iPhone 16e archive IPA.
-- Open held: QuicksilverV1 #242 (cutover lattice), #209 (checkout bump); Conduit #187/#190/#188/#162/#155/#120; Resonance #154/#157. Dependabot medium vitest path-traversal on Resonance (dev-server only; not production).
+- Open held: QuicksilverV1 #242 (cutover lattice), #209 (checkout bump); Conduit #187/#190/#188/#162/#155/#120; Resonance #154/#157. Dependabot: Resonance medium vitest path-traversal (dev-server only) + postcss incomplete sourceMappingURL fix (runtime, but low exploitability without from unset in production paths).
 - Supabase projects for Resonance/Quicksilver reported INACTIVE in prior probes.
-- Hygiene: pruned `docs/AUDIT-2026-09-26.md` and `docs/AUDIT-2026-09-29-1743.md`. One roadmap file remains.
+- Hygiene: one roadmap file remains. No hourly audit artifacts. Archived Quicksilver non-product.
 
 ## Phase 1 — Owner gate stays external
 Do not invent or store `SUPABASE_SERVICE_ROLE_KEY`. Exit: live ready body remains owner-blocked; posture parser rejects any other classification.
@@ -30,7 +30,7 @@ Bounded windows and on-device embeddings continue. Exit: AppTests green; no unbo
 No paid Workers bindings (KV/R2/D1/Queues). Exit: `wrangler.toml` clean.
 
 ## Phase 7 — Hygiene prune executed
-One roadmap file. No hourly audit artifacts. Held PRs not merged. Archived `Quicksilver` remains non-product. Dependabot vitest noted (medium, dev-only).
+One roadmap file. No hourly audit artifacts. Held PRs not merged. Archived `Quicksilver` remains non-product. Dependabot alerts noted (vitest dev-only, postcss residual).
 
 ## Phase 8 — Resonance control plane waits on stamp
 No second client or iOS Resonance surface until live Netlify ready body carries contract stamp and owner key is set.
@@ -44,9 +44,10 @@ Single probe covers Conduit ready, Resonance ready (stamped), and real device ar
 Binding constraints: Resonance owner secret + CHR-55 device archive. Neither is closed by simulator or classifier.
 
 Innovation notes (this pass):
-- Added `scripts/portfolio-probe.sh` that fails closed on missing stamps or device evidence.
+- Refreshed probe evidence with current timestamps and diagnostics confirmation.
+- Noted additional postcss Dependabot for future dep bump after verification.
 - Strengthen PortfolioPosture classifier with stranger_occupant and inactive Supabase signals (held until next lattice PR).
-- Add optional HMAC cursor secret path in Conduit once env is ready (see #162).
+- Optional HMAC cursor secret path in Conduit once env is ready (see #162).
 - Device-side validation script for CHR-55 that records acceptance only after real IPA install + health check.
 - Chamber dissolve audit token hardening already in #157; land after owner gate clears.
-- Cross-plane probe is the fail-closed gate before claiming Phase 10.
+- Cross-plane probe is the fail-closed gate before claiming Phase 10. Enhanced script output for structured parsing.
