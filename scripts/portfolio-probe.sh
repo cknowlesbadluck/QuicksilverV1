@@ -3,7 +3,8 @@
 # Exits non-zero unless Conduit is ready+stamped, Resonance is ready+stamped
 # with owner key present, and deviceAcceptance is recorded on a real archive.
 # Classifier tests and fixtures are not proof. Do not invent secrets.
-# Output is human-readable; use --json for structured summary. grep for FAIL/OK for automation.
+# Output is human-readable; use --json for structured summary with explicit classification.
+# grep for FAIL/OK for automation.
 set -euo pipefail
 
 JSON=false
@@ -32,12 +33,23 @@ RES_READY=$(curl -sS -w "\n%{http_code}" https://resonancenexus.netlify.app/api/
 RES_BODY=$(echo "$RES_READY" | head -n -1)
 RES_CODE=$(echo "$RES_READY" | tail -n 1)
 RES_OK=false
+RES_CLASS="unknown"
 if [[ "$RES_CODE" == "200" ]] && echo "$RES_BODY" | grep -q '"status":"ready"' && echo "$RES_BODY" | grep -q 'contractRevision' && echo "$RES_BODY" | grep -q 'ownerActionRequired'; then
   RES_OK=true
+  RES_CLASS="ready_stamped"
   echo "OK: Resonance ready + stamped + owner key present"
   echo "DETAIL: $RES_BODY"
+elif [[ "$RES_CODE" == "503" ]] && echo "$RES_BODY" | grep -q 'SUPABASE_SERVICE_ROLE_KEY'; then
+  RES_CLASS="owner_gate_deploy_lag"
+  echo "FAIL: Resonance /api/ready HTTP 503 owner gate + deploy lag (missing key; stamp fields absent)"
+  echo "$RES_BODY"
+elif [[ "$RES_CODE" == "404" ]]; then
+  RES_CLASS="alias_absent"
+  echo "FAIL: Resonance ready alias_absent (404)"
+  echo "$RES_BODY"
 else
-  echo "FAIL: Resonance /api/ready HTTP $RES_CODE (owner gate or deploy lag)"
+  RES_CLASS="other"
+  echo "FAIL: Resonance /api/ready HTTP $RES_CODE unexpected"
   echo "$RES_BODY"
 fi
 
@@ -57,7 +69,7 @@ echo "Probe fails closed until that evidence exists."
 
 if [[ "$JSON" == true ]]; then
   cat <<EOF
-{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","conduit":{"ok":$CONDUIT_OK,"http":$CONDUIT_CODE,"body":$(echo "$CONDUIT_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"resonance":{"ok":$RES_OK,"http":$RES_CODE,"body":$(echo "$RES_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"diagnostics":$DIAG_OK,"deviceAcceptance":"not_recorded","probePassed":false}
+{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","conduit":{"ok":$CONDUIT_OK,"http":$CONDUIT_CODE,"body":$(echo "$CONDUIT_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"resonance":{"ok":$RES_OK,"http":$RES_CODE,"class":"$RES_CLASS","body":$(echo "$RES_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"diagnostics":$DIAG_OK,"deviceAcceptance":"not_recorded","probePassed":false}
 EOF
 fi
 
