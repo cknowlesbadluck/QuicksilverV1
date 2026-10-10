@@ -4,13 +4,18 @@
 # with owner key present, and deviceAcceptance is recorded on a real archive.
 # Classifier tests and fixtures are not proof. Do not invent secrets.
 # Output is human-readable; use --json for structured summary with explicit classification.
+# --strict treats WARN as FAIL (still always exits non-zero until full gates clear).
 # grep for FAIL/OK for automation.
 set -euo pipefail
 
 JSON=false
-if [[ "${1:-}" == "--json" ]]; then
-  JSON=true
-fi
+STRICT=false
+for arg in "$@"; do
+  case "$arg" in
+    --json) JSON=true ;;
+    --strict) STRICT=true ;;
+  esac
+done
 
 echo "=== Portfolio probe $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
 
@@ -56,20 +61,26 @@ fi
 # Optional diagnostics check (non-blocking but logged)
 DIAG=$(curl -sS https://conduit-feco.onrender.com/diagnostics || echo "DIAG_UNAVAILABLE")
 DIAG_OK=false
+WARN_COUNT=0
 if echo "$DIAG" | grep -q 'scopeParity'; then
   DIAG_OK=true
   echo "INFO: Conduit diagnostics scopeParity present"
 else
   echo "WARN: Conduit diagnostics incomplete or unavailable"
+  WARN_COUNT=$((WARN_COUNT + 1))
 fi
 
 # Device fence (placeholder — real proof requires iPhone 16e archive IPA evidence)
 echo "NOTE: deviceAcceptance remains not_recorded until CHR-55 archive IPA is installed and validated on iPhone 16e."
 echo "Probe fails closed until that evidence exists."
 
+if [[ "$STRICT" == true && "$WARN_COUNT" -gt 0 ]]; then
+  echo "FAIL: --strict mode: $WARN_COUNT WARN(s) treated as failure"
+fi
+
 if [[ "$JSON" == true ]]; then
   cat <<EOF
-{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","conduit":{"ok":$CONDUIT_OK,"http":$CONDUIT_CODE,"body":$(echo "$CONDUIT_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"resonance":{"ok":$RES_OK,"http":$RES_CODE,"class":"$RES_CLASS","body":$(echo "$RES_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"diagnostics":$DIAG_OK,"deviceAcceptance":"not_recorded","probePassed":false}
+{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","conduit":{"ok":$CONDUIT_OK,"http":$CONDUIT_CODE,"body":$(echo "$CONDUIT_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"resonance":{"ok":$RES_OK,"http":$RES_CODE,"class":"$RES_CLASS","body":$(echo "$RES_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"diagnostics":$DIAG_OK,"deviceAcceptance":"not_recorded","strict":$STRICT,"probePassed":false}
 EOF
 fi
 
