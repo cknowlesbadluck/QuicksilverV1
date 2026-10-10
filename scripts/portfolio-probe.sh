@@ -44,19 +44,19 @@ if [[ "$RES_CODE" == "200" ]] && echo "$RES_BODY" | grep -q '"status":"ready"' &
   RES_CLASS="ready_stamped"
   echo "OK: Resonance ready + stamped + owner key present"
   echo "DETAIL: $RES_BODY"
-elif [[ "$RES_CODE" == "503" ]] && echo "$RES_BODY" | grep -q 'SUPABASE_SERVICE_ROLE_KEY'; then
+ elif [[ "$RES_CODE" == "503" ]] && echo "$RES_BODY" | grep -q 'SUPABASE_SERVICE_ROLE_KEY'; then
   RES_CLASS="owner_gate_deploy_lag"
   echo "FAIL: Resonance /api/ready HTTP 503 owner gate + deploy lag (missing key; stamp fields absent)"
   echo "$RES_BODY"
-elif [[ "$RES_CODE" == "404" ]]; then
+ elif [[ "$RES_CODE" == "404" ]]; then
   RES_CLASS="alias_absent"
   echo "FAIL: Resonance ready alias_absent (404)"
   echo "$RES_BODY"
-else
+ else
   RES_CLASS="other"
   echo "FAIL: Resonance /api/ready HTTP $RES_CODE unexpected"
   echo "$RES_BODY"
-fi
+ fi
 
 # Optional diagnostics check (non-blocking but logged)
 DIAG=$(curl -sS https://conduit-feco.onrender.com/diagnostics || echo "DIAG_UNAVAILABLE")
@@ -80,7 +80,7 @@ fi
 
 if [[ "$JSON" == true ]]; then
   cat <<EOF
-{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","conduit":{"ok":$CONDUIT_OK,"http":$CONDUIT_CODE,"body":$(echo "$CONDUIT_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"resonance":{"ok":$RES_OK,"http":$RES_CODE,"class":"$RES_CLASS","body":$(echo "$RES_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"diagnostics":$DIAG_OK,"deviceAcceptance":"not_recorded","strict":$STRICT,"probePassed":false}
+{"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)","conduit":{"ok":$CONDUIT_OK,"http":$CONDUIT_CODE,"body":$(echo "$CONDUIT_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"resonance":{"ok":$RES_OK,"http":$RES_CODE,"class":"$RES_CLASS","body":$(echo "$RES_BODY" | jq -c . 2>/dev/null || echo '"parse_failed"')},"diagnostics":$DIAG_OK,"deviceAcceptance":"not_recorded","gates":{"conduit":$CONDUIT_OK,"resonance":$RES_OK,"device":false},"strict":$STRICT,"probePassed":false,"note":"fail-closed until all gates clear"}
 EOF
 fi
 

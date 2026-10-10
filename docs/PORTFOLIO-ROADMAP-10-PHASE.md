@@ -1,6 +1,6 @@
-# Portfolio 10-phase roadmap — 2026-10-10 07:01 EDT
+# Portfolio 10-phase roadmap — 2026-10-10 09:01 EDT
 
-Live probes refreshed at 2026-10-10T11:01Z. No secrets invented. Classifier tests are not production proof. Hygiene pass confirmed: one roadmap file, held PRs not merged, archived Quicksilver non-product.
+Live probes refreshed at 2026-10-10T13:01Z. No secrets invented. Classifier tests are not production proof. Hygiene pass confirmed: one roadmap file, held PRs not merged, archived Quicksilver non-product. Stabilization holds.
 
 Evidence:
 - Resonance GET https://resonancenexus.netlify.app/api/ready 503 missing exactly ["SUPABASE_SERVICE_ROLE_KEY"]. Body: status=not_ready, authMode=required, authModeOk=true, persistenceConfigured=false, githubAdapterConfigured=false. Omits ownerActionRequired and contractRevision (deploy lag + owner gate). Health 200 stage=deployment.
@@ -42,10 +42,10 @@ Single probe covers Conduit ready, Resonance ready (stamped), and real device ar
 Binding constraints: Resonance owner secret + CHR-55 device archive. Neither is closed by simulator or classifier.
 
 ## Innovative next slices (post-gate)
-1. Strengthen PortfolioPosture classifiers with explicit owner_gate / deploy_lag / alias_absent / device_not_recorded signals.
+1. Strengthen PortfolioPosture classifiers with explicit owner_gate / deploy_lag / alias_absent / device_not_recorded signals (pure function, no secrets).
 2. Keep lattice PR #242 open until verified inside repo tests.
 3. After Resonance ready 200, expose read-only Nexus capability list in Sanctum as a diagnostic surface (no execution).
 4. Confirm Resonance lockfile regen and CI after vitest 4.
-5. Harden portfolio-probe.sh with optional --strict mode that exits non-zero on any WARN, and emit structured classification for Linear/GitHub automation.
+5. Harden portfolio-probe.sh further with structured gates array in --json and explicit fail-closed until all three clear.
 
-Audit note: Full hygiene pass completed. Stabilization holds. No merge of held cutover lattice PRs. Innovation deferred until gates clear.
+Audit note: Full hygiene pass completed at 09:01 EDT. Stabilization holds. No merge of held cutover lattice PRs. Innovation deferred until gates clear. Probe confirmed fail-closed.
