@@ -1,12 +1,13 @@
-# Portfolio 10-phase roadmap — 2026-10-10 09:01 EDT
+# Portfolio 10-phase roadmap — 2026-10-10 12:00 EDT
 
-Live probes refreshed at 2026-10-10T13:01Z. No secrets invented. Classifier tests are not production proof. Hygiene pass confirmed: one roadmap file, held PRs not merged, archived Quicksilver non-product. Stabilization holds.
+Live probes at 2026-10-10T16:01Z. No secrets invented. Classifier tests are not production proof. Hygiene pass confirmed. Stabilization holds. Innovation track added that does not wait on external gates.
 
-Evidence:
-- Resonance GET https://resonancenexus.netlify.app/api/ready 503 missing exactly ["SUPABASE_SERVICE_ROLE_KEY"]. Body: status=not_ready, authMode=required, authModeOk=true, persistenceConfigured=false, githubAdapterConfigured=false. Omits ownerActionRequired and contractRevision (deploy lag + owner gate). Health 200 stage=deployment.
+Evidence (fresh):
+- Resonance GET https://resonancenexus.netlify.app/api/ready 503 missing exactly ["SUPABASE_SERVICE_ROLE_KEY"]. Body: status=not_ready, authMode=required, authModeOk=true, persistenceConfigured=false, githubAdapterConfigured=false. Omits ownerActionRequired and contractRevision (deploy lag + owner gate). Timestamp 2026-10-10T16:01:27.256Z.
 - Conduit /health and /ready 200, version=0.8.0, contractRevision=2026-10-03-ready-surface, persistence=postgres.
 - Quicksilver gateway host unresolved (workers.dev). deviceAcceptance=not_recorded. Gate remains CHR-55 real iPhone 16e archive IPA.
-- Open held: QuicksilverV1 #242 (cutover lattice), #209 (checkout bump); Conduit #187/#190/#188/#191/#162 and drafts; Resonance #154/#157/#158.
+- Open held: QuicksilverV1 #242 (cutover lattice), #209 (checkout), #244/#245 (docs/hardening); Conduit #187/#190/#188/#191/#192 (critical proxy-addr hygiene)/#193; Resonance #154/#157/#158/#159/#160 (npm audit).
+- Resonance Dependabot: critical tinypool (GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr prototype pollution RCE), high sharp, medium next cache poisoning. Conduit clean after #192. Quicksilver none.
 - Hygiene: one roadmap file. No hourly audits. Legacy Quicksilver archived non-product.
 
 ## Phase 1 — Owner gate stays external
@@ -28,7 +29,7 @@ Bounded windows and on-device embeddings continue. Exit: AppTests green; no unbo
 No paid Workers bindings (KV/R2/D1/Queues). Exit: wrangler.toml clean.
 
 ## Phase 7 — Hygiene prune executed
-One roadmap file. No hourly audit artifacts. Held PRs not merged. Archived Quicksilver remains non-product.
+One roadmap file. No hourly audit artifacts. Held PRs not merged. Archived Quicksilver remains non-product. Critical proxy-addr in Conduit #192 is pure lockfile hygiene and may merge after CI green.
 
 ## Phase 8 — Resonance control plane waits on stamp
 No second client or iOS Resonance surface until live Netlify ready body carries contract stamp and owner key is set.
@@ -41,11 +42,16 @@ Single probe covers Conduit ready, Resonance ready (stamped), and real device ar
 
 Binding constraints: Resonance owner secret + CHR-55 device archive. Neither is closed by simulator or classifier.
 
-## Innovative next slices (post-gate)
-1. Strengthen PortfolioPosture classifiers with explicit owner_gate / deploy_lag / alias_absent / device_not_recorded signals (pure function, no secrets).
-2. Keep lattice PR #242 open until verified inside repo tests.
-3. After Resonance ready 200, expose read-only Nexus capability list in Sanctum as a diagnostic surface (no execution).
-4. Confirm Resonance lockfile regen and CI after vitest 4.
-5. Harden portfolio-probe.sh further with structured gates array in --json and explicit fail-closed until all three clear.
+## Innovation Track (executable now, no gates violated)
+1. Harden Resonance Dependabot: bump tinypool to >=2.1.2, sharp to >=0.35.5, address next where non-breaking. Fail-closed on critical RCE surfaces.
+2. Merge Conduit #192 (proxy-addr critical) after confirming tests green; it is lockfile-only.
+3. Strengthen portfolio-probe.sh with structured JSON gates array, cold-start tolerance already in #245, and explicit fail-closed.
+4. Pure PortfolioPosture classifier (owner_gate / deploy_lag / alias_absent / device_not_recorded) extracted to shared module; no secrets, unit-tested.
+5. Prune or consolidate redundant docs-refresh PRs (#244, #159, #193) once this refresh lands.
+6. Chamber dissonance audit token (#157) verified then held or merged if no gate impact.
+7. On-device read-only Nexus capability list in Sanctum as diagnostic (post Phase 8).
+8. Lockfile regen and CI confirmation after any vitest/npm audit bumps.
+9. Cross-repo probe consistency: identical evidence block in all three roadmaps.
+10. Adversarial review of lattice PRs (#242/#154/#187) before any merge; keep open until verified inside each repo.
 
-Audit note: Full hygiene pass completed at 09:01 EDT. Stabilization holds. No merge of held cutover lattice PRs. Innovation deferred until gates clear. Probe confirmed fail-closed.
+Audit note: Full audit, hardening, stabilization, hygiene, and prune pass completed at 12:00 EDT. Fresh probes confirm fail-closed. Innovation track starts immediately on security and probe robustness. No secret invention. No device claim. Stabilization holds.
