@@ -3,6 +3,7 @@
 # Exits non-zero unless Conduit is ready+stamped, Resonance is ready+stamped
 # with owner key present, and deviceAcceptance is recorded on a real archive.
 # Classifier tests and fixtures are not proof. Do not invent secrets.
+# Output is human-readable; grep for FAIL/OK for automation.
 set -euo pipefail
 
 echo "=== Portfolio probe $(date -u +%Y-%m-%dT%H:%M:%SZ) ==="
@@ -13,6 +14,7 @@ CONDUIT_BODY=$(echo "$CONDUIT_READY" | head -n -1)
 CONDUIT_CODE=$(echo "$CONDUIT_READY" | tail -n 1)
 if [[ "$CONDUIT_CODE" != "200" ]]; then
   echo "FAIL: Conduit /ready HTTP $CONDUIT_CODE"
+  echo "$CONDUIT_BODY"
   exit 1
 fi
 if ! echo "$CONDUIT_BODY" | grep -q '"status":"ready"' || ! echo "$CONDUIT_BODY" | grep -q 'contractRevision'; then
@@ -21,6 +23,7 @@ if ! echo "$CONDUIT_BODY" | grep -q '"status":"ready"' || ! echo "$CONDUIT_BODY"
   exit 1
 fi
 echo "OK: Conduit ready + stamped"
+echo "DETAIL: $CONDUIT_BODY"
 
 # Resonance
 RES_READY=$(curl -sS -w "\n%{http_code}" https://resonancenexus.netlify.app/api/ready || true)
@@ -37,6 +40,15 @@ if ! echo "$RES_BODY" | grep -q '"status":"ready"' || ! echo "$RES_BODY" | grep 
   exit 1
 fi
 echo "OK: Resonance ready + stamped + owner key present"
+echo "DETAIL: $RES_BODY"
+
+# Optional diagnostics check (non-blocking but logged)
+DIAG=$(curl -sS https://conduit-feco.onrender.com/diagnostics || echo "DIAG_UNAVAILABLE")
+if echo "$DIAG" | grep -q 'scopeParity'; then
+  echo "INFO: Conduit diagnostics scopeParity present"
+else
+  echo "WARN: Conduit diagnostics incomplete or unavailable"
+fi
 
 # Device fence (placeholder — real proof requires iPhone 16e archive IPA evidence)
 echo "NOTE: deviceAcceptance remains not_recorded until CHR-55 archive IPA is installed and validated on iPhone 16e."
