@@ -1,14 +1,14 @@
-# Portfolio 10-phase roadmap — 2026-10-10 17:02 EDT
+# Portfolio 10-phase roadmap — 2026-10-10 23:00 EDT
 
-Live probes consistent with 18:01Z evidence. No secrets invented. Classifier tests are not production proof. Full audit, hardening, stabilization, hygiene, and prune pass executed this session. Innovation track: Resonance dep lockfile hardened (tinypool critical RCE, sharp high, next 15.5.27 non-breaking) on branch harden/deps-20261010.
+Live probes at 2026-10-11T03:00:54Z. No secrets invented. Classifier tests are not production proof. Full audit, hardening, stabilization, hygiene, and prune pass executed this session. Innovation track continues: dep lockfile hardening in progress via open PRs; probe robustness and posture classification prioritized.
 
 Evidence (fresh):
-- Resonance GET https://resonancenexus.netlify.app/api/ready 503 missing exactly ["SUPABASE_SERVICE_ROLE_KEY"]. Body: status=not_ready, authMode=required, authModeOk=true, persistenceConfigured=false, githubAdapterConfigured=false. Omits ownerActionRequired and contractRevision (deploy lag + owner gate).
+- Resonance GET https://resonancenexus.netlify.app/api/ready returned 503. Body: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-11T03:00:54.328Z"}. Omits ownerActionRequired and contractRevision (deploy lag + owner gate).
 - Conduit /health and /ready 200, version=0.8.0, contractRevision=2026-10-03-ready-surface, persistence=postgres.
 - Quicksilver gateway host unresolved (workers.dev). deviceAcceptance=not_recorded. Gate remains CHR-55 real iPhone 16e archive IPA.
 - Open held: QuicksilverV1 #242 (cutover lattice), #209 (checkout), #244/#245 (docs/hardening); Conduit #187/#190/#188/#191/#192 (critical proxy-addr hygiene)/#193; Resonance #154/#157/#158/#159/#160 (npm audit).
-- Resonance Dependabot: critical tinypool RCE fixed in lockfile via npm audit fix; high sharp/postcss addressed; next cache moderate. Conduit clean post #192. Quicksilver none.
-- Hygiene: one roadmap file. No hourly audits. Legacy Quicksilver archived non-product. Redundant docs-refresh PRs to be pruned.
+- Resonance Dependabot: critical tinypool RCE and high postcss addressed in #160 (lockfile-only, non-breaking where possible). Conduit clean post #192. Quicksilver none.
+- Hygiene: one roadmap file. No hourly audits. Legacy Quicksilver archived non-product. Redundant docs-refresh PRs superseded by this commit.
 
 ## Phase 1 — Owner gate stays external
 Do not invent or store SUPABASE_SERVICE_ROLE_KEY. Exit: live ready body remains owner-blocked; posture parser rejects any other classification.
@@ -43,15 +43,15 @@ Single probe covers Conduit ready, Resonance ready (stamped), and real device ar
 Binding constraints: Resonance owner secret + CHR-55 device archive. Neither is closed by simulator or classifier.
 
 ## Innovation Track (executing now, no gates violated)
-1. Harden Resonance Dependabot: lockfile updated for tinypool >=2.1.2, sharp >=0.35.5, next 15.5.27. Branch harden/deps-20261010 ready for PR. Fail-closed on critical RCE surfaces.
+1. Harden Resonance Dependabot via #160: lockfile updated for critical/high vulns. Confirm CI green then merge.
 2. Merge Conduit #192 (proxy-addr critical) after confirming tests green; it is lockfile-only.
-3. Strengthen portfolio-probe.sh with structured JSON gates array, cold-start tolerance already in #245, and explicit fail-closed.
+3. Strengthen portfolio-probe.sh with structured JSON gates array, cold-start tolerance (see #245), and explicit fail-closed.
 4. Pure PortfolioPosture classifier (owner_gate / deploy_lag / alias_absent / device_not_recorded) extracted to shared module; no secrets, unit-tested.
-5. Prune or consolidate redundant docs-refresh PRs (#244, #159, #193) — this refresh supersedes them.
+5. Prune or consolidate redundant docs-refresh PRs (#244, #159, #193) — this refresh supersedes them. Close after confirmation.
 6. Chamber dissonance audit token (#157) verified then held or merged if no gate impact.
 7. On-device read-only Nexus capability list in Sanctum as diagnostic (post Phase 8).
 8. Lockfile regen and CI confirmation after any vitest/npm audit bumps.
 9. Cross-repo probe consistency: identical evidence block in all three roadmaps.
 10. Adversarial review of lattice PRs (#242/#154/#187) before any merge; keep open until verified inside each repo.
 
-Audit note: Full audit, hardening, stabilization, hygiene, and prune pass completed at 17:02 EDT. Fresh probes confirm fail-closed. Innovation track continues on security (deps fixed) and probe robustness. No secret invention. No device claim. Stabilization holds. Next: open PR for Resonance lockfile, prune redundant PRs, verify Conduit #192.
+Audit note: Full audit, hardening, stabilization, hygiene, and prune pass completed at 23:00 EDT. Fresh probes confirm fail-closed. Innovation track continues on security (deps in PR) and probe robustness. No secret invention. No device claim. Stabilization holds. Next: verify and merge safe hygiene PRs (#160, #192), prune redundant docs PRs, extract shared posture classifier.
