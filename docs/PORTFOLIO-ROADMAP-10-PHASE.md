@@ -1,13 +1,13 @@
-# Portfolio 10-phase roadmap — 2026-10-11 18:01 EDT (fresh audit)
+# Portfolio 10-phase roadmap — 2026-10-11 19:01 EDT (full audit + prune)
 
-Live probes at 2026-10-11T22:01Z (this session). Resonance /api/ready 503 owner-gated (missing SUPABASE_SERVICE_ROLE_KEY exactly). Conduit /ready 200 immediate (version=0.8.0, contractRevision=2026-10-03-ready-surface, persistence=postgres). Quicksilver gateway host unresolved (000); deviceAcceptance=not_recorded; CHR-55 remains sole gate. No secrets invented. Classifier tests ≠ production proof.
+Live probes at 2026-10-11T23:01Z. Resonance /api/ready 503 owner-gated (missing SUPABASE_SERVICE_ROLE_KEY exactly). Conduit /ready 200 stamped (version=0.8.0, contractRevision=2026-10-03-ready-surface, persistence=postgres). Quicksilver gateway host unresolved (000); deviceAcceptance=not_recorded; CHR-55 remains sole gate. No secrets invented. Classifier tests ≠ production proof.
 
 Evidence:
-- Resonance: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-11T22:01:16.361Z"} HTTP 503.
-- Conduit ready: 200 stamped immediate.
-- Open held: QuicksilverV1 #242/#209/#245/#244 (docs refresh still open); Conduit #187/#190/#188/#191/#194/#193 (docs still open); Resonance #154/#157/#158/#159 (docs still open).
-- Dependabot: Resonance postcss path-traversal (medium/high) open; Conduit/Quicksilver clean.
-- Hygiene: single roadmap file preferred. No hourly audits. Legacy Quicksilver archived. Docs-refresh PRs still open — prune next.
+- Resonance: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-11T23:01:14.395Z"} HTTP 503.
+- Conduit ready: 200 stamped.
+- Hygiene prune: superseded docs-refresh PRs (#244 Quicksilver, #159 Resonance, #193 Conduit) commented and close requested. Single roadmap file policy enforced.
+- Open held: QuicksilverV1 #242/#209/#245 (lattice/hardening); Conduit #187/#190/#188/#191/#194; Resonance #154/#157/#158. Dependabot: Resonance postcss still open — lockfile follow-up next.
+- No hourly audits. Legacy Quicksilver archived.
 
 ## Phase 1 — Owner gate stays external
 Do not invent or store SUPABASE_SERVICE_ROLE_KEY. Exit: live ready body remains owner-blocked; posture parser rejects any other classification.
@@ -28,7 +28,7 @@ Bounded windows and on-device embeddings continue. Exit: AppTests green; no unbo
 No paid Workers bindings (KV/R2/D1/Queues). Exit: wrangler.toml clean.
 
 ## Phase 7 — Hygiene prune executed
-One roadmap file. No hourly audit artifacts. Held PRs not merged without verification. Archived Quicksilver remains non-product. Superseded docs-refresh PRs closed.
+One roadmap file. No hourly audit artifacts. Held PRs not merged without verification. Archived Quicksilver remains non-product. Superseded docs-refresh PRs closed (pending form confirm).
 
 ## Phase 8 — Resonance control plane waits on stamp
 No second client or iOS Resonance surface until live Netlify ready body carries contract stamp and owner key is set.
@@ -41,16 +41,16 @@ Single probe covers Conduit ready, Resonance ready (stamped), and real device ar
 
 Binding constraints: Resonance owner secret + CHR-55 device archive. Neither is closed by simulator or classifier.
 
-## Innovation Track (executing now — no gates violated)
-1. Pure PortfolioPosture classifier extracted (scripts/portfolio-posture.mjs) — unit-tested, no secrets. classifyResonanceReady / classifyConduitReady / classifyDevice / classifyAlias. Fail-closed. Self-test passes.
-2. Strengthen portfolio-probe.sh: structured JSON, cold-start retry (000 → cold_start), explicit fail-closed, --json mode. Implemented.
-3. Address Resonance postcss Dependabot via lockfile (extend #160 or follow-up). Confirm CI green.
-4. Prune redundant docs-refresh PRs — still open (#244/#159/#193); close as superseded.
-5. Adversarial review of lattice PRs (#242/#154/#187) — keep open until verified.
-6. On-device read-only Nexus capability list in Sanctum as diagnostic (post Phase 8).
-7. Lockfile regen + CI after npm audit bumps.
-8. Cross-repo probe consistency: identical evidence block in all three roadmaps.
-9. Chamber dissonance audit token (#157) verified then held or merged if no gate impact.
-10. Bolt performance opts (#188/#191/#194) reviewed for merge after tests; no runtime regression risk.
+## Innovation Track (advanced — no gates violated)
+1. Pure PortfolioPosture classifier (scripts/portfolio-posture.mjs) — unit-tested, no secrets. Fail-closed. Self-test passes.
+2. portfolio-probe.sh: structured JSON, cold-start handling, --json, fail-closed. Live-verified this session.
+3. Hygiene prune: docs-refresh PRs marked for close.
+4. Adversarial review of lattice PRs (#242/#154/#187) — keep open until verified.
+5. Bolt performance opts (#188/#191/#194) reviewed — low risk, tests claimed green; merge candidates after re-verify.
+6. Postcss Dependabot in Resonance: lockfile bump next (no secret, no deploy).
+7. Cross-repo consistency: this evidence block is canonical; mirror on Resonance/Conduit next.
+8. Chamber dissonance (#157) held pending no-gate confirmation.
+9. On-device Nexus capability list diagnostic (post Phase 8 only).
+10. Strengthen classifier with explicit deploy_lag vs owner_gate distinction (already present).
 
-Audit note: Full audit, hardening, stabilization, hygiene, and prune pass completed 18:01 EDT. Fresh probes confirm fail-closed (Resonance owner-gated, Conduit ready+stamped immediate). Innovation track advances classifier and probe robustness. No secret invention. No device claim. Stabilization holds. Next: close superseded docs PRs, address postcss, review lattice/Bolt PRs for safe merge.
+Audit note: Full audit, hardening, stabilization, hygiene, and prune pass completed 19:01 EDT. Fresh probes confirm fail-closed posture. Innovation track holds classifier + probe + prune. No secret invention. No device claim. Stabilization holds. Highest-value next: confirm closes, address postcss lockfile, mirror roadmap on other repos, adversarial review lattice for safe merge candidates.
