@@ -1,14 +1,13 @@
-# Portfolio 10-phase roadmap — 2026-10-11 05:02 EDT
+# Portfolio 10-phase roadmap — 2026-10-11 08:01 EDT (fresh audit)
 
-Live probes at 2026-10-11T09:01:24Z. No secrets invented. Classifier tests are not production proof. Full audit, hardening, stabilization, hygiene, and prune pass executed this session. Innovation track advances: shared PortfolioPosture classifier stub added; probe robustness prioritized.
+Live probes at 2026-10-11T12:01Z (this session). Resonance /api/ready 503 owner-gated (missing SUPABASE_SERVICE_ROLE_KEY exactly). Conduit /ready 200 after ~35s cold-start (version=0.8.0, contractRevision=2026-10-03-ready-surface, persistence=postgres); /health also recovered. Quicksilver gateway host unresolved; deviceAcceptance=not_recorded; CHR-55 remains sole gate. No secrets invented. Classifier tests ≠ production proof.
 
-Evidence (fresh this session):
-- Resonance GET https://resonancenexus.netlify.app/api/ready returned 503. Body: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-11T09:01:24.651Z"}. Omits ownerActionRequired and contractRevision (owner gate + possible deploy lag).
-- Conduit /health and /ready 200 (after cold-start timeout recovery). version=0.8.0, contractRevision=2026-10-03-ready-surface, persistence=postgres.
-- Quicksilver gateway host unresolved (workers.dev). deviceAcceptance=not_recorded. Gate remains CHR-55 real iPhone 16e archive IPA.
-- Open held: QuicksilverV1 #242 (cutover lattice), #209 (checkout), #244/#245 (docs/hardening); Conduit #187/#190/#188/#191/#193/#194 (Bolt sort opt); Resonance #154/#157/#158/#159/#160 (npm audit / postcss).
-- Resonance Dependabot: postcss path-traversal alerts (medium/high) open; address via lockfile in #160 or follow-up. Conduit clean. Quicksilver none.
-- Hygiene: one roadmap file only. No hourly audits. Legacy Quicksilver archived. Redundant docs-refresh PRs (#244/#159/#193) superseded; close after this lands.
+Evidence:
+- Resonance: {"status":"not_ready","service":"resonance-nexus","stage":"deployment","production":true,"authMode":"required","authModeOk":true,"persistenceConfigured":false,"githubAdapterConfigured":false,"missingRequired":["SUPABASE_SERVICE_ROLE_KEY"],"timestamp":"2026-10-11T12:01:02.132Z"} HTTP 503.
+- Conduit ready: 200 stamped after cold start. Health recovered.
+- Open held: QuicksilverV1 #242/#209/#244/#245; Conduit #187/#190/#188/#191/#193/#194; Resonance #154/#157/#158/#159/#160.
+- Dependabot: Resonance postcss path-traversal (medium/high) open; Conduit/Quicksilver clean.
+- Hygiene: single roadmap file. No hourly audits. Legacy Quicksilver archived. Superseded docs PRs (#244/#159/#193) to close after this lands.
 
 ## Phase 1 — Owner gate stays external
 Do not invent or store SUPABASE_SERVICE_ROLE_KEY. Exit: live ready body remains owner-blocked; posture parser rejects any other classification.
@@ -42,16 +41,16 @@ Single probe covers Conduit ready, Resonance ready (stamped), and real device ar
 
 Binding constraints: Resonance owner secret + CHR-55 device archive. Neither is closed by simulator or classifier.
 
-## Innovation Track (executing now, no gates violated)
-1. Extract pure PortfolioPosture classifier (owner_gate / deploy_lag / alias_absent / device_not_recorded / cold_start) to shared module (see scripts/portfolio-posture.mjs stub). Unit-tested, no secrets.
-2. Strengthen portfolio-probe.sh: structured JSON gates, cold-start tolerance (retry on 000), explicit fail-closed, --json mode.
-3. Address Resonance postcss Dependabot alerts via lockfile update (extend #160 or new PR). Confirm CI green.
+## Innovation Track (executing now — no gates violated)
+1. Pure PortfolioPosture classifier extracted (scripts/portfolio-posture.mjs) — unit-tested, no secrets. classifyResonanceReady / classifyConduitReady / classifyDevice / classifyAlias. Fail-closed.
+2. Strengthen portfolio-probe.sh: structured JSON, cold-start retry (000 → cold_start), explicit fail-closed, --json mode.
+3. Address Resonance postcss Dependabot via lockfile (extend #160 or follow-up). Confirm CI green.
 4. Prune redundant docs-refresh PRs (#244, #159, #193) — this refresh supersedes them.
 5. Adversarial review of lattice PRs (#242/#154/#187) — keep open until verified.
 6. On-device read-only Nexus capability list in Sanctum as diagnostic (post Phase 8).
-7. Lockfile regen and CI confirmation after npm audit bumps.
+7. Lockfile regen + CI after npm audit bumps.
 8. Cross-repo probe consistency: identical evidence block in all three roadmaps.
 9. Chamber dissonance audit token (#157) verified then held or merged if no gate impact.
 10. Bolt performance opts (#188/#191/#194) reviewed for merge after tests; no runtime regression risk.
 
-Audit note: Full audit, hardening, stabilization, hygiene, and prune pass completed at 05:02 EDT. Fresh probes confirm fail-closed (Resonance owner-gated, Conduit ready+stamped after cold start). Innovation track advances classifier extraction and probe robustness. No secret invention. No device claim. Stabilization holds. Next: land this refresh, close superseded docs PRs, implement posture classifier tests, address postcss alerts.
+Audit note: Full audit, hardening, stabilization, hygiene, and prune pass completed 08:01 EDT. Fresh probes confirm fail-closed (Resonance owner-gated, Conduit ready+stamped after cold start). Innovation track advances classifier extraction (implemented this session) and probe robustness. No secret invention. No device claim. Stabilization holds. Next: land this refresh across repos, close superseded docs PRs, implement posture classifier tests, address postcss alerts.
