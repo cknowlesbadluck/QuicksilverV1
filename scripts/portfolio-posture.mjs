@@ -8,10 +8,10 @@
  * @returns {string} one of: owner_gate | deploy_lag | alias_absent | device_not_recorded | cold_start | ready | unknown
  */
 export function classifyPosture(body = {}, meta = {}) {
-  const { httpCode = 0, service = '', timedOut = false } = meta;
+  const { httpCode = 200, service = '', timedOut = false } = meta;
 
-  if (timedOut || httpCode === 0) return 'cold_start';
-
+  if (timedOut) return 'cold_start';
+  if (httpCode === 0) return 'cold_start';
   if (httpCode === 404) return 'alias_absent';
 
   if (!body || typeof body !== 'object') return 'unknown';
@@ -40,11 +40,11 @@ export function classifyPosture(body = {}, meta = {}) {
 }
 
 // Simple self-test (node scripts/portfolio-posture.mjs)
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url.endsWith('portfolio-posture.mjs')) {
   const cases = [
-    [{ status: 'not_ready', missingRequired: ['SUPABASE_SERVICE_ROLE_KEY'] }, { service: 'resonance' }, 'owner_gate'],
-    [{ status: 'ready', contractRevision: 'x', persistence: 'postgres' }, {}, 'ready'],
-    [{ deviceAcceptance: 'not_recorded' }, {}, 'device_not_recorded'],
+    [{ status: 'not_ready', missingRequired: ['SUPABASE_SERVICE_ROLE_KEY'] }, { service: 'resonance', httpCode: 503 }, 'owner_gate'],
+    [{ status: 'ready', contractRevision: 'x', persistence: 'postgres' }, { httpCode: 200 }, 'ready'],
+    [{ deviceAcceptance: 'not_recorded' }, { httpCode: 200 }, 'device_not_recorded'],
     [{}, { httpCode: 0, timedOut: true }, 'cold_start'],
     [{}, { httpCode: 404 }, 'alias_absent'],
   ];
@@ -52,7 +52,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   for (const [b, m, expected] of cases) {
     const got = classifyPosture(b, m);
     if (got === expected) passed++;
-    else console.error('FAIL', expected, got);
+    else console.error('FAIL', expected, 'got', got);
   }
   console.log(`${passed}/${cases.length} posture cases passed`);
   if (passed !== cases.length) process.exit(1);
