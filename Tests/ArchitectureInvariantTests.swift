@@ -11,6 +11,11 @@ final class ArchitectureInvariantTests: XCTestCase {
         .deletingLastPathComponent()
         .deletingLastPathComponent()
 
+    private static let brainFiles: Set<String> = [
+        "App/MercuryBrain.swift", "App/MercuryBrain+Capabilities.swift",
+        "App/MercuryBrain+Ranking.swift", "App/MercuryBrainComposition.swift"
+    ]
+
     private static let skippedDirectories: Set<String> = [
         ".git", ".build", "node_modules", "DerivedData", "build", ".wrangler"
     ]
@@ -58,7 +63,7 @@ final class ArchitectureInvariantTests: XCTestCase {
         let sources = try files(in: ["App", "UI", "Intents", "Nexus", "Memory", "Personas", "Services"], extensions: ["swift"])
         XCTAssertFalse(sources.isEmpty)
         let offenders = sources.filter { file in
-            guard !file.path.hasPrefix("App/MercuryBrain"), !file.path.hasPrefix("Services/AI/") else { return false }
+            guard !Self.brainFiles.contains(file.path), !file.path.hasPrefix("Services/AI/") else { return false }
             let touchesService = file.text.contains("aiService") || file.text.contains("AIService")
             return touchesService && file.text.range(of: #"\.complete\s*\("#, options: .regularExpression) != nil
         }.map(\.path)
@@ -86,7 +91,7 @@ final class ArchitectureInvariantTests: XCTestCase {
         XCTAssertTrue(aiService.text.contains("CloudContextPolicy.redactForTrainingProvider("))
 
         let brain = try files(in: ["App"], extensions: ["swift"])
-            .filter { $0.path.hasPrefix("App/MercuryBrain") }
+            .filter { Self.brainFiles.contains($0.path) }
             .map(\.text).joined(separator: "\n")
         for call in ["assemble(", "cappedHistory(", "gatewayContext(", "resolvedLevel("] {
             XCTAssertTrue(
@@ -110,15 +115,16 @@ final class ArchitectureInvariantTests: XCTestCase {
             in: ["App", "AppTests", "Core", "Intents", "Memory", "Nexus", "Personas", "Services", "Tests", "UI", "UITests",
                  "Resources", "gateway", ".github", "scripts", "docs", "Documentation", "fastlane"],
             extensions: ["swift", "ts", "js", "mjs", "json", "yml", "yaml", "toml", "plist", "sh", "md", "txt", "xcconfig"]
-        ) + rootFiles(extensions: ["swift", "yml", "yaml", "md", "json", "plist", "xcprivacy", "toml"])
+        ) + rootFiles(extensions: ["swift", "yml", "yaml", "md", "json", "plist", "xcprivacy", "toml", "example", "sample"])
         let patterns = [
             #"AIza[0-9A-Za-z_\-]{35}"#,          // Google / Gemini
             #"gsk_[0-9A-Za-z]{40,}"#,            // Groq
             #"xai-[0-9A-Za-z]{40,}"#,            // xAI
             #"sk-[0-9A-Za-z]{40,}"#,             // OpenAI-style
-            #"-----BEGIN [A-Z ]*PRIVATE KEY-----"#
+            #"-----BEGIN [A-Z ]*PRIVATE KEY-----"#,
+            #"DEVICE_TOKEN\s*[=:]\s*["']?[0-9A-Za-z_\-]{32,}"#   // gateway device token assignment
         ].map { try? NSRegularExpression(pattern: $0) }.compactMap { $0 }
-        XCTAssertEqual(patterns.count, 5)
+        XCTAssertEqual(patterns.count, 6)
 
         var offenders: [String] = []
         for file in sources {
