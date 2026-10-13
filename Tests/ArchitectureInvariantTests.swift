@@ -37,6 +37,12 @@ final class ArchitectureInvariantTests: XCTestCase {
         return result
     }
 
+    private func rootFiles(extensions: Set<String>) throws -> [(path: String, text: String)] {
+        try FileManager.default.contentsOfDirectory(at: Self.repoRoot, includingPropertiesForKeys: [.isRegularFileKey])
+            .filter { extensions.contains($0.pathExtension) }
+            .map { ($0.lastPathComponent, try String(contentsOf: $0, encoding: .utf8)) }
+    }
+
     func testRepositoryRootIsResolvable() {
         XCTAssertTrue(
             FileManager.default.fileExists(atPath: Self.repoRoot.appendingPathComponent("App/MercuryBrain.swift").path),
@@ -45,23 +51,27 @@ final class ArchitectureInvariantTests: XCTestCase {
     }
 
     /// Only MercuryBrain may ask the AI service for a completion; UI, Intents
-    /// and the container go through the Brain / IntelligenceSurface.
+    /// and the container go through the Brain / IntelligenceSurface. Any file
+    /// outside MercuryBrain that touches the AI service must not call
+    /// `.complete(` on anything, whatever the local variable is called.
     func testOnlyMercuryBrainRequestsCompletions() throws {
-        let sources = try files(in: ["App", "UI", "Intents", "Nexus", "Memory", "Personas"], extensions: ["swift"])
+        let sources = try files(in: ["App", "UI", "Intents", "Nexus", "Memory", "Personas", "Services"], extensions: ["swift"])
         XCTAssertFalse(sources.isEmpty)
         let offenders = sources.filter { file in
-            !file.path.hasPrefix("App/MercuryBrain")
-                && (file.text.contains("aiService.complete(") || file.text.contains("aiService.complete\n"))
+            guard !file.path.hasPrefix("App/MercuryBrain"), !file.path.hasPrefix("Services/AI/") else { return false }
+            let touchesService = file.text.contains("aiService") || file.text.contains("AIService")
+            return touchesService && file.text.range(of: #"\.complete\s*\("#, options: .regularExpression) != nil
         }.map(\.path)
         XCTAssertEqual(offenders, [], "Completions must route through MercuryBrain")
     }
 
-    /// Concrete providers are built only inside Services/AI (AIService owns them).
+    /// Concrete providers are built only inside Services/AI (AIService owns them),
+    /// via initializer, `.init` or static factory.
     func testProvidersAreConstructedOnlyInsideServicesAI() throws {
-        let sources = try files(in: ["App", "UI", "Intents", "Core", "Memory", "Personas", "Nexus"], extensions: ["swift"])
-        let constructors = ["GatewayAIProvider(", "GeminiAIProvider(", "GrokAIProvider("]
+        let sources = try files(in: ["App", "UI", "Intents", "Core", "Memory", "Personas", "Nexus", "Services"], extensions: ["swift"])
+        let pattern = #"\b(GatewayAIProvider|GeminiAIProvider|GrokAIProvider)\s*(\(|\.init\b|\.make\b)"#
         let offenders = sources.filter { file in
-            constructors.contains { file.text.contains($0) }
+            !file.path.hasPrefix("Services/AI/") && file.text.range(of: pattern, options: .regularExpression) != nil
         }.map(\.path)
         XCTAssertEqual(offenders, [], "Providers must be created by AIService, not callers")
     }
@@ -73,18 +83,24 @@ final class ArchitectureInvariantTests: XCTestCase {
         let aiService = try XCTUnwrap(service.first { $0.path == "Services/AI/AIService.swift" })
         XCTAssertTrue(aiService.text.contains("CloudContextPolicy."), "AIService must redact via CloudContextPolicy")
 
-        let brain = try files(in: ["App"], extensions: ["swift"]).filter { $0.path.hasPrefix("App/MercuryBrain") }
-        XCTAssertTrue(
-            brain.contains { $0.text.contains("CloudContextPolicy") },
-            "MercuryBrain must assemble cloud context via CloudContextPolicy"
-        )
+        XCTAssertTrue(aiService.text.contains("CloudContextPolicy.redactForTrainingProvider("))
+
+        let brain = try files(in: ["App"], extensions: ["swift"])
+            .filter { $0.path.hasPrefix("App/MercuryBrain") }
+            .map(\.text).joined(separator: "\n")
+        for call in ["assemble(", "cappedHistory(", "gatewayContext(", "resolvedLevel("] {
+            XCTAssertTrue(
+                brain.contains("CloudContextPolicy.\(call)"),
+                "MercuryBrain must build cloud payloads via CloudContextPolicy.\(call)"
+            )
+        }
     }
 
     /// Aspects are moods of one entity, never user-selectable "modes".
     func testNoModeVocabularyForAspects() throws {
         let sources = try files(in: ["App", "UI", "Intents", "Core", "Personas"], extensions: ["swift"])
-        let banned = ["PersonaMode", "AspectMode", "selectedMode", "enum Mode "]
-        let offenders = sources.filter { file in banned.contains { file.text.contains($0) } }.map(\.path)
+        let pattern = #"\b(PersonaMode|AspectMode|selectedAspectMode|(Quicksilver|Forge|Eternal)Mode)\b"#
+        let offenders = sources.filter { $0.text.range(of: pattern, options: .regularExpression) != nil }.map(\.path)
         XCTAssertEqual(offenders, [], "Use Aspect vocabulary, not modes")
     }
 
@@ -94,7 +110,7 @@ final class ArchitectureInvariantTests: XCTestCase {
             in: ["App", "AppTests", "Core", "Intents", "Memory", "Nexus", "Personas", "Services", "Tests", "UI", "UITests",
                  "Resources", "gateway", ".github", "scripts", "docs", "Documentation", "fastlane"],
             extensions: ["swift", "ts", "js", "mjs", "json", "yml", "yaml", "toml", "plist", "sh", "md", "txt", "xcconfig"]
-        )
+        ) + rootFiles(extensions: ["swift", "yml", "yaml", "md", "json", "plist", "xcprivacy", "toml"])
         let patterns = [
             #"AIza[0-9A-Za-z_\-]{35}"#,          // Google / Gemini
             #"gsk_[0-9A-Za-z]{40,}"#,            // Groq
