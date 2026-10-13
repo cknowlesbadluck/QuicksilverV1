@@ -76,9 +76,15 @@ final class AspectTransitionTests: XCTestCase {
     }
 
     func testTurnMappingCoversEveryIntentKind() {
+        let expected: [Intent.Kind: Aspect] = [
+            .create: .forge, .diagnose: .forge,
+            .observe: .eternal, .retrieve: .eternal, .remember: .eternal,
+            .inquire: .quicksilver, .express: .quicksilver,
+            .switchAspect: .quicksilver, .unknown: .quicksilver
+        ]
+        XCTAssertEqual(Set(expected.keys), Set(Intent.Kind.allCases), "Every intent kind needs an expected aspect")
         for kind in Intent.Kind.allCases {
-            let aspect = policy.aspectForTurn(intent: Intent(kind: kind))
-            XCTAssertTrue(Aspect.allCases.contains(aspect))
+            XCTAssertEqual(policy.aspectForTurn(intent: Intent(kind: kind)), expected[kind], "\(kind)")
         }
         XCTAssertEqual(
             policy.aspectForTurn(intent: Intent(kind: .inquire), environment: .init(isLowPower: true)),
