@@ -5,12 +5,12 @@ A build is release-ready only when **every** box is ticked. Automated items are 
 
 ## Automated (agent / CI)
 - [ ] Quicksilver CI green on `main`: Structure & Contracts (incl. gateway tests), SwiftLint `--strict`, SPM Unit Tests, iOS Simulator Build (AppTests), iOS UI Smoke (a11y audit)
-- [ ] Architecture invariants pass (`Tests/ArchitectureInvariantTests.swift`): one MercuryBrain path, CloudContextPolicy choke point, aspects not modes, no secrets
+- [ ] Architecture invariants pass (`Tests/ArchitectureInvariantTests.swift`, added in #254): one MercuryBrain path, CloudContextPolicy choke point, aspects not modes, no secrets
 - [ ] No secret-shaped strings or env files tracked (`scripts/release-readiness.sh`)
 - [ ] `PrivacyInfo.xcprivacy`: tracking false, no tracking domains, only `OtherUserContent` (sent to the bound AI provider), not tracked
-- [ ] Reproducible: gateway `package-lock.json` committed; no unpinned SPM remotes; Xcode/runner versions pinned in workflows
+- [ ] Reproducible: gateway `package-lock.json` committed; no unpinned SPM remotes; runner image pinned (`macos-15`). Pinning the Xcode version explicitly is an open follow-up and not checked yet
 - [ ] No temporary write workflows; no workflow commits to the repo
-- [ ] *Archive IPA* run on the release commit produced `Quicksilver-unsigned.ipa` (artifact kept with the SHA)
+- [ ] *Archive IPA* run on the release commit (checked by `--ci`) produced `Quicksilver-unsigned.ipa` (artifact kept with the SHA)
 
 ## Human gates (owner)
 - [ ] HG2/HG3: gateway deployed on Cloudflare Workers Free; GEMINI_API_KEY / GROQ_API_KEY / DEVICE_TOKEN set as gateway secrets (never in the repo)
