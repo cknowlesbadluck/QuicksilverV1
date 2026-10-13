@@ -10,7 +10,7 @@ echo "== Secrets =="
 if git grep -IlE 'AIza[0-9A-Za-z_-]{35}|gsk_[0-9A-Za-z]{40,}|xai-[0-9A-Za-z]{40,}|sk-[0-9A-Za-z]{40,}|-----BEGIN [A-Z ]*PRIVATE KEY-----' HEAD -- . ':!scripts/release-readiness.sh' 2>/dev/null; then
   bad "secret-shaped strings in tracked files (listed above)"
 else pass "no secret-shaped strings in tracked files"; fi
-envs=$(git ls-files | grep -E '(^|/)\.env($|\.)|(^|/)\.dev\.vars($|\.)' | grep -vE '\.(example|sample|template)$' || true)
+envs=$(git ls-tree -r --name-only HEAD | grep -E '(^|/)\.env($|\.)|(^|/)\.dev\.vars($|\.)' | grep -vE '\.(example|sample|template)$' || true)
 [ -n "$envs" ] && bad "tracked env files: $envs" || pass "no tracked env files"
 [ -n "$(git status --porcelain)" ] && echo "  NOTE  working tree is dirty; file checks read the committed tree (HEAD)"
 
@@ -44,7 +44,7 @@ if grep -q 'CODE_SIGNING_ALLOWED=NO' <<<"$arch" && grep -q 'Quicksilver-unsigned
 echo "== Reproducibility =="
 git cat-file -e HEAD:gateway/package-lock.json 2>/dev/null && pass "gateway/package-lock.json committed" || bad "gateway lockfile missing"
 if git show HEAD:Package.swift | grep -q '\.package('; then
-  git ls-files --error-unmatch Package.resolved >/dev/null 2>&1 && pass "SPM remotes pinned by Package.resolved" || bad "Package.swift has remote packages but Package.resolved is not committed"
+  git cat-file -e HEAD:Package.resolved 2>/dev/null && pass "SPM remotes pinned by Package.resolved" || bad "Package.swift has remote packages but Package.resolved is not committed"
 else pass "no SPM remote dependencies"; fi
 
 echo "== Lint =="
@@ -58,10 +58,13 @@ if [ "${1:-}" = "--ci" ]; then
   git merge-base --is-ancestor "$sha" origin/main 2>/dev/null || bad "$sha is not on origin/main"
   c=$(gh run list -w "Quicksilver CI" -b main -e push -c "$sha" -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null)
   [ "$c" = "success" ] && pass "Quicksilver CI on $sha: success" || bad "Quicksilver CI on $sha: ${c:-no run}"
-  a=$(gh run list -w "Archive IPA" -b main -c "$sha" -L 1 --json conclusion,databaseId --jq '.[0]|"\(.conclusion) \(.databaseId)"' 2>/dev/null)
-  if [ "${a%% *}" = "success" ] && gh run view "${a##* }" --log 2>/dev/null | grep -q "Config: Release"; then
-    pass "Archive IPA (non-Debug) built for $sha on main"
-  else bad "no successful Release Archive IPA run for $sha on main (${a:-none}); confirm the configuration input was Release"; fi
+  a=$(gh run list -w "Archive IPA" -b main -c "$sha" -s success -L 20 --json databaseId,createdAt --jq '.[]|"\(.databaseId) \(.createdAt)"' 2>/dev/null)
+  rel=""; for id in $(awk '{print $1}' <<<"$a"); do gh run view "$id" --log 2>/dev/null | grep -q "Config: Release" && { rel=$id; break; }; done
+  if [ -n "$rel" ]; then
+    age=$(( ($(date +%s) - $(date -d "$(awk -v r="$rel" '$1==r{print $2}' <<<"$a")" +%s)) / 86400 ))
+    [ "$age" -lt 14 ] && pass "artifact within 14-day retention (${age}d); download it and record the SHA" || bad "Release IPA run $rel is ${age}d old; artifact expired, re-run Archive IPA"
+    pass "Release Archive IPA run $rel for $sha on main"
+  else bad "no successful Release Archive IPA run for $sha on main"; fi
 fi
 
 echo "== Human gates (cannot be checked here) =="
