@@ -68,7 +68,10 @@ final class AppIntentsDiscoveryTests: XCTestCase {
             let end = index + 1 < matches.count
                 ? (Range(matches[index + 1].range, in: all)?.lowerBound ?? all.endIndex) : all.endIndex
             let block = all[start..<end]
-            guard block.contains("supportedModes"), block.contains(".foreground") else { continue }
+            let legacyForeground = block.range(
+                of: #"openAppWhenRun\s*(:\s*Bool)?\s*=\s*true"#, options: .regularExpression
+            ) != nil
+            guard legacyForeground || (block.contains("supportedModes") && block.contains(".foreground")) else { continue }
             XCTAssertEqual(String(all[nameRange]), "OpenDiagnosticsIntent", "Only OpenDiagnosticsIntent may run in the foreground")
         }
     }
