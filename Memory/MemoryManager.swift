@@ -7,6 +7,14 @@ import Core
 public final class MemoryManager {
     public private(set) var items: [MemoryItem] = []
 
+    /// Most recent persistence failure, cleared by the next successful
+    /// operation of the same kind. Surfaces store failures (M4-T5) instead
+    /// of silently logging them; in-memory items stay authoritative.
+    public enum Failure: String, Sendable, Equatable {
+        case load, save, delete
+    }
+    public private(set) var lastFailure: Failure?
+
     private let store: MemoryStore
     private let eventBus: EventBus
     private let logger: LoggerService
@@ -20,8 +28,10 @@ public final class MemoryManager {
     public func load() async {
         do {
             items = try await store.loadAll()
+            if lastFailure == .load { lastFailure = nil }
             logger.info("Loaded \(items.count) memory items", category: logger.memory)
         } catch {
+            lastFailure = .load
             logger.error("Failed to load memory: \(error.localizedDescription)", category: logger.memory)
         }
     }
@@ -96,8 +106,10 @@ public final class MemoryManager {
         do {
             try await store.delete(id: id)
             items.removeAll { $0.id == id }
+            if lastFailure == .delete { lastFailure = nil }
             await eventBus.publish(.memoryDidUpdate(itemID: id.uuidString))
         } catch {
+            lastFailure = .delete
             logger.error("Failed to delete memory item: \(error.localizedDescription)", category: logger.memory)
         }
     }
@@ -138,8 +150,10 @@ public final class MemoryManager {
         do {
             try await store.save(item)
             if let index = items.firstIndex(where: { $0.id == item.id }) { items[index] = item } else { items.append(item) }
+            if lastFailure == .save { lastFailure = nil }
             await eventBus.publish(.memoryDidUpdate(itemID: item.id.uuidString))
         } catch {
+            lastFailure = .save
             logger.error("Failed to save memory item: \(error.localizedDescription)", category: logger.memory)
         }
     }
