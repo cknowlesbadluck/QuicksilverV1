@@ -13,13 +13,12 @@ concurrency:
 
 permissions:
   contents: read
-  checks: write
-  pull-requests: write
 
 jobs:
   structure:
     name: Structure & Contracts
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -83,6 +82,7 @@ jobs:
   lint:
     name: SwiftLint
     runs-on: macos-15
+    timeout-minutes: 20
     needs: structure
     steps:
       - name: Checkout
@@ -109,6 +109,7 @@ jobs:
   spm-test:
     name: SPM Unit Tests
     runs-on: macos-15
+    timeout-minutes: 30
     needs: structure
     steps:
       - name: Checkout
@@ -156,6 +157,7 @@ jobs:
   ios-simulator-build:
     name: iOS Simulator Build
     runs-on: macos-15
+    timeout-minutes: 45
     needs: [structure, lint]
     steps:
       - name: Checkout
@@ -304,6 +306,7 @@ jobs:
   ios-ui-smoke:
     name: iOS UI Smoke
     runs-on: macos-15
+    timeout-minutes: 45
     needs: [structure, lint]
     steps:
       - name: Checkout
