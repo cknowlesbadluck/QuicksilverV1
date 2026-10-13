@@ -7,7 +7,7 @@ cd "$(git rev-parse --show-toplevel)"
 fail=0; pass() { echo "  PASS  $1"; }; bad() { echo "  FAIL  $1"; fail=1; }; skip() { echo "  SKIP  $1"; }
 
 echo "== Secrets =="
-if git ls-files -z | xargs -0 grep -IlE 'AIza[0-9A-Za-z_-]{35}|gsk_[0-9A-Za-z]{40,}|xai-[0-9A-Za-z]{40,}|sk-[0-9A-Za-z]{40,}|-----BEGIN [A-Z ]*PRIVATE KEY-----' 2>/dev/null | grep -v '^scripts/release-readiness.sh$'; then
+if git grep -IlE 'AIza[0-9A-Za-z_-]{35}|gsk_[0-9A-Za-z]{40,}|xai-[0-9A-Za-z]{40,}|sk-[0-9A-Za-z]{40,}|-----BEGIN [A-Z ]*PRIVATE KEY-----' HEAD -- . ':!scripts/release-readiness.sh' 2>/dev/null; then
   bad "secret-shaped strings in tracked files (listed above)"
 else pass "no secret-shaped strings in tracked files"; fi
 envs=$(git ls-files | grep -E '(^|/)\.env($|\.)|(^|/)\.dev\.vars($|\.)' | grep -vE '\.(example|sample|template)$' || true)
@@ -28,14 +28,21 @@ PY
 then pass "PrivacyInfo.xcprivacy parses; no tracking; only OtherUserContent"; else bad "PrivacyInfo.xcprivacy"; fi
 
 echo "== Workflows =="
-writers=$(git grep -lE 'git (commit|push)|contents: *write' HEAD -- .github/workflows | sed 's/^HEAD://' | grep -vE '/(prune-branches|release)\.yml$' || true)
+writers=$(git grep -lE 'git commit|git push' HEAD -- .github/workflows | sed 's/^HEAD://' | grep -v '/release.yml$' || true)
+# prune-branches may only push deletions
+for w in $writers; do
+  if [ "$w" = ".github/workflows/prune-branches.yml" ] && ! git show "HEAD:$w" | grep -E 'git (commit|push)' | grep -vq -- '--delete'; then
+    writers=$(echo "$writers" | grep -v prune-branches || true)
+  fi
+done
+echo "  NOTE  release.yml is owner-gated (signing/TestFlight dormant) and reviewed by hand"
 [ -n "$writers" ] && bad "workflows that can commit/push: $writers" || pass "no workflow commits to the repo (prune-branches deletes only; release.yml is owner-gated)"
 arch=$(git show HEAD:.github/workflows/archive.yml)
 if grep -q 'CODE_SIGNING_ALLOWED=NO' <<<"$arch" && grep -q 'Quicksilver-unsigned.ipa' <<<"$arch"; then
   pass "archive.yml builds the unsigned SideStore IPA"; else bad "archive.yml unsigned IPA path"; fi
 
 echo "== Reproducibility =="
-[ -f gateway/package-lock.json ] && pass "gateway/package-lock.json committed" || bad "gateway lockfile missing"
+git cat-file -e HEAD:gateway/package-lock.json 2>/dev/null && pass "gateway/package-lock.json committed" || bad "gateway lockfile missing"
 if git show HEAD:Package.swift | grep -q '\.package('; then
   git ls-files --error-unmatch Package.resolved >/dev/null 2>&1 && pass "SPM remotes pinned by Package.resolved" || bad "Package.swift has remote packages but Package.resolved is not committed"
 else pass "no SPM remote dependencies"; fi
@@ -48,10 +55,13 @@ else skip "swiftlint not installed (CI SwiftLint job is the gate)"; fi
 if [ "${1:-}" = "--ci" ]; then
   echo "== Main CI =="
   sha=$(git rev-parse HEAD)
-  c=$(gh run list -w "Quicksilver CI" -c "$sha" -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null)
+  git merge-base --is-ancestor "$sha" origin/main 2>/dev/null || bad "$sha is not on origin/main"
+  c=$(gh run list -w "Quicksilver CI" -b main -e push -c "$sha" -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null)
   [ "$c" = "success" ] && pass "Quicksilver CI on $sha: success" || bad "Quicksilver CI on $sha: ${c:-no run}"
-  a=$(gh run list -w "Archive IPA" -c "$sha" -L 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null)
-  [ "$a" = "success" ] && pass "Archive IPA built for $sha" || bad "no successful Archive IPA run for $sha (${a:-none})"
+  a=$(gh run list -w "Archive IPA" -b main -c "$sha" -L 1 --json conclusion,databaseId --jq '.[0]|"\(.conclusion) \(.databaseId)"' 2>/dev/null)
+  if [ "${a%% *}" = "success" ] && gh run view "${a##* }" --log 2>/dev/null | grep -q "Config: Release"; then
+    pass "Archive IPA (non-Debug) built for $sha on main"
+  else bad "no successful Release Archive IPA run for $sha on main (${a:-none}); confirm the configuration input was Release"; fi
 fi
 
 echo "== Human gates (cannot be checked here) =="
