@@ -52,7 +52,7 @@ jobs:
                   continue
                 fi
                 echo "Deleting branch from merged PR #$pr_number: $branch"
-                git push origin --delete "$branch" || true
+                git push --force-with-lease="refs/heads/$branch:$remote_sha" origin --delete "$branch" || true
               done
 
       - name: Delete plain fast-forward-merged branches
@@ -78,5 +78,6 @@ jobs:
                   continue
                 fi
                 echo "Deleting fast-forward-merged branch: $branch"
-                git push origin --delete "$branch" || true
+                tip=$(git rev-parse "origin/$branch")
+                git push --force-with-lease="refs/heads/$branch:$tip" origin --delete "$branch" || true
               done
