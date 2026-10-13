@@ -25,18 +25,35 @@ final class AppIntentsDiscoveryTests: XCTestCase {
         XCTAssertTrue(OpenDiagnosticsIntent.openAppWhenRun)
     }
 
-    /// Every shipped intent declared in Intents/ is reachable from an App Shortcut.
-    func testEveryIntentHasAShortcut() throws {
+    private func intentSources() throws -> [(name: String, text: String)] {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-        let source = try String(
-            contentsOf: root.appendingPathComponent("Intents/QuicksilverIntents.swift"), encoding: .utf8
-        )
-        let declared = try NSRegularExpression(pattern: #"struct (\w+Intent): AppIntent"#)
-            .matches(in: source, range: NSRange(source.startIndex..., in: source))
-            .compactMap { Range($0.range(at: 1), in: source).map { String(source[$0]) } }
+        let directory = root.appendingPathComponent("Intents")
+        return try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "swift" }
+            .map { ($0.lastPathComponent, try String(contentsOf: $0, encoding: .utf8)) }
+    }
+
+    /// Every AppIntent declared anywhere in Intents/ is reachable from an App Shortcut.
+    func testEveryIntentHasAShortcut() throws {
+        let sources = try intentSources()
+        let all = sources.map(\.text).joined(separator: "\n")
+        let regex = try NSRegularExpression(pattern: #"struct (\w+): AppIntent\b"#)
+        let declared = regex.matches(in: all, range: NSRange(all.startIndex..., in: all))
+            .compactMap { Range($0.range(at: 1), in: all).map { String(all[$0]) } }
         XCTAssertFalse(declared.isEmpty)
         for name in declared {
-            XCTAssertTrue(source.contains("intent: \(name)("), "\(name) is not exposed as an App Shortcut")
+            XCTAssertTrue(all.contains("intent: \(name)("), "\(name) is not exposed as an App Shortcut")
+        }
+    }
+
+    /// `openAppWhenRun` is deprecated on iOS 26+ in favour of `supportedModes`.
+    /// Until the intents migrate, guard the runtime contract at source level:
+    /// only Open Diagnostics may declare a foreground mode.
+    func testOnlyOpenDiagnosticsDeclaresForegroundMode() throws {
+        let all = try intentSources().map(\.text).joined(separator: "\n")
+        let blocks = all.components(separatedBy: "struct ").dropFirst()
+        for block in blocks where block.contains("supportedModes") && block.contains(".foreground") {
+            XCTAssertTrue(block.hasPrefix("OpenDiagnosticsIntent"), "Only OpenDiagnosticsIntent may run in the foreground")
         }
     }
 }
