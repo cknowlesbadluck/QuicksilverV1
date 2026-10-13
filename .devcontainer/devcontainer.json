@@ -1,12 +1,20 @@
 {
   "name": "Quicksilver Swift Devcontainer",
-  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  // Official Swift image: the previous ghcr.io/devcontainers/features/swift
+  // feature does not exist in devcontainers/features, which made every
+  // Codespaces prebuild fail at "Create Template".
+  "image": "swift:6.1-jammy",
   "features": {
-    "ghcr.io/devcontainers/features/swift:1": {}
+    "ghcr.io/devcontainers/features/common-utils:2": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
   },
-  "extensions": [
-    "vknabel.vscode-swift-development-environment",
-    "eamodio.gitlens"
-  ],
-  "postCreateCommand": "swift --version || true && bash scripts/install-opencode.sh || true"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "swiftlang.swift-vscode",
+        "eamodio.gitlens"
+      ]
+    }
+  },
+  "postCreateCommand": "swift --version || true; bash scripts/install-opencode.sh || true"
 }
