@@ -84,6 +84,7 @@ final class OnDeviceAIProviderTests: XCTestCase {
         XCTAssertEqual(off.prewarms, 0)
     }
 
+    @MainActor
     func testOnDeviceRequestPrefersLocalHistoryCappedToFourPairs() {
         let local = (0..<12).map { Message(role: $0.isMultiple(of: 2) ? .user : .assistant, content: "m\($0)") }
         let cloud = [Message(role: .user, content: "cloud-only")]
