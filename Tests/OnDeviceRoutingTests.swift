@@ -170,6 +170,43 @@ final class OnDeviceRoutingTests: XCTestCase {
     }
 }
 
+@MainActor
+final class AnswerProvenanceTests: XCTestCase {
+    private func service(cloud: AIProvider?, model: ScriptedOnDeviceModel?) -> AIService {
+        let flags = FeatureFlags(defaults: UserDefaults(suiteName: "AnswerProvenance.\(UUID().uuidString)") ?? .standard)
+        flags.set("aiServiceEnabled", enabled: true)
+        let service = AIService(primary: cloud, secondary: nil, eventBus: EventBus(), logger: LoggerService(), featureFlags: flags)
+        service.onDeviceProvider = model.map { OnDeviceAIProvider(model: $0) }
+        service.retrySleep = { _ in }
+        return service
+    }
+
+    func testOnDeviceReplyIsTaggedOnDevice() async throws {
+        let svc = service(cloud: CountingCloud(), model: ScriptedOnDeviceModel(availability: .available, outcome: .reply("local")))
+        _ = try await svc.complete(AIRequest(prompt: "what is a prime number"))
+        XCTAssertEqual(svc.lastAnswerProvenance, .onDevice)
+        XCTAssertEqual(svc.lastAnswerProvenance?.badge, "On device")
+    }
+
+    func testCloudReplyNamesProvider() async throws {
+        let cloud = CountingCloud()
+        let svc = service(cloud: cloud, model: ScriptedOnDeviceModel(availability: .appleIntelligenceNotEnabled, outcome: .reply("x")))
+        _ = try await svc.complete(AIRequest(prompt: "what is a prime number"))
+        XCTAssertEqual(svc.lastAnswerProvenance?.origin, .cloud)
+        XCTAssertEqual(svc.lastAnswerProvenance?.providerName, cloud.displayName)
+        XCTAssertTrue(svc.lastAnswerProvenance?.badge.contains(cloud.displayName) ?? false)
+    }
+
+    func testFailureClearsStaleProvenance() async throws {
+        let svc = service(cloud: nil, model: ScriptedOnDeviceModel(availability: .available, outcome: .reply("local")))
+        _ = try await svc.complete(AIRequest(prompt: "hi"))
+        XCTAssertNotNil(svc.lastAnswerProvenance)
+        svc.onDeviceProvider = nil
+        _ = try? await svc.complete(AIRequest(prompt: "hi"))
+        XCTAssertNil(svc.lastAnswerProvenance, "A failed turn must not inherit the previous badge")
+    }
+}
+
 private final class CountingCloud: AIProvider {
     let id = "cloud"
     let displayName = "Cloud"
