@@ -50,11 +50,16 @@ enum BrainComposition {
         )
     }
 
-    /// Request metadata: compact on-device prompt, plus the offline flag so a
-    /// failed local answer never falls back to the cloud without a network.
-    static func requestMetadata(aspect: Aspect, offline: Bool) -> [String: String] {
-        var metadata = [AIService.onDeviceInstructionsKey: onDeviceInstructions(aspect: aspect)]
-        if offline { metadata[AIService.offlineKey] = "1" }
+    /// Request metadata for the turn (snapshotted aspect via `personaID`):
+    /// compact on-device prompt, unless the plain register is latched (then the
+    /// on-device model gets the full plain-mode system prompt), plus the offline
+    /// flag so a failed or unavailable local answer never falls back to the cloud.
+    static func requestMetadata(_ personaID: String, _ register: Register, _ network: String) -> [String: String] {
+        var metadata: [String: String] = [:]
+        if register != .plain {
+            metadata[AIService.onDeviceInstructionsKey] = onDeviceInstructions(aspect: aspect(forPersonaID: personaID))
+        }
+        if network == "disconnected" { metadata[AIService.offlineKey] = "1" }
         return metadata
     }
 

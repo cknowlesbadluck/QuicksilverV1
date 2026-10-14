@@ -107,6 +107,16 @@ final class OnDeviceRoutingTests: XCTestCase {
         XCTAssertEqual(cloud.calls, 0)
     }
 
+    func testOfflineWithUnavailableOnDeviceNeverTriesCloud() async {
+        let cloud = CountingCloud()
+        let service = makeService(cloud: cloud, model: ScriptedOnDeviceModel(availability: .modelNotReady, outcome: .reply("x")))
+        do {
+            _ = try await service.complete(AIRequest(prompt: "q", metadata: [AIService.offlineKey: "1"]))
+            XCTFail("Expected networkUnavailable")
+        } catch {}
+        XCTAssertEqual(cloud.calls, 0)
+    }
+
     func testEmptyLocalAnswerFallsBackToCloud() async throws {
         let cloud = CountingCloud()
         let service = makeService(cloud: cloud, model: ScriptedOnDeviceModel(availability: .available, outcome: .reply("  ")))

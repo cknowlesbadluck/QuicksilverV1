@@ -358,7 +358,7 @@ extension MercuryBrain {
                     context: turn.context,
                     temperature: turn.config.preferredTemperature,
                     maxTokens: turn.maxTokens,
-                    metadata: BrainComposition.requestMetadata(aspect: activeAspect, offline: nexus.state.networkStatus == "disconnected")
+                    metadata: BrainComposition.requestMetadata(turn.config.id, activeRegister, nexus.state.networkStatus)
                 )
             )
             recordTurn(user: query, assistant: response.content)

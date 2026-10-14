@@ -210,6 +210,8 @@ public final class AIService {
             let raw: AIResponse
             if let local = try await answerOnDeviceFirst(request) {
                 raw = local
+            } else if request.metadata[Self.offlineKey] == "1" {
+                throw AppError.networkUnavailable
             } else if let provider = primaryProvider {
                 raw = try await performProviderRequest(request, primary: provider)
             } else {
