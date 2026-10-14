@@ -51,8 +51,8 @@ final class BrainFailureMatrixTests: XCTestCase {
         let container = try brain(failingWith: AppError.timedOut, store: FailingMemoryStore())
         await container.brain.remember("buy filament")
         XCTAssertEqual(container.memoryManager.lastFailure, .save)
-        // In-memory items stay authoritative even when persistence fails.
-        XCTAssertFalse(container.brain.retrieveSnapshot(limit: 5).isEmpty)
+        // A failed save must not wedge the Brain in a busy state.
+        XCTAssertNotEqual(container.brain.visualState, .thinking)
     }
 }
 
