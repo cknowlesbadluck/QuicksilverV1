@@ -47,22 +47,7 @@ final class AspectDwellBrainTests: XCTestCase {
     }
 
     private func makeContainer(defaults: UserDefaults) -> DependencyContainer {
-        let logger = LoggerService(subsystem: "com.quicksilver.tests")
-        let eventBus = EventBus()
-        let nexus = NexusCoordinator(
-            networkMonitor: StubNetworkMonitor(),
-            batteryMonitor: StubBatteryMonitor(),
-            storageMonitor: StubStorageMonitor(),
-            deviceMonitor: StubDeviceMonitor(),
-            logger: logger,
-            eventBus: eventBus
-        )
-        return DependencyContainer(
-            memoryStore: InMemoryMemoryStore(),
-            aiProvider: EchoProvider(),
-            nexus: nexus,
-            defaults: defaults
-        )
+        ViewModelTestSupport.makeContainer(provider: EchoProvider(), defaults: defaults)
     }
 }
 
