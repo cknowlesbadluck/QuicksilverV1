@@ -32,6 +32,12 @@ final class CloudSensitivityTests: XCTestCase {
         }
     }
 
+    func testShortNumbersAreNotIdentifiers() {
+        for text in ["what happened in 1969", "open port 5988", "issue #1988 and 2026-10-14"] {
+            XCTAssertFalse(CloudContextPolicy.isPersonalText(text), text)
+        }
+    }
+
     func testRequestLevelSignals() {
         XCTAssertTrue(CloudContextPolicy.isPersonal(AIRequest(prompt: "ok", metadata: [CloudContextPolicy.personalTurnKey: "1"])))
         let memory = GatewayContextBlock(kind: .memory, text: "likes tea", privacy: .cloud)
@@ -55,7 +61,10 @@ final class CloudSensitivityTests: XCTestCase {
             "my email is alice@example.com",
             "API token: abcdefghijklmnopqrstuvwxyz",
             "use API key sk-abc123def456",
-            "here it is ghp_9f8e7d6c5b4a3f2e1d0c9b8a7f6e"
+            "here it is ghp_9f8e7d6c5b4a3f2e1d0c9b8a7f6e",
+            "call me at 415-555-1212",
+            "it's +44 20 7946 0958",
+            "number 123-45-6789"
         ] {
             XCTAssertFalse(CloudContextPolicy.allowsCloudFallback(AIRequest(prompt: text)), text)
         }

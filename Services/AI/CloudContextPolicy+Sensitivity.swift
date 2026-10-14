@@ -8,7 +8,8 @@ import Core
 /// location, finance, identity or credentials. The check is deliberately
 /// conservative (false positives keep a turn local; they never leak it).
 extension CloudContextPolicy {
-    /// Metadata flag the Brain sets when the turn is known to be personal (plain register latched).
+    /// Metadata flag a caller sets when the turn is known to be personal. Not derived from the
+    /// plain register (that is a presentation choice; e.g. "be serious" is not sensitive).
     public static let personalTurnKey = "personal"
 
     /// True when the turn must stay on this device.
@@ -33,8 +34,23 @@ extension CloudContextPolicy {
         guard !lower.isEmpty else { return false }
         if personalPhrases.contains(where: { lower.contains($0) }) { return true }
         if valueLooksLikeCredential(text) || containsEmailAddress(lower) || containsSecretShapedToken(text) { return true }
+        if containsStructuredIdentifier(text) { return true }
         let words = Set(lower.split { !$0.isLetter && !$0.isNumber && $0 != "'" }.map(String.init))
         return !words.isDisjoint(with: personalWords)
+    }
+
+    /// Phone numbers (7+ digits in one run of digits/spaces/()-.+) and SSN-shaped values.
+    static func containsStructuredIdentifier(_ text: String) -> Bool {
+        if text.range(of: #"\b\d{3}-\d{2}-\d{4}\b"#, options: .regularExpression) != nil { return true }
+        let pattern = #"\+?\(?\d[\d\s().-]{5,}\d"#
+        var searchRange = text.startIndex..<text.endIndex
+        while let range = text.range(of: pattern, options: .regularExpression, range: searchRange) {
+            let match = text[range].trimmingCharacters(in: .whitespaces)
+            let isDate = match.range(of: #"^\d{4}-\d{2}-\d{2}$"#, options: .regularExpression) != nil
+            if !isDate, match.filter(\.isNumber).count >= 7 { return true }
+            searchRange = range.upperBound..<text.endIndex
+        }
+        return false
     }
 
     static func containsEmailAddress(_ lower: String) -> Bool {
