@@ -7,12 +7,22 @@ import Core
 extension AIService {
     /// Request metadata key carrying the compact on-device system prompt (P-T4).
     public static let onDeviceInstructionsKey = "onDeviceSystem"
-    /// Prior turns kept for the small on-device context window.
-    public static let onDeviceHistoryTurns = 4
+    /// Metadata flag the Brain sets when Nexus reports no network: never fall back to cloud.
+    public static let offlineKey = "offline"
+    /// Prior messages kept for the small on-device window (4 user/assistant pairs).
+    public static let onDeviceHistoryMessages = 8
 
     /// Why the on-device mind can or cannot answer (Codex / Diagnostics).
     public var onDeviceAvailability: OnDeviceModelAvailability {
         onDeviceProvider?.availability ?? .unsupportedOS
+    }
+
+    /// Bound route id/name; the on-device route counts when no cloud is bound.
+    public var currentProviderID: String {
+        primaryProvider?.id ?? (canAnswerOnDevice ? OnDeviceAIProvider.routeID : Self.unboundProviderID)
+    }
+    public var currentProviderName: String {
+        primaryProvider?.displayName ?? (canAnswerOnDevice ? OnDeviceAIProvider.routeName : Self.unboundProviderName)
     }
 
     /// True when the on-device model is present and ready.
@@ -32,7 +42,7 @@ extension AIService {
             id: request.id,
             prompt: request.prompt,
             systemPrompt: instructions ?? request.systemPrompt,
-            history: Array(request.history.suffix(onDeviceHistoryTurns)),
+            history: Array(request.history.suffix(onDeviceHistoryMessages)),
             context: [],
             temperature: request.temperature,
             maxTokens: request.maxTokens,
@@ -51,10 +61,21 @@ extension AIService {
                 policy: AIStreamExecutor.RetryPolicy(maxRetries: 0, honorRetryAfter: false),
                 sleep: retrySleep
             )
+            // An empty local answer is a failure, not a reply: let the cloud try.
+            guard !response.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw OnDeviceModelError.generationFailed("empty response")
+            }
             logger.info("AI answered on device", category: logger.ai)
             return response
         } catch {
             if AIClientClassifier.isCancellation(error) { throw CancellationError() }
+            // A safety refusal is a decision, not an outage: never re-send it to the cloud.
+            if case OnDeviceModelError.guardrailViolation = error {
+                throw AppError.aiRequestFailed("on-device: request declined")
+            }
+            if request.metadata[Self.offlineKey] == "1" {
+                throw AppError.networkUnavailable
+            }
             guard primaryProvider != nil else {
                 logger.error("On-device failed and no cloud route is bound", category: logger.ai)
                 throw AppError.aiRequestFailed("on-device: \(error.localizedDescription)")
@@ -67,4 +88,5 @@ extension AIService {
 
 extension OnDeviceAIProvider {
     public static let routeName = "Apple Intelligence (on-device)"
+    public static let routeID = "on-device"
 }

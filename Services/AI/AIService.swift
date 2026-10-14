@@ -146,8 +146,6 @@ public final class AIService {
 
     /// True when a real provider is bound. False means Ask/Brain requests return the unbound state.
     public var isBound: Bool { primaryProvider != nil || canAnswerOnDevice }
-    public var currentProviderID: String { primaryProvider?.id ?? Self.unboundProviderID }
-    public var currentProviderName: String { primaryProvider?.displayName ?? Self.unboundProviderName }
     public var fallbackProviderName: String? { secondaryProvider?.displayName }
     public var hasGrokKey: Bool {
         !(KeychainStore.string(forKey: Self.grokAPIKeyKeychainAccount)?.isEmpty ?? true)

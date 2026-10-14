@@ -50,6 +50,14 @@ enum BrainComposition {
         )
     }
 
+    /// Request metadata: compact on-device prompt, plus the offline flag so a
+    /// failed local answer never falls back to the cloud without a network.
+    static func requestMetadata(aspect: Aspect, offline: Bool) -> [String: String] {
+        var metadata = [AIService.onDeviceInstructionsKey: onDeviceInstructions(aspect: aspect)]
+        if offline { metadata[AIService.offlineKey] = "1" }
+        return metadata
+    }
+
     static func aspect(forPersonaID personaID: String) -> Aspect {
         switch personaID {
         case "forge": return .forge
