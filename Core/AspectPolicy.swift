@@ -30,11 +30,35 @@ public struct AspectPolicy: Sendable {
         }
     }
 
-    /// Minimum dwell before an autonomous aspect change is allowed.
+    /// Minimum dwell before an autonomous (environment / memory drift) change is allowed.
     public let minimumDwellSeconds: TimeInterval
+    /// Shorter dwell for per-turn intent projection: a clear new intent may move
+    /// the entity, but not on every message (hysteresis against ping-pong).
+    public let turnDwellSeconds: TimeInterval
 
-    public init(minimumDwellSeconds: TimeInterval = 15 * 60) {
+    public init(minimumDwellSeconds: TimeInterval = 15 * 60, turnDwellSeconds: TimeInterval = 90) {
         self.minimumDwellSeconds = minimumDwellSeconds
+        self.turnDwellSeconds = turnDwellSeconds
+    }
+
+    /// Decides whether the Brain should actually project `target` now.
+    /// - Explicit (owner / intent "switch") requests always win (`force`).
+    /// - Never re-project the current aspect.
+    /// - Otherwise a change is allowed only after `turnDwellSeconds` since the last change.
+    /// A dwell-suppressed decision means **stay**, never "no objection".
+    public func shouldProject(
+        _ target: Aspect,
+        current: Aspect,
+        lastChangedAt: Date?,
+        force: Bool = false,
+        now: Date = Date()
+    ) -> Bool {
+        if force { return target != current }
+        guard target != current else { return false }
+        guard let lastChangedAt else { return true }
+        // A clock moved backwards (manual change / restore) must not lock the entity.
+        let elapsed = now.timeIntervalSince(lastChangedAt)
+        return elapsed < 0 || elapsed >= turnDwellSeconds
     }
 
     /// Evaluate preferred Aspect.

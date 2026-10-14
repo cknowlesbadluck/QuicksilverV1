@@ -17,7 +17,12 @@ enum ViewModelTestSupport {
         testCase.addTeardownBlock {
             defaults.removePersistentDomain(forName: suiteName)
         }
+        return makeContainer(provider: provider, defaults: defaults)
+    }
 
+    /// Same harness over caller-owned defaults, so a test can "relaunch"
+    /// (build a second container over the same persisted state).
+    static func makeContainer(provider: AIProvider?, defaults: UserDefaults) -> DependencyContainer {
         let logger = LoggerService(subsystem: "com.quicksilver.tests")
         let eventBus = EventBus()
         let nexus = NexusCoordinator(
