@@ -527,7 +527,7 @@ Also landed: M3.5-T3 on-device-first routing (#268, 8a21d32). Open issues: #250 
 
 ### Status 2026-10-14
 #270 RoutingConfigStore Mutex + redirect rejector (#252) · #271 Ask on-device reason · #272 M3.5-T5 Codex mind status · #273 M3.5-T4 budget/prewarm/4-pair local history · #274 gateway dev-dep patch bumps · #275 Codex-review follow-ups (local memories/device in on-device prompt, plain directive kept under cap, prewarm via Brain).
-Cloud fallback after an on-device failure is now privacy-gated (#277, local sensitivity check in CloudContextPolicy); the `needsCloud` planner (M3.5-T19) is still open. #278 adds element logging to the flaky Sanctum a11y audit. The `aiServiceEnabled` default (off) is awaiting the owner's decision. #252 is down to LoggerService + 4 Nexus monitors. CHR-55 remains open.
+Cloud fallback after an on-device failure is now privacy-gated (#277, de0422c): a local heuristic in CloudContextPolicy (health, distress, memory, contacts, location incl. street/ZIP, finance, identity incl. phone/SSN/DOB, credentials/tokens/email; English only; misses paraphrases); the `needsCloud` planner (M3.5-T19) is still open. #278 adds element logging to the flaky Sanctum a11y audit. The `aiServiceEnabled` default (off) is awaiting the owner's decision. #252 is down to LoggerService + 4 Nexus monitors. CHR-55 remains open.
 
 ## 5. Risks
 
