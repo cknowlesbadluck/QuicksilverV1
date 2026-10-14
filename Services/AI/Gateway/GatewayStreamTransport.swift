@@ -80,7 +80,8 @@ public struct GatewayStreamTransport: Sendable {
 }
 
 /// Rejects every HTTP redirect so POSTed prompts never leave the validated gateway URL.
-private final class GatewayRedirectRejector: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+/// Stateless `final` NSObject subclass, so it is checked `Sendable` (issue #252).
+private final class GatewayRedirectRejector: NSObject, URLSessionTaskDelegate, Sendable {
     static let shared = GatewayRedirectRejector()
 
     func urlSession(
