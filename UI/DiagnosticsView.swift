@@ -68,6 +68,8 @@ struct DiagnosticsView: View {
     @ViewBuilder
     private func statusSection(_ vm: DiagnosticsViewModel) -> some View {
         Section("Status") {
+            LabeledContent("Route", value: container.aiService.activeRouteName)
+            LabeledContent("On-device mind", value: container.aiService.onDeviceAvailability.userFacingReason)
             LabeledContent("Nexus", value: vm.isActive ? "Active" : "Inactive")
             LabeledContent("Health", value: "\(vm.overallHealth)")
             LabeledContent("Network", value: vm.networkStatus)

@@ -42,6 +42,14 @@ enum BrainComposition {
         )
     }
 
+    /// P-T4 / M3.5-T3: compact identity + aspect prompt for the small on-device model.
+    static func onDeviceInstructions(aspect: Aspect) -> String {
+        PromptBudget.composedHead(
+            core: PromptManager.coreCompactIdentity(),
+            aspect: PersonaConfiguration.forAspect(aspect).systemPrompt
+        )
+    }
+
     static func aspect(forPersonaID personaID: String) -> Aspect {
         switch personaID {
         case "forge": return .forge
