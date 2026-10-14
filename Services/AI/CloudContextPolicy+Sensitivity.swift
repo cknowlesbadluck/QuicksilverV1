@@ -95,7 +95,8 @@ extension CloudContextPolicy {
         // Finance / identity / credentials
         "my bank", "my salary", "my debt", "credit card", "bank account", "account number", "my taxes",
         "social security",
-        "my password", "api key", "my email", "my phone", "date of birth", "my birthday", "born on", "pin code", "my passport", "my loan", "my rent"
+        "my password", "api key", "my email", "my phone", "date of birth",
+        "my birthday", "born on", "pin code", "my passport", "my loan", "my rent"
     ]
 
     /// Single words (whole-word match).
