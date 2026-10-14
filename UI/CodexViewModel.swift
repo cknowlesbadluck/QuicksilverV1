@@ -55,7 +55,7 @@ final class CodexViewModel {
         let availability = container.aiService.onDeviceAvailability
         onDeviceStatus = availability.shortLabel
         onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason
-        answerRoute = container.aiService.activeRouteName
+        answerRoute = aiEnabled ? container.aiService.activeRouteName : "Dormant (wake it above)"
     }
 
     func saveGrokKey() {

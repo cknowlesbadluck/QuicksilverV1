@@ -42,25 +42,38 @@ enum BrainComposition {
         )
     }
 
-    /// P-T4 / M3.5-T3: compact identity + aspect prompt for the small on-device model.
-    static func onDeviceInstructions(aspect: Aspect) -> String {
-        PromptBudget.composedHead(
-            core: PromptManager.coreCompactIdentity(),
-            aspect: PersonaConfiguration.forAspect(aspect).systemPrompt
-        )
+    /// Memories that reach the small on-device model (local only, never cloud).
+    static let onDeviceMemoryLimit = 3
+
+    /// Request metadata for the turn (snapshotted `config`): the compact local
+    /// prompt (compact core + aspect + up to 3 memories + device line, with the
+    /// plain-mode directive when plain is latched), plus the offline flag so a
+    /// failed or unavailable local answer never falls back to the cloud.
+    static func requestMetadata(
+        _ config: PersonaConfiguration,
+        _ register: Register,
+        _ memories: [MemoryItem],
+        _ state: NexusState
+    ) -> [String: String] {
+        let aspect = aspect(forPersonaID: config.id)
+        var metadata = [
+            AIService.onDeviceInstructionsKey: PromptComposer.compose(
+                core: PromptManager.coreCompactIdentity(),
+                aspect: config.systemPrompt,
+                memory: Array(memories.prefix(onDeviceMemoryLimit)),
+                device: localDeviceLine(state),
+                aspectLabel: aspect.diagnosticLabel,
+                plainMode: register == .plain,
+                destination: .onDevice
+            )
+        ]
+        if state.networkStatus == "disconnected" { metadata[AIService.offlineKey] = "1" }
+        return metadata
     }
 
-    /// Request metadata for the turn (snapshotted aspect via `personaID`):
-    /// compact on-device prompt, unless the plain register is latched (then the
-    /// on-device model gets the full plain-mode system prompt), plus the offline
-    /// flag so a failed or unavailable local answer never falls back to the cloud.
-    static func requestMetadata(_ personaID: String, _ register: Register, _ network: String) -> [String: String] {
-        var metadata: [String: String] = [:]
-        if register != .plain {
-            metadata[AIService.onDeviceInstructionsKey] = onDeviceInstructions(aspect: aspect(forPersonaID: personaID))
-        }
-        if network == "disconnected" { metadata[AIService.offlineKey] = "1" }
-        return metadata
+    static func localDeviceLine(_ state: NexusState) -> String {
+        let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
+        return "health \(state.overallHealthScore), battery \(battery)"
     }
 
     static func aspect(forPersonaID personaID: String) -> Aspect {
@@ -127,14 +140,7 @@ enum BrainComposition {
     ) -> String {
         let includeLocal = destination == .onDevice
         let memoryForPrompt = includeLocal ? memory : []
-        let device: String
-        if includeLocal {
-            let health = state.overallHealthScore
-            let battery = state.batteryLevel.map { "\(Int($0 * 100))%" } ?? "unknown"
-            device = "health \(health), battery \(battery)"
-        } else {
-            device = ""
-        }
+        let device = includeLocal ? localDeviceLine(state) : ""
         return PromptComposer.compose(
             core: PromptManager.coreIdentity(),
             aspect: base,

@@ -80,6 +80,8 @@ final class MercuryBrain {
     }
 
     /// Ask and return the aspect applied for this turn (captured before the provider await).
+    func prepareInvocation() { aiService.prewarmOnDevice() } // M3.5-T4: warm on-device on Invocation open
+
     func askWithAspect(_ query: String) async throws -> AskResult {
         personaManager.recordInteraction()
         try rejectAskWhileDisconnected()
@@ -278,6 +280,7 @@ extension MercuryBrain {
         let maxTokens: Int
         let history: [Message]
         let context: [GatewayContextBlock]
+        let metadata: [String: String]
     }
 
     private func preparedAsk(query: String, intent: Intent, turnRegister: Register) async throws -> PreparedAsk {
@@ -293,10 +296,7 @@ extension MercuryBrain {
         if turnRegister == .plain { personality.enterPlainRegister() }
         let memoryCandidates = await rankedMemories(for: query, limit: 12, excludingHistory: conversation)
         let trains = aiService.primaryTrainsOnPrompts
-        let level = CloudContextPolicy.resolvedLevel(
-            requested: trains ? .minimal : .standard,
-            trainsOnPrompts: trains
-        )
+        let level = CloudContextPolicy.resolvedLevel(requested: trains ? .minimal : .standard, trainsOnPrompts: trains)
         let payload = BrainComposition.cloudPayload(
             question: query,
             history: BrainComposition.recentHistory(conversation),
@@ -323,7 +323,8 @@ extension MercuryBrain {
             config: config,
             maxTokens: min(config.maxTokensHint, plan.maxOutputTokens),
             history: payload.history,
-            context: payload.context
+            context: payload.context,
+            metadata: BrainComposition.requestMetadata(config, activeRegister, memoryCandidates, nexus.state)
         )
     }
 
@@ -356,7 +357,7 @@ extension MercuryBrain {
                     context: turn.context,
                     temperature: turn.config.preferredTemperature,
                     maxTokens: turn.maxTokens,
-                    metadata: BrainComposition.requestMetadata(turn.config.id, activeRegister, nexus.state.networkStatus),
+                    metadata: turn.metadata,
                     onDeviceHistory: BrainComposition.recentHistory(conversation, maxTurns: BrainComposition.onDeviceTurns)
                 )
             )

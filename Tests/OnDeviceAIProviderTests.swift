@@ -75,6 +75,14 @@ final class OnDeviceAIProviderTests: XCTestCase {
         XCTAssertEqual(model.calls.first?.instructions?.count, OnDeviceAIProvider.maxInstructionCharacters)
     }
 
+    func testCapKeepsTrailingPlainDirective() {
+        let text = String(repeating: "c", count: OnDeviceAIProvider.maxInstructionCharacters) + "\nPlain mode: no wit."
+        let capped = OnDeviceAIProvider.cappedInstructions(text)
+        XCTAssertLessThanOrEqual(capped.count, OnDeviceAIProvider.maxInstructionCharacters)
+        XCTAssertTrue(capped.hasSuffix("Plain mode: no wit."))
+        XCTAssertTrue(capped.hasPrefix("ccc"))
+    }
+
     func testPrewarmOnlyWhenAvailable() {
         let ready = FakeOnDeviceModel(availability: .available, reply: "")
         OnDeviceAIProvider(model: ready).prewarm(instructions: "x")
