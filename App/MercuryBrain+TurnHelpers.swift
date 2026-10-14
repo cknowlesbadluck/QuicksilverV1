@@ -1,6 +1,8 @@
 import Foundation
 import Core
 import Memory
+import Personas
+import Nexus
 import ServicesAI
 
 // MARK: - Turn helpers (split from MercuryBrain.swift; behaviour unchanged)
