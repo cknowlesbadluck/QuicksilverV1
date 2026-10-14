@@ -7,6 +7,8 @@ import Core
 public final class AIService {
     public private(set) var isProcessing = false
     public private(set) var lastResponse: AIResponse?
+    /// Origin of the most recent accepted reply; nil until one succeeds or after a failure.
+    public private(set) var lastAnswerProvenance: AnswerProvenance?
 
     /// `nil` means intelligence is unbound: no real provider has a key. Requests throw
     /// `AppError.apiKeyMissing`; no mock text is ever substituted (M1-T3).
@@ -200,6 +202,7 @@ public final class AIService {
     }
 
     private func execute(_ request: AIRequest) async throws -> AIResponse {
+        lastAnswerProvenance = nil
         try ensureReadyForNetworkRequest()
         isProcessing = true
         await eventBus.publish(.aiRequestStarted(requestID: request.id.uuidString))
@@ -208,18 +211,23 @@ public final class AIService {
 
         do {
             let raw: AIResponse
+            let provenance: AnswerProvenance
             if let local = try await answerOnDeviceFirst(request) {
                 raw = local
+                provenance = .onDevice
             } else if request.metadata[Self.offlineKey] == "1" {
                 throw AppError.networkUnavailable
             } else if let provider = primaryProvider {
-                raw = try await performProviderRequest(request, primary: provider)
+                let answered = try await performProviderRequest(request, primary: provider)
+                raw = answered.response
+                provenance = AnswerProvenance(origin: .cloud, providerName: answered.provider.displayName)
             } else {
                 throw AppError.apiKeyMissing
             }
             switch ResponseValidator.validate(raw, preserveIncomplete: true) {
             case .accept(let response):
                 lastResponse = response
+                lastAnswerProvenance = provenance
                 await eventBus.publish(.aiRequestCompleted(requestID: request.id.uuidString))
                 if response.finishReason == .incomplete {
                     logger.info("AI request incomplete (partial kept): \(response.id)", category: logger.ai)
@@ -240,14 +248,19 @@ public final class AIService {
         }
     }
 
-    private func performProviderRequest(_ request: AIRequest, primary: AIProvider) async throws -> AIResponse {
+    /// Returns the response and the provider that actually produced it (primary or secondary).
+    private func performProviderRequest(
+        _ request: AIRequest,
+        primary: AIProvider
+    ) async throws -> (response: AIResponse, provider: AIProvider) {
         do {
-            return try await AIStreamExecutor.collect(
+            let response = try await AIStreamExecutor.collect(
                 request: request,
                 provider: primary,
                 policy: effectiveRetryPolicy(),
                 sleep: retrySleep
             )
+            return (response, primary)
         } catch {
             if AIClientClassifier.isCancellation(error) {
                 throw CancellationError()
@@ -264,12 +277,13 @@ public final class AIService {
                 category: logger.ai
             )
             let fallbackRequest = Self.requestForFallback(request, provider: fallback)
-            return try await AIStreamExecutor.collect(
+            let response = try await AIStreamExecutor.collect(
                 request: fallbackRequest,
                 provider: fallback,
                 policy: effectiveRetryPolicy(),
                 sleep: retrySleep
             )
+            return (response, fallback)
         }
     }
 
