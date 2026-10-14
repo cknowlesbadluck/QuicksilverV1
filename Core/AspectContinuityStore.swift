@@ -17,6 +17,11 @@ public struct AspectContinuityStore {
     public struct Snapshot: Equatable, Sendable {
         public let aspect: Aspect
         public let lastChangedAt: Date?
+
+        public init(aspect: Aspect, lastChangedAt: Date?) {
+            self.aspect = aspect
+            self.lastChangedAt = lastChangedAt
+        }
     }
 
     public func load() -> Snapshot? {
