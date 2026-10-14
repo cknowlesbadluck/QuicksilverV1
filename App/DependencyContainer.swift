@@ -79,7 +79,7 @@ final class DependencyContainer {
             aiService: aiService,
             nexus: self.nexus,
             eventBus: eventBus,
-            logger: logger
+            logger: logger, aspectContinuity: AspectContinuityStore(defaults: defaults)
         )
 
         IntentDependencies.shared.configure(surface: brain)

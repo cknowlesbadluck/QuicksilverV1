@@ -26,7 +26,8 @@ final class MercuryBrain {
     private let logger: LoggerService
 
     private let intentEngine = IntentEngine()
-    private let aspectPolicy = AspectPolicy()
+    private let aspectPolicy: AspectPolicy
+    private let aspectContinuity: AspectContinuityStore
     private let registerPolicy = RegisterPolicy()
     private let broker = IntelligenceBroker()
 
@@ -49,8 +50,12 @@ final class MercuryBrain {
         aiService: AIService,
         nexus: NexusCoordinator,
         eventBus: EventBus,
-        logger: LoggerService
+        logger: LoggerService,
+        aspectPolicy: AspectPolicy = AspectPolicy(),
+        aspectContinuity: AspectContinuityStore = AspectContinuityStore()
     ) {
+        self.aspectPolicy = aspectPolicy
+        self.aspectContinuity = aspectContinuity
         self.personaManager = personaManager
         self.memoryManager = memoryManager
         self.memoryIndex = memoryIndex
@@ -60,6 +65,8 @@ final class MercuryBrain {
         self.logger = logger
 
         activeAspect = BrainComposition.aspect(forPersonaID: personaManager.activePersonaID)
+        // Continuity across relaunch: restore the last aspect and its dwell clock.
+        if let snapshot = aspectContinuity.load() { (activeAspect, lastAspectChangeAt) = (snapshot.aspect, snapshot.lastChangedAt) }
         personality.recomputeForTurn(aspect: activeAspect)
         refreshLivingStatus()
     }
@@ -167,25 +174,16 @@ extension MercuryBrain {
             return
         }
 
-        if !force {
-            let preferred = aspectPolicy.preferredAspect(
-                current: activeAspect,
-                lastChangedAt: lastAspectChangeAt,
-                intent: Intent(kind: .unknown),
-                isLowPower: nexus.state.lowPowerMode,
-                thermalState: nexus.state.thermalState,
-                hasRecentMemoryHints: !retrieveRelevantMemory().isEmpty
-            )
-            if preferred != aspect && preferred != nil {
-                if visualState == .thinking || visualState == .idle {
-                    visualState = aspect.defaultVisualState
-                }
-                return
-            }
+        // Dwell / hysteresis: a suppressed decision means stay in the current aspect.
+        guard aspectPolicy.shouldProject(aspect, current: activeAspect, lastChangedAt: lastAspectChangeAt, force: force) else {
+            if visualState == .thinking || visualState == .idle { visualState = activeAspect.defaultVisualState }
+            return
         }
 
         activeAspect = aspect
-        lastAspectChangeAt = Date()
+        let changedAt = Date()
+        lastAspectChangeAt = changedAt
+        aspectContinuity.save(aspect, changedAt: changedAt)
 
         do {
             try await personaManager.switchTo(id: aspect.rawValue, reason: "aspect projection (\(reason))")
