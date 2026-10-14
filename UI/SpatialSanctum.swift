@@ -187,7 +187,11 @@ struct SpatialSanctum: View {
                 .font(.caption.weight(.medium))
                 .foregroundStyle(PersonaTheme.readableSecondary)
         }
+        // The audit intermittently flagged this element's caption-height frame as a too-small
+        // hit area (#278 logging). Give it the 44 pt minimum and mark it a header, not a control.
+        .frame(minHeight: 44)
         .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isHeader)
         .accessibilityLabel("Quicksilver's Sanctum, \(visualState.rawValue)")
     }
 
