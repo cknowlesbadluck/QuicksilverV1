@@ -32,7 +32,6 @@ struct DiagnosticsView: View {
 
         List {
             aspectStateSection
-            ownerGateSection
             statusSection(vm)
             insightsSection(vm, personaID: personaID)
             signalsSection(vm)
@@ -63,34 +62,6 @@ struct DiagnosticsView: View {
             Text("Quicksilver state")
         } footer: {
             Text("Quicksilver chooses the aspect that fits the current context.")
-        }
-    }
-
-    /// Owner gates stay unproven until evidence exists. This view does not fetch secrets or claim a device archive.
-    @ViewBuilder
-    private var ownerGateSection: some View {
-        Section {
-            ForEach(OwnerGateBoard.current()) { gate in
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(gate.title)
-                        Spacer()
-                        Text(gate.statusLabel)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(PersonaTheme.readableSecondary)
-                    }
-                    Text(gate.ownerAction)
-                        .font(.caption)
-                        .foregroundStyle(PersonaTheme.readableSecondary)
-                }
-                .padding(.vertical, 2)
-                .accessibilityElement(children: .combine)
-            }
-        } header: {
-            Text("Owner gates")
-        } footer: {
-            Text(OwnerGateBoard.latestProbe.footer(asOf: Date()))
-                .accessibilityLabel(OwnerGateBoard.latestProbe.footer(asOf: Date()))
         }
     }
 
