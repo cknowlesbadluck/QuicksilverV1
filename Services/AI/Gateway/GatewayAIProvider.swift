@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Core
 
 /// Mercury Gateway SSE client (M3-T3).
@@ -303,45 +304,48 @@ private enum GatewayAIStreamEngine {
 // MARK: - Timeout watchdog
 
 /// Shared first-event / idle / total deadline checks for the stream + watchdog tasks.
-private final class StreamTimeoutClock: @unchecked Sendable {
-    private let lock = NSLock()
+/// State lives in a `Mutex`, so the type is checked `Sendable` (issue #252).
+private final class StreamTimeoutClock: Sendable {
+    private struct State {
+        var responseStartedAt: ContinuousClock.Instant?
+        var gotFirstEvent = false
+        var lastEventAt: ContinuousClock.Instant
+    }
+
     private let timeouts: GatewayTimeouts
     private let startedAt: ContinuousClock.Instant
-    private var responseStartedAt: ContinuousClock.Instant?
-    private var gotFirstEvent = false
-    private var lastEventAt: ContinuousClock.Instant
+    private let state: Mutex<State>
 
     init(timeouts: GatewayTimeouts) {
         self.timeouts = timeouts
         let now = ContinuousClock.now
         self.startedAt = now
-        self.lastEventAt = now
+        self.state = Mutex(State(lastEventAt: now))
     }
 
     /// Call after response headers / stream open so first-event excludes connect time.
     func markResponseStarted() {
-        lock.lock()
-        let now = ContinuousClock.now
-        responseStartedAt = now
-        lastEventAt = now
-        lock.unlock()
+        state.withLock { state in
+            let now = ContinuousClock.now
+            state.responseStartedAt = now
+            state.lastEventAt = now
+        }
     }
 
     func markEvent() {
-        lock.lock()
-        gotFirstEvent = true
-        lastEventAt = ContinuousClock.now
-        lock.unlock()
+        state.withLock { state in
+            state.gotFirstEvent = true
+            state.lastEventAt = ContinuousClock.now
+        }
     }
 
     func check() throws {
-        lock.lock()
-        let gotFirst = gotFirstEvent
-        let lastEvent = lastEventAt
+        let snapshot = state.withLock { $0 }
+        let gotFirst = snapshot.gotFirstEvent
+        let lastEvent = snapshot.lastEventAt
         let start = startedAt
-        let responseStart = responseStartedAt
+        let responseStart = snapshot.responseStartedAt
         let timeouts = self.timeouts
-        lock.unlock()
 
         let now = ContinuousClock.now
         if now - start > .seconds(timeouts.total) {

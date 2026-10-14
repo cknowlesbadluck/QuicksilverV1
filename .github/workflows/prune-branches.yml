@@ -7,6 +7,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: prune-branches
+  cancel-in-progress: false
+
 permissions:
   contents: write
   pull-requests: read
@@ -14,11 +18,12 @@ permissions:
 jobs:
   prune:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
@@ -31,17 +36,23 @@ jobs:
           # gh pr list only sees open PRs by default; --state merged is required
           # to find branches whose PR was squash/rebase-merged (git branch
           # --merged misses these entirely since there's no ancestor commit).
-          gh pr list --state merged --limit 500 --json headRefName,number \
-            --jq '.[] | "\(.headRefName)\t\(.number)"' \
-            | while IFS=$'\t' read -r branch pr_number; do
+          gh pr list --state merged --limit 500 --json headRefName,headRefOid,number \
+            --jq '.[] | "\(.headRefName)\t\(.number)\t\(.headRefOid)"' \
+            | while IFS=$'\t' read -r branch pr_number merged_sha; do
                 [ -z "$branch" ] && continue
                 if echo "$branch" | grep -qE "$PROTECTED_REGEX"; then
                   continue
                 fi
-                if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-                  echo "Deleting branch from merged PR #$pr_number: $branch"
-                  git push origin --delete "$branch" || true
+                remote_sha=$(git ls-remote --heads origin "refs/heads/$branch" | cut -f1)
+                [ -z "$remote_sha" ] && continue
+                # Safety: only delete if the branch tip is exactly what was merged.
+                # A reused branch name or commits pushed after merge must survive.
+                if [ "$remote_sha" != "$merged_sha" ]; then
+                  echo "Skipping $branch: tip $remote_sha != merged head $merged_sha (PR #$pr_number)"
+                  continue
                 fi
+                echo "Deleting branch from merged PR #$pr_number: $branch"
+                git push --force-with-lease="refs/heads/$branch:$remote_sha" origin --delete "$branch" || true
               done
 
       - name: Delete plain fast-forward-merged branches
@@ -50,13 +61,23 @@ jobs:
           PROTECTED_REGEX='^(main|develop|master|HEAD)$'
 
           # Fallback for branches merged without going through a PR at all.
+          MAIN_SHA=$(git rev-parse origin/main)
+          OPEN_HEADS=$(gh pr list --state open --limit 500 --json headRefName --jq '.[].headRefName')
           git branch -r --merged origin/main \
-            | sed 's|origin/||' \
+            | sed 's|^ *origin/||' | grep -v -- '->' \
             | while read -r branch; do
                 [ -z "$branch" ] && continue
+                # Never delete a freshly created branch (tip == main) or one with an open PR.
+                if [ "$(git rev-parse "origin/$branch")" = "$MAIN_SHA" ]; then
+                  echo "Skipping fresh branch at main tip: $branch"; continue
+                fi
+                if printf '%s\n' "$OPEN_HEADS" | grep -qxF "$branch"; then
+                  echo "Skipping $branch: has an open PR"; continue
+                fi
                 if echo "$branch" | grep -qE "$PROTECTED_REGEX"; then
                   continue
                 fi
                 echo "Deleting fast-forward-merged branch: $branch"
-                git push origin --delete "$branch" || true
+                tip=$(git rev-parse "origin/$branch")
+                git push --force-with-lease="refs/heads/$branch:$tip" origin --delete "$branch" || true
               done
