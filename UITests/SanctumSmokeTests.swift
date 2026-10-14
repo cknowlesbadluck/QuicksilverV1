@@ -89,9 +89,15 @@ final class SanctumSmokeTests: XCTestCase {
         for attempt in 1...Self.auditAttempts {
             do {
                 try app.performAccessibilityAudit { issue in
+                    // Element details identify intermittent offenders (e.g. "Hit area is too small"
+                    // on an unlabeled SwiftUI.AccessibilityNode) without hiding the failure.
+                    let element = issue.element
                     print(
                         "AUDIT compact=\(issue.compactDescription) "
-                            + "detail=\(issue.detailedDescription)"
+                            + "detail=\(issue.detailedDescription) "
+                            + "element=\(element?.identifier ?? "-")|\(element?.label ?? "-")|"
+                            + "\(element.map { "\($0.elementType.rawValue)" } ?? "-")|"
+                            + "frame=\(element.map { "\($0.frame)" } ?? "-")"
                     )
                     return false
                 }
