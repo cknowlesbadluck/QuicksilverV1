@@ -24,20 +24,18 @@ public final class RoutingConfigStore: Sendable {
 
     private let state: Mutex<State>
     private let bundledLoader: BundledLoader
-    private let fileManager: FileManager
     private let cacheDirectoryURL: URL
     private let fetch: DataFetcher
 
     public init(
         bundledLoader: @escaping BundledLoader = RoutingConfigStore.defaultBundledLoader,
-        fileManager: FileManager = .default,
+        fileManager: FileManager = .default, // used for launch-time cache reads only
         cacheDirectoryURL: URL? = nil,
         fetch: @escaping DataFetcher = { request in
             try await URLSession.shared.data(for: request)
         }
     ) {
         self.bundledLoader = bundledLoader
-        self.fileManager = fileManager
         self.fetch = fetch
 
         let resolvedCacheDir: URL
@@ -114,6 +112,8 @@ public final class RoutingConfigStore: Sendable {
     ) throws -> Bool {
         try state.withLock { state in
             guard generation == state.refreshGeneration else { return false }
+            // FileManager.default (thread-safe) rather than a stored non-Sendable instance.
+            let fileManager = FileManager.default
             if !fileManager.fileExists(atPath: cacheDirectoryURL.path) {
                 try fileManager.createDirectory(
                     at: cacheDirectoryURL,
