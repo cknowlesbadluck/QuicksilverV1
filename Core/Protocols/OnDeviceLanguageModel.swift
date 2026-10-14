@@ -12,6 +12,18 @@ public enum OnDeviceModelAvailability: Equatable, Sendable {
 
     public var isAvailable: Bool { self == .available }
 
+    /// Short state for the Codex "Mind" section (M3.5-T5).
+    public var shortLabel: String {
+        switch self {
+        case .available: return "Available"
+        case .deviceNotEligible: return "Not eligible"
+        case .appleIntelligenceNotEnabled: return "Apple Intelligence off"
+        case .modelNotReady: return "Preparing model"
+        case .unsupportedOS: return "Requires iOS 26"
+        case .unknown: return "Unavailable"
+        }
+    }
+
     /// Plain explanation for the Codex (shown when Apple Intelligence can't answer).
     public var userFacingReason: String {
         switch self {
