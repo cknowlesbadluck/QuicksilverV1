@@ -513,6 +513,13 @@ Agents must not create the account, deploy or enable anything.
 | 9 | **Hardening sweep** | Every failure has a calm path | Brain-level tests for invalid key, quota, malformed stream, network loss mid-stream, background interruption, memory-store failure; lifecycle tests | The failure matrix in Documentation/HARDENING.md is fully covered by tests | Airplane-mode, invalid-token and exhausted-budget checks on phone |
 | 10 | **Release freeze (SideStore 1.0)** | Known-good artifact | Documentation/RELEASE-READINESS.md all ticked; Archive IPA (Release) on the freeze SHA; M6 tasks | Readiness script `--ci` passes on the freeze SHA | **HG1** install, 7-day refresh, reinstall survival; device acceptance (CHR-55) closed by the owner |
 
+### Current gates (2026-10-14 evening)
+These block 1.0. Agents must not work around them or fabricate evidence for them.
+- **CHR-55 device acceptance:** open. Only the owner closes it, with real device evidence. Simulator or fake results don't count (Phase 10, HG1/HG5).
+- **HG2 / HG3:** the Cloudflare account and deploy, and the GEMINI / GROQ / DEVICE_TOKEN gateway secrets. Owner only. Agents never create, guess or commit secrets (Phase 4).
+- **`release.yml` pin (#250):** the only workflow whose actions aren't SHA-pinned yet. Changing it needs the owner's OK (Phase 1).
+- **`aiServiceEnabled` default:** currently `false` (`Core/FeatureFlags.swift`). Owner decision pending; agents leave it unchanged (Phase 3).
+
 ### High-leverage innovations (fit: privacy first, free tier, SideStore)
 1. **Split-brain routing:** the on-device model does everything personal (memory, device state, tools); the cloud gets only de-personalized knowledge questions. This makes Gemini's training risk irrelevant by construction (Phase 3/4).
 2. **Privacy floor that remote config can't lower:** the app clamps any `/v1/config` change to at least its compiled-in privacy level (Phase 4).
@@ -528,6 +535,7 @@ Also landed: M3.5-T3 on-device-first routing (#268, 8a21d32). Open issues: #250 
 ### Status 2026-10-14
 #270 RoutingConfigStore Mutex + redirect rejector (#252) · #271 Ask on-device reason · #272 M3.5-T5 Codex mind status · #273 M3.5-T4 budget/prewarm/4-pair local history · #274 gateway dev-dep patch bumps · #275 Codex-review follow-ups (local memories/device in on-device prompt, plain directive kept under cap, prewarm via Brain).
 Cloud fallback after an on-device failure is now privacy-gated (#277, de0422c): a local heuristic in CloudContextPolicy (health, distress, memory, contacts, location incl. street/ZIP, finance, identity incl. phone/SSN/DOB, credentials/tokens/email; English only; misses paraphrases); the `needsCloud` planner (M3.5-T19) is still open. #278 adds element logging to the flaky Sanctum a11y audit. The `aiServiceEnabled` default (off) is awaiting the owner's decision. #252 is down to LoggerService + 4 Nexus monitors. CHR-55 remains open.
+Evening: these PRs are open and none is merged: #280 Brain split, #281 docs sync, #282 needsCloud planner (M3.5-T19), #283–#287 the remaining #252 types, #288 Sanctum header a11y fix (green; confirms the flake source), #289 module-boundary test, #290 bundle-hardening test, #291 Brain failure matrix, #292 per-reply provenance badge. Scored audit: `docs/AUDIT-2026-10-14.md`.
 
 ## 5. Risks
 
