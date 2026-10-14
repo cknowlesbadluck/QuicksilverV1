@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Core
 
 /// Scripted streaming provider for SPM, AppTests, and `-uitest`.
@@ -165,19 +166,11 @@ public struct FakeStreamingProvider: AIProvider {
 }
 
 /// Shared cancel flag so `FakeStreamingProvider` value copies still report cancellation.
-private final class CancellationBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var didCancel = false
+/// Backed by a `Mutex`, so it is checked `Sendable` (issue #252).
+private final class CancellationBox: Sendable {
+    private let didCancel = Mutex(false)
 
-    var value: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return didCancel
-    }
+    var value: Bool { didCancel.withLock { $0 } }
 
-    func mark() {
-        lock.lock()
-        defer { lock.unlock() }
-        didCancel = true
-    }
+    func mark() { didCancel.withLock { $0 = true } }
 }
