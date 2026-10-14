@@ -6,11 +6,11 @@ import Core
 /// is sent anywhere. Cloud is used only when on-device is unavailable or fails.
 extension AIService {
     /// Request metadata key carrying the compact on-device system prompt (P-T4).
-    public static let onDeviceInstructionsKey = "onDeviceSystem"
+    nonisolated public static let onDeviceInstructionsKey = "onDeviceSystem"
     /// Metadata flag the Brain sets when Nexus reports no network: never fall back to cloud.
-    public static let offlineKey = "offline"
+    nonisolated public static let offlineKey = "offline"
     /// Prior messages kept for the small on-device window (4 user/assistant pairs).
-    public static let onDeviceHistoryMessages = 8
+    nonisolated public static let onDeviceHistoryMessages = 8
 
     /// Why the on-device mind can or cannot answer (Codex / Diagnostics).
     public var onDeviceAvailability: OnDeviceModelAvailability {
