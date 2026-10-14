@@ -25,6 +25,11 @@ final class CodexViewModel {
     /// Read-only display model for the active answer route.
     private(set) var activeModelLabel: String = "Gemini Flash"
 
+    /// On-device mind state and the route the next answer tries first (M3.5-T5).
+    private(set) var onDeviceStatus: String = ""
+    private(set) var onDeviceReason: String?
+    private(set) var answerRoute: String = ""
+
     private let container: DependencyContainer
     /// Cancels in-flight `/v1/config` refresh on unbind / rebind.
     @ObservationIgnored private var routingRefreshTask: Task<Void, Never>?
@@ -47,6 +52,10 @@ final class CodexViewModel {
         let display = container.routingConfigStore.loadValidated().answerDisplay()
         activeRouteLabel = display.route
         activeModelLabel = display.model
+        let availability = container.aiService.onDeviceAvailability
+        onDeviceStatus = availability.shortLabel
+        onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason
+        answerRoute = container.aiService.activeRouteName
     }
 
     func saveGrokKey() {

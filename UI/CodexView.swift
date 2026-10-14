@@ -66,6 +66,9 @@ struct CodexView: View {
                 "Bound",
                 value: boundSummary(vm)
             )
+            LabeledContent("On-device mind", value: vm.onDeviceStatus)
+                .accessibilityHint(vm.onDeviceReason ?? "")
+            LabeledContent("Answers via", value: vm.answerRoute)
             LabeledContent("Policy route", value: vm.activeRouteLabel)
             LabeledContent("Policy model", value: vm.activeModelLabel)
         } header: {

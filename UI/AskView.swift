@@ -60,6 +60,12 @@ struct AskView: View {
                             .foregroundStyle(accent)
                             .accessibilityLabel(notice)
                             .id(Self.unboundNoticeID)
+                        if let reason = vm.onDeviceReason {
+                            Text(reason)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .accessibilityIdentifier("ask.onDeviceReason")
+                        }
                     }
 
                     if let error = vm.errorMessage {

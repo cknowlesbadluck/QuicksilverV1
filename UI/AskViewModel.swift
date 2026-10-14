@@ -26,6 +26,8 @@ final class AskViewModel {
     private(set) var errorMessage: String?
     /// In-character "Intelligence unbound" notice (no key bound or intelligence switched off).
     private(set) var unboundNotice: String?
+    /// Why the on-device mind couldn't answer, shown under the unbound notice.
+    private(set) var onDeviceReason: String?
     private(set) var providerName: String = ""
 
     private let container: DependencyContainer
@@ -63,6 +65,7 @@ final class AskViewModel {
         isProcessing = true
         errorMessage = nil
         unboundNotice = nil
+        onDeviceReason = nil
         providerName = container.aiService.currentProviderName
 
         let config = container.activeConfiguration
@@ -96,6 +99,8 @@ final class AskViewModel {
         } catch {
             if let notice = AppError.unboundNotice(for: error) {
                 unboundNotice = notice
+                let availability = container.aiService.onDeviceAvailability
+                onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason
             } else {
                 errorMessage = error.localizedDescription
             }

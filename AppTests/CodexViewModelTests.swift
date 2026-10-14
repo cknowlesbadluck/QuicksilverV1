@@ -29,6 +29,16 @@ final class CodexViewModelTests: XCTestCase {
         XCTAssertFalse(vm.statusIsError)
     }
 
+    func testMindShowsOnDeviceStatusAndAnswerRoute() throws {
+        ViewModelTestSupport.isolateProviderKeychain(testCase: self)
+        let container = try ViewModelTestSupport.makeContainer(provider: nil, testCase: self)
+        let vm = CodexViewModel(container: container)
+        let availability = container.aiService.onDeviceAvailability
+        XCTAssertEqual(vm.onDeviceStatus, availability.shortLabel)
+        XCTAssertEqual(vm.onDeviceReason, availability.isAvailable ? nil : availability.userFacingReason)
+        XCTAssertEqual(vm.answerRoute, container.aiService.activeRouteName)
+    }
+
     func testEmptyGrokKeyDoesNotEnableAI() throws {
         ViewModelTestSupport.isolateProviderKeychain(testCase: self)
         let container = try ViewModelTestSupport.makeContainer(provider: nil, testCase: self)

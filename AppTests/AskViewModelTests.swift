@@ -107,6 +107,8 @@ final class AskViewModelTests: XCTestCase {
         await vm.submit()
 
         XCTAssertEqual(vm.unboundNotice, AppError.unboundNotice)
+        let availability = container.aiService.onDeviceAvailability
+        XCTAssertEqual(vm.onDeviceReason, availability.isAvailable ? nil : availability.userFacingReason)
         XCTAssertNil(vm.errorMessage)
         XCTAssertEqual(vm.turns.map(\.role), [.user])
         XCTAssertFalse(vm.isProcessing)
