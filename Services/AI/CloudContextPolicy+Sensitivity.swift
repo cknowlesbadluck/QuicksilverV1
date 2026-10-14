@@ -37,7 +37,10 @@ extension CloudContextPolicy {
     public static func isPersonalText(_ text: String) -> Bool {
         let lower = RegisterPolicy.normalize(text)
         guard !lower.isEmpty else { return false }
-        if personalPhrases.contains(where: { lower.contains($0) }) { return true }
+        // Token-boundary phrase match: "about mercury" must not hit "about me", "my song" not "my son".
+        let padded = " " + tokenized(lower) + " "
+        if personalPhrases.contains(where: { padded.contains(" " + tokenized($0) + " ") }) { return true }
+        if containsStreetAddress(text) { return true }
         if valueLooksLikeCredential(text) || containsEmailAddress(lower) || containsSecretShapedToken(text) { return true }
         if containsStructuredIdentifier(text) { return true }
         let words = Set(lower.split { !$0.isLetter && !$0.isNumber && $0 != "'" }.map(String.init))
@@ -56,6 +59,20 @@ extension CloudContextPolicy {
             searchRange = range.upperBound..<text.endIndex
         }
         return false
+    }
+
+    /// Lowercased words joined by single spaces (apostrophes kept: "can't").
+    static func tokenized(_ text: String) -> String {
+        text.split { !$0.isLetter && !$0.isNumber && $0 != "'" }.joined(separator: " ")
+    }
+
+    /// "123 Main Street", "42 Elm Ave", or a US state + ZIP ("IL 62704").
+    static func containsStreetAddress(_ text: String) -> Bool {
+        let suffix = "street|st|avenue|ave|road|rd|boulevard|blvd|lane|ln|drive|dr|court|ct|way|place|pl|terrace"
+        let street = #"(?i)\b\d{1,6}\s+(?:[a-z]+\s+){1,3}(?:"# + suffix + #")\b"#
+        let stateZip = #"\b[A-Z]{2}\s+\d{5}(?:-\d{4})?\b"#
+        return text.range(of: street, options: .regularExpression) != nil
+            || text.range(of: stateZip, options: .regularExpression) != nil
     }
 
     static func containsEmailAddress(_ lower: String) -> Bool {

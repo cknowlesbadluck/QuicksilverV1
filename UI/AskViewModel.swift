@@ -100,6 +100,7 @@ final class AskViewModel {
             if case AppError.keptOnDevice = error {
                 // Calm, accent-styled notice (not a red error): the turn was kept private on purpose.
                 unboundNotice = AppError.keptOnDeviceNotice
+                providerName = OnDeviceAIProvider.routeName // zero cloud calls were made
             } else if let notice = AppError.unboundNotice(for: error) {
                 unboundNotice = notice
                 let availability = container.aiService.onDeviceAvailability

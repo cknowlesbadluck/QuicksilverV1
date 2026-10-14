@@ -25,7 +25,9 @@ final class CloudSensitivityTests: XCTestCase {
             "plan the shelf",
             "what's the capital of Portugal",
             "write a haiku about rain",
-            "summarize the system health diagnostics"
+            "summarize the system health diagnostics",
+            "Tell me about Mercury",
+            "Help with my song"
         ]
         for text in general {
             XCTAssertFalse(CloudContextPolicy.isPersonalText(text), text)
@@ -71,7 +73,8 @@ final class CloudSensitivityTests: XCTestCase {
             "it's +44 20 7946 0958",
             "number 123-45-6789",
             "use ghp_9f8e7d6c5b4a3f2e1d0c9b8a7f6e, please",
-            "DOB: 1990-01-01"
+            "DOB: 1990-01-01",
+            "Ship this to 123 Main Street, Springfield, IL 62704"
         ] {
             XCTAssertFalse(CloudContextPolicy.allowsCloudFallback(AIRequest(prompt: text)), text)
         }
