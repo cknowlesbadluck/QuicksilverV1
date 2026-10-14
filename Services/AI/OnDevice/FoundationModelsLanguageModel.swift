@@ -43,13 +43,20 @@ struct FoundationModelsLanguageModel: OnDeviceLanguageModel {
         }
     }
 
-    func respond(instructions: String?, prompt: String) async throws -> String {
-        let session: LanguageModelSession
+    func prewarm(instructions: String?) {
+        guard availability.isAvailable else { return }
+        Self.session(instructions: instructions).prewarm()
+    }
+
+    private static func session(instructions: String?) -> LanguageModelSession {
         if let instructions, !instructions.isEmpty {
-            session = LanguageModelSession(instructions: instructions)
-        } else {
-            session = LanguageModelSession()
+            return LanguageModelSession(instructions: instructions)
         }
+        return LanguageModelSession()
+    }
+
+    func respond(instructions: String?, prompt: String) async throws -> String {
+        let session = Self.session(instructions: instructions)
         do {
             return try await session.respond(to: prompt).content
         } catch let error as LanguageModelSession.GenerationError {

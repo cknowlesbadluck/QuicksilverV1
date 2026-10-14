@@ -91,6 +91,8 @@ enum BrainComposition {
 
     /// Prior user/assistant pairs kept on a Brain turn. Current prompt is not history.
     static let maxConversationTurns = 8
+    /// M3.5-T4: user/assistant pairs kept for the on-device route (local only).
+    static let onDeviceTurns = 4
 
     static func recentHistory(_ messages: [Message], maxTurns: Int = maxConversationTurns) -> [Message] {
         let maxMessages = max(0, maxTurns) * 2
