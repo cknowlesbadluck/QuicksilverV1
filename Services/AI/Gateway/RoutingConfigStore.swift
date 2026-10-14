@@ -1,5 +1,6 @@
 import Foundation
 import Core
+import Synchronization
 
 /// Loads, validates, caches, and refreshes `AIRoutingConfig` (M3-T4).
 ///
@@ -7,17 +8,21 @@ import Core
 /// `refresh` GETs `/v1/config`; any failure keeps the previous effective config.
 /// Never stores or decodes API keys. Cache writes re-encode the validated model
 /// so unknown JSON fields (including misspelled secrets) are not persisted.
-public final class RoutingConfigStore: @unchecked Sendable {
+/// State lives in a `Mutex`, so the type is checked `Sendable` (issue #252).
+public final class RoutingConfigStore: Sendable {
     public static let cacheFileName = "ai-routing.cache.json"
     public static let bundledResourceName = "ai-routing.default"
 
     public typealias BundledLoader = @Sendable () throws -> Data
     public typealias DataFetcher = @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
-    private let lock = NSLock()
-    private var effective: AIRoutingConfig
-    /// Monotonic generation so overlapping refreshes cannot roll back a newer policy.
-    private var refreshGeneration = 0
+    private struct State {
+        var effective: AIRoutingConfig
+        /// Monotonic generation so overlapping refreshes cannot roll back a newer policy.
+        var refreshGeneration = 0
+    }
+
+    private let state: Mutex<State>
     private let bundledLoader: BundledLoader
     private let fileManager: FileManager
     private let cacheDirectoryURL: URL
@@ -50,17 +55,15 @@ public final class RoutingConfigStore: @unchecked Sendable {
             directory: resolvedCacheDir,
             fileManager: fileManager
         ) {
-            self.effective = cached
+            self.state = Mutex(State(effective: cached))
         } else {
-            self.effective = bundled
+            self.state = Mutex(State(effective: bundled))
         }
     }
 
     /// Current effective config (cache if valid, else bundled).
     public func loadValidated() -> AIRoutingConfig {
-        lock.lock()
-        defer { lock.unlock() }
-        return effective
+        state.withLock { $0.effective }
     }
 
     /// `GET /v1/config` with bearer token. On success validates and writes the cache.
@@ -95,14 +98,13 @@ public final class RoutingConfigStore: @unchecked Sendable {
         cacheDirectoryURL.appendingPathComponent(Self.cacheFileName)
     }
 
-    // MARK: - Sync lock helpers (never call NSLock from an async function body)
+    // MARK: - Sync lock helpers (never hold the lock across an await)
 
     private func beginRefresh() -> Int {
-        lock.lock()
-        refreshGeneration += 1
-        let generation = refreshGeneration
-        lock.unlock()
-        return generation
+        state.withLock { state in
+            state.refreshGeneration += 1
+            return state.refreshGeneration
+        }
     }
 
     private func commitIfCurrent(
@@ -110,18 +112,18 @@ public final class RoutingConfigStore: @unchecked Sendable {
         config: AIRoutingConfig,
         encoded: Data
     ) throws -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        guard generation == refreshGeneration else { return false }
-        if !fileManager.fileExists(atPath: cacheDirectoryURL.path) {
-            try fileManager.createDirectory(
-                at: cacheDirectoryURL,
-                withIntermediateDirectories: true
-            )
+        try state.withLock { state in
+            guard generation == state.refreshGeneration else { return false }
+            if !fileManager.fileExists(atPath: cacheDirectoryURL.path) {
+                try fileManager.createDirectory(
+                    at: cacheDirectoryURL,
+                    withIntermediateDirectories: true
+                )
+            }
+            try encoded.write(to: cacheFileURL, options: [.atomic])
+            state.effective = config
+            return true
         }
-        try encoded.write(to: cacheFileURL, options: [.atomic])
-        effective = config
-        return true
     }
 
     // MARK: - Loaders
