@@ -310,9 +310,7 @@ extension MercuryBrain {
             memories: memoryCandidates,
             context: payload.context
         )
-        let contextForEstimate = aiService.currentProviderID == "gateway"
-            ? payload.context
-            : []
+        let contextForEstimate = aiService.currentProviderID == "gateway" ? payload.context : []
         let tokens = BrainComposition.estimateContextTokens(
             systemHint: system,
             serializedContext: contextForEstimate,
@@ -358,7 +356,8 @@ extension MercuryBrain {
                     context: turn.context,
                     temperature: turn.config.preferredTemperature,
                     maxTokens: turn.maxTokens,
-                    metadata: BrainComposition.requestMetadata(turn.config.id, activeRegister, nexus.state.networkStatus)
+                    metadata: BrainComposition.requestMetadata(turn.config.id, activeRegister, nexus.state.networkStatus),
+                    onDeviceHistory: BrainComposition.recentHistory(conversation, maxTurns: BrainComposition.onDeviceTurns)
                 )
             )
             recordTurn(user: query, assistant: response.content)

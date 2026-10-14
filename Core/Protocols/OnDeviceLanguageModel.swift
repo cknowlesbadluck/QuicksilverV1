@@ -30,6 +30,12 @@ public enum OnDeviceModelAvailability: Equatable, Sendable {
 public protocol OnDeviceLanguageModel: Sendable {
     var availability: OnDeviceModelAvailability { get }
     func respond(instructions: String?, prompt: String) async throws -> String
+    /// M3.5-T4: load the model ahead of the first request. Best effort.
+    func prewarm(instructions: String?)
+}
+
+extension OnDeviceLanguageModel {
+    public func prewarm(instructions: String?) {}
 }
 
 /// Typed failures from the on-device model (M3.5-T2), mapped from framework errors.

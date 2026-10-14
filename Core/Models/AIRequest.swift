@@ -29,6 +29,8 @@ public struct AIRequest: Sendable, Identifiable {
     public let temperature: Double
     public let maxTokens: Int
     public let metadata: [String: String]
+    /// M3.5-T4: the Brain's pre-cloud-policy history for the on-device route (never sent to cloud).
+    public let onDeviceHistory: [Message]?
 
     public init(
         id: UUID = UUID(),
@@ -38,7 +40,8 @@ public struct AIRequest: Sendable, Identifiable {
         context: [GatewayContextBlock] = [],
         temperature: Double = 0.7,
         maxTokens: Int = 1024,
-        metadata: [String: String] = [:]
+        metadata: [String: String] = [:],
+        onDeviceHistory: [Message]? = nil
     ) {
         self.id = id
         self.prompt = prompt
@@ -48,5 +51,6 @@ public struct AIRequest: Sendable, Identifiable {
         self.temperature = temperature
         self.maxTokens = maxTokens
         self.metadata = metadata
+        self.onDeviceHistory = onDeviceHistory
     }
 }

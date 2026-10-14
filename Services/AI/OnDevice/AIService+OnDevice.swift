@@ -34,6 +34,12 @@ extension AIService {
         return currentProviderName
     }
 
+    /// M3.5-T4: warm the on-device model when the Invocation opens. No-op when unavailable.
+    public func prewarmOnDevice(instructions: String? = nil) {
+        guard canAnswerOnDevice else { return }
+        onDeviceProvider?.prewarm(instructions: instructions)
+    }
+
     /// Compact request for the on-device model: compact instructions when the
     /// Brain supplied them, and only the newest turns.
     public static func onDeviceRequest(from request: AIRequest) -> AIRequest {
@@ -42,7 +48,7 @@ extension AIService {
             id: request.id,
             prompt: request.prompt,
             systemPrompt: instructions ?? request.systemPrompt,
-            history: Array(request.history.suffix(onDeviceHistoryMessages)),
+            history: Array((request.onDeviceHistory ?? request.history).suffix(onDeviceHistoryMessages)),
             context: [],
             temperature: request.temperature,
             maxTokens: request.maxTokens,
