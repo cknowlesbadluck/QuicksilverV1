@@ -98,6 +98,14 @@ extension AppError {
         }
     }
 
+    /// Calm, intentional outcomes (unbound, dormant, kept on device): the Brain shows its
+    /// environmental baseline rather than a warning.
+    public static func isCalmOutcome(_ error: Error) -> Bool {
+        guard let appError = error as? AppError else { return false }
+        if case .keptOnDevice = appError { return true }
+        return appError.isIntelligenceUnbound
+    }
+
     /// The unbound notice for `error`, or `nil` when the error is not an unbound state.
     public static func unboundNotice(for error: Error) -> String? {
         guard let appError = error as? AppError, appError.isIntelligenceUnbound else { return nil }

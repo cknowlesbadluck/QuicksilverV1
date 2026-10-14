@@ -14,9 +14,12 @@ extension CloudContextPolicy {
     /// True when the turn must stay on this device.
     public static func isPersonal(_ request: AIRequest) -> Bool {
         if request.metadata[personalTurnKey] == "1" { return true }
-        if request.context.contains(where: { $0.kind == .memory || $0.kind == .device }) { return true }
-        let recentUser = request.history.filter { $0.role == .user }.suffix(2).map(\.content)
-        return ([request.prompt] + recentUser).contains(where: isPersonalText)
+        // Memory blocks are personal. Coarse device blocks are already sanitized to an
+        // allowlist ("thermal nominal"), so they don't make a turn personal on their own.
+        if request.context.contains(where: { $0.kind == .memory }) { return true }
+        // Every outbound history message counts, assistant turns included: an earlier
+        // on-device answer can carry memory or health details.
+        return ([request.prompt] + request.history.map(\.content)).contains(where: isPersonalText)
     }
 
     /// Cloud fallback after an on-device failure is allowed only for non-personal turns.
@@ -29,8 +32,22 @@ extension CloudContextPolicy {
         let lower = RegisterPolicy.normalize(text)
         guard !lower.isEmpty else { return false }
         if personalPhrases.contains(where: { lower.contains($0) }) { return true }
+        if valueLooksLikeCredential(text) || containsEmailAddress(lower) || containsSecretShapedToken(text) { return true }
         let words = Set(lower.split { !$0.isLetter && !$0.isNumber && $0 != "'" }.map(String.init))
         return !words.isDisjoint(with: personalWords)
+    }
+
+    static func containsEmailAddress(_ lower: String) -> Bool {
+        lower.range(of: #"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}"#, options: .regularExpression) != nil
+    }
+
+    /// Long opaque tokens (keys like `sk-…`, 24+ chars of letters/digits/-_ with a digit).
+    static func containsSecretShapedToken(_ text: String) -> Bool {
+        text.split(whereSeparator: \.isWhitespace).contains { word in
+            word.count >= 24
+                && word.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+                && word.contains(where: \.isNumber)
+        } || text.range(of: #"\bsk-[A-Za-z0-9_-]{8,}"#, options: .regularExpression) != nil
     }
 
     /// Multi-word phrases (substring match).
@@ -52,7 +69,7 @@ extension CloudContextPolicy {
         "where am i", "my location", "my address", "home address", "where i live", "near me", "my home",
         // Finance / identity / credentials
         "my bank", "my salary", "my debt", "credit card", "bank account", "account number", "my taxes",
-        "social security", "my password", "pin code", "my passport", "my loan", "my rent"
+        "social security", "my password", "api key", "my email", "my phone", "pin code", "my passport", "my loan", "my rent"
     ]
 
     /// Single words (whole-word match).
@@ -64,7 +81,7 @@ extension CloudContextPolicy {
         // Distress
         "lonely", "overwhelmed", "grieving", "abuse", "abused", "scared", "panic",
         // Finance / identity
-        "salary", "mortgage", "bankruptcy", "debt", "iban", "ssn", "password", "passcode",
+        "salary", "mortgage", "bankruptcy", "debt", "iban", "ssn", "password", "passcode", "token", "secret",
         // Location
         "address", "gps", "coordinates",
         // Legal

@@ -34,14 +34,30 @@ final class CloudSensitivityTests: XCTestCase {
 
     func testRequestLevelSignals() {
         XCTAssertTrue(CloudContextPolicy.isPersonal(AIRequest(prompt: "ok", metadata: [CloudContextPolicy.personalTurnKey: "1"])))
-        let device = GatewayContextBlock(kind: .device, text: "battery ok", privacy: .cloud)
-        XCTAssertTrue(CloudContextPolicy.isPersonal(AIRequest(prompt: "ok", context: [device])))
+        let memory = GatewayContextBlock(kind: .memory, text: "likes tea", privacy: .cloud)
+        XCTAssertTrue(CloudContextPolicy.isPersonal(AIRequest(prompt: "ok", context: [memory])))
         XCTAssertFalse(CloudContextPolicy.allowsCloudFallback(AIRequest(prompt: "my doctor said rest")))
         XCTAssertTrue(CloudContextPolicy.allowsCloudFallback(AIRequest(prompt: "explain recursion")))
     }
 
-    func testAssistantHistoryDoesNotMarkTurnPersonal() {
-        let history = [Message(role: .assistant, content: "Have you seen a doctor?")]
-        XCTAssertFalse(CloudContextPolicy.isPersonal(AIRequest(prompt: "explain recursion", history: history)))
+    func testAnyOutboundHistoryMessageMarksTurnPersonal() {
+        let history = [Message(role: .assistant, content: "Your therapist note says rest.")]
+        XCTAssertTrue(CloudContextPolicy.isPersonal(AIRequest(prompt: "explain recursion", history: history)))
+    }
+
+    func testCoarseDeviceBlockAloneIsNotPersonal() {
+        let device = GatewayContextBlock(kind: .device, text: "thermal nominal", privacy: .cloud)
+        XCTAssertTrue(CloudContextPolicy.allowsCloudFallback(AIRequest(prompt: "explain recursion", context: [device])))
+    }
+
+    func testEmailAndCredentialDisclosuresStayLocal() {
+        for text in [
+            "my email is alice@example.com",
+            "API token: abcdefghijklmnopqrstuvwxyz",
+            "use API key sk-abc123def456",
+            "here it is ghp_9f8e7d6c5b4a3f2e1d0c9b8a7f6e"
+        ] {
+            XCTAssertFalse(CloudContextPolicy.allowsCloudFallback(AIRequest(prompt: text)), text)
+        }
     }
 }
