@@ -17,7 +17,12 @@ extension CloudContextPolicy {
         if request.metadata[personalTurnKey] == "1" { return true }
         // Memory blocks are personal. Coarse device blocks are already sanitized to an
         // allowlist ("thermal nominal"), so they don't make a turn personal on their own.
-        if request.context.contains(where: { $0.kind == .memory }) { return true }
+        // The just-persisted current prompt can come back as an exact-match "memory"; that echo
+        // is not extra personal context, so only other memory text counts.
+        let prompt = RegisterPolicy.normalize(request.prompt)
+        if request.context.contains(where: { $0.kind == .memory && RegisterPolicy.normalize($0.text) != prompt }) {
+            return true
+        }
         // Every outbound history message counts, assistant turns included: an earlier
         // on-device answer can carry memory or health details.
         return ([request.prompt] + request.history.map(\.content)).contains(where: isPersonalText)
@@ -59,11 +64,15 @@ extension CloudContextPolicy {
 
     /// Long opaque tokens (keys like `sk-…`, 24+ chars of letters/digits/-_ with a digit).
     static func containsSecretShapedToken(_ text: String) -> Bool {
-        text.split(whereSeparator: \.isWhitespace).contains { word in
+        let edges = CharacterSet.punctuationCharacters.union(.symbols).subtracting(CharacterSet(charactersIn: "-_"))
+        let words = text.split(whereSeparator: \.isWhitespace).map { $0.trimmingCharacters(in: edges) }
+        let knownPrefix = #"\b(sk-|ghp_|gho_|github_pat_|xox[abpr]-|AKIA|AIza)[A-Za-z0-9_-]{8,}"#
+        if text.range(of: knownPrefix, options: .regularExpression) != nil { return true }
+        return words.contains { word in
             word.count >= 24
                 && word.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
                 && word.contains(where: \.isNumber)
-        } || text.range(of: #"\bsk-[A-Za-z0-9_-]{8,}"#, options: .regularExpression) != nil
+        }
     }
 
     /// Multi-word phrases (substring match).
@@ -85,7 +94,8 @@ extension CloudContextPolicy {
         "where am i", "my location", "my address", "home address", "where i live", "near me", "my home",
         // Finance / identity / credentials
         "my bank", "my salary", "my debt", "credit card", "bank account", "account number", "my taxes",
-        "social security", "my password", "api key", "my email", "my phone", "pin code", "my passport", "my loan", "my rent"
+        "social security",
+        "my password", "api key", "my email", "my phone", "date of birth", "my birthday", "born on", "pin code", "my passport", "my loan", "my rent"
     ]
 
     /// Single words (whole-word match).
@@ -97,7 +107,7 @@ extension CloudContextPolicy {
         // Distress
         "lonely", "overwhelmed", "grieving", "abuse", "abused", "scared", "panic",
         // Finance / identity
-        "salary", "mortgage", "bankruptcy", "debt", "iban", "ssn", "password", "passcode", "token", "secret",
+        "salary", "mortgage", "bankruptcy", "debt", "iban", "ssn", "password", "passcode", "token", "secret", "dob",
         // Location
         "address", "gps", "coordinates",
         // Legal
