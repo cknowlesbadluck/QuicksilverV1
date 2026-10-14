@@ -66,6 +66,30 @@ final class OnDeviceRoutingTests: XCTestCase {
         XCTAssertEqual(cloud.calls, 1)
     }
 
+    func testPersonalTurnFailureStaysLocalWithCalmNotice() async {
+        let personal: [AIRequest] = [
+            AIRequest(prompt: "what should I tell my doctor about these symptoms"),
+            AIRequest(prompt: "plan the shelf", metadata: [CloudContextPolicy.personalTurnKey: "1"]),
+            AIRequest(prompt: "plan the shelf", context: [GatewayContextBlock(kind: .memory, text: "note", privacy: .cloud)]),
+            AIRequest(prompt: "and then?", history: [Message(role: .user, content: "how much is in my bank account")])
+        ]
+        for req in personal {
+            let cloud = CountingCloud()
+            let service = makeService(
+                cloud: cloud,
+                model: ScriptedOnDeviceModel(availability: .available, outcome: .fail(.generationFailed("x")))
+            )
+            do {
+                _ = try await service.complete(req)
+                XCTFail("Personal turn must not fall back: \(req.prompt)")
+            } catch {
+                guard case AppError.keptOnDevice = error else { return XCTFail("Unexpected \(error)") }
+                XCTAssertEqual(error.localizedDescription, AppError.keptOnDeviceNotice)
+            }
+            XCTAssertEqual(cloud.calls, 0, "Personal turn reached the cloud: \(req.prompt)")
+        }
+    }
+
     func testOnDeviceFailureWithoutCloudSurfacesError() async {
         let service = makeService(
             cloud: nil,

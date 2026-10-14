@@ -68,6 +68,7 @@ enum BrainComposition {
             )
         ]
         if state.networkStatus == "disconnected" { metadata[AIService.offlineKey] = "1" }
+        if register == .plain { metadata[CloudContextPolicy.personalTurnKey] = "1" }
         return metadata
     }
 

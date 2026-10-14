@@ -32,6 +32,8 @@ public enum AppError: Error, LocalizedError, Sendable {
     case budgetExhausted
     /// Connect / first-event / idle / total timeout, or wire `timeout`.
     case timedOut
+    /// The on-device model couldn't answer a personal turn, and it was kept off the cloud.
+    case keptOnDevice
 
     case unknown(String)
 
@@ -67,6 +69,8 @@ public enum AppError: Error, LocalizedError, Sendable {
             return "Daily intelligence budget is exhausted. Try again tomorrow."
         case .timedOut:
             return "The request timed out. Please try again."
+        case .keptOnDevice:
+            return Self.keptOnDeviceNotice
         case .unknown(let message):
             return message
         }
@@ -78,6 +82,9 @@ public enum AppError: Error, LocalizedError, Sendable {
 extension AppError {
     /// Short in-character notice shown when no real provider is bound. Never fabricated model text.
     public static let unboundNotice = "Intelligence unbound — bind a key in the Codex."
+    /// Calm reply when a personal turn stays local and the on-device mind couldn't answer.
+    public static let keptOnDeviceNotice =
+        "That one stays on this device, and the on-device mind couldn't answer just now. Give it a moment and ask again."
     /// Shown when a key may be bound but intelligence is switched off in the Codex.
     public static let dormantNotice = "Intelligence unbound — wake it in the Codex."
 

@@ -97,7 +97,10 @@ final class AskViewModel {
             turns.append(assistantTurn)
             await persistTurn(assistantTurn, personaID: responseAspectID, writeHint: responseHint)
         } catch {
-            if let notice = AppError.unboundNotice(for: error) {
+            if case AppError.keptOnDevice = error {
+                // Calm, accent-styled notice (not a red error): the turn was kept private on purpose.
+                unboundNotice = AppError.keptOnDeviceNotice
+            } else if let notice = AppError.unboundNotice(for: error) {
                 unboundNotice = notice
                 let availability = container.aiService.onDeviceAvailability
                 onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason

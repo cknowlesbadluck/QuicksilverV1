@@ -86,6 +86,11 @@ extension AIService {
                 logger.error("On-device failed and no cloud route is bound", category: logger.ai)
                 throw AppError.aiRequestFailed("on-device: \(error.localizedDescription)")
             }
+            // Privacy gate (CloudContextPolicy): personal turns never fall back to the cloud.
+            guard CloudContextPolicy.allowsCloudFallback(request) else {
+                logger.info("On-device failed; personal turn kept on device", category: logger.ai)
+                throw AppError.keptOnDevice
+            }
             logger.info("On-device failed; falling back to \(currentProviderName)", category: logger.ai)
             return nil
         }
