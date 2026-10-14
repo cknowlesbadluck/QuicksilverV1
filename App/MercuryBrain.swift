@@ -369,7 +369,7 @@ extension MercuryBrain {
             stabilizeVisualStateAfterSuccess()
             return colored
         } catch {
-            visualState = AppError.unboundNotice(for: error) == nil ? .warning : environmentalBaseline()
+            visualState = AppError.isCalmOutcome(error) ? environmentalBaseline() : .warning
             refreshLivingStatus()
             throw error
         }
