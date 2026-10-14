@@ -45,12 +45,13 @@ public struct AspectPolicy: Sendable {
         intent: Intent?,
         isLowPower: Bool = false,
         thermalState: String? = nil,
-        hasRecentMemoryHints: Bool = false
+        hasRecentMemoryHints: Bool = false,
+        now: Date = Date()
     ) -> Aspect? {
 
         // Respect dwell — avoid thrashing
         if let last = lastChangedAt,
-           Date().timeIntervalSince(last) < minimumDwellSeconds {
+           now.timeIntervalSince(last) < minimumDwellSeconds {
             return nil
         }
 
