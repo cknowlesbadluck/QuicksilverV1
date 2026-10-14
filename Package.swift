@@ -19,7 +19,13 @@ let package = Package(
             path: "Memory"
         ),
         .target(name: "Personas", dependencies: ["Core"], path: "Personas"),
-        .target(name: "ServicesAI", dependencies: ["Core"], path: "Services/AI"),
+        .target(
+            name: "ServicesAI",
+            dependencies: ["Core"],
+            path: "Services/AI",
+            // M3.5-T1: FoundationModels is iOS/macOS 26+; weak-link so older OSes still load.
+            linkerSettings: [.unsafeFlags(["-Xlinker", "-weak_framework", "-Xlinker", "FoundationModels"])]
+        ),
         .target(
             name: "Nexus",
             dependencies: ["Core"],

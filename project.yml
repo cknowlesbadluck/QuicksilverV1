@@ -68,6 +68,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.quicksilver.servicesai
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGNING_ALLOWED: NO
+        # M3.5-T1: FoundationModels exists only on iOS 26+; weak-link so iOS 18 still launches.
+        OTHER_LDFLAGS: ["$(inherited)", "-weak_framework", "FoundationModels"]
 
   Nexus:
     type: framework
