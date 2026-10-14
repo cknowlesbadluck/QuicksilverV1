@@ -179,3 +179,15 @@ final class ScriptedOnDeviceModel: OnDeviceLanguageModel {
         }
     }
 }
+
+final class OnDeviceStatusLabelTests: XCTestCase {
+    func testEveryAvailabilityHasDistinctShortLabel() {
+        let all: [OnDeviceModelAvailability] = [
+            .available, .deviceNotEligible, .appleIntelligenceNotEnabled, .modelNotReady, .unsupportedOS, .unknown("x")
+        ]
+        let labels = all.map(\.shortLabel)
+        XCTAssertEqual(Set(labels).count, all.count)
+        XCTAssertEqual(OnDeviceModelAvailability.appleIntelligenceNotEnabled.shortLabel, "Apple Intelligence off")
+        XCTAssertFalse(labels.contains(where: \.isEmpty))
+    }
+}
