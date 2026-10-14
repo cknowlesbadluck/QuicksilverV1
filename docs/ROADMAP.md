@@ -496,6 +496,31 @@ Agents must not create the account, deploy or enable anything.
 
 ---
 
+## 4a. Ten-phase path to 1.0 (proposal, 2026-10-13)
+
+> Companion to the milestones above (M0–M6, MP, MV, M3.5). It **orders** existing task IDs into phases with exit criteria. It doesn't replace them. Proposed by the audit of 2026-10-13; the owner may reorder. HG = human gate (owner only).
+
+| # | Phase | Goal | Key tasks (IDs) | Exit criteria | Human gates |
+|---|---|---|---|---|---|
+| 1 | **Stabilize & guard** | Main stays green and reproducible; automation can't mutate main | Prune (#253, #261), invariant tests (#254), SHA-pinned actions (#260), pin Xcode explicitly in CI (new), release-readiness script (#256), remove `UI/OwnerGate` portfolio gates (new) | 10 consecutive green main runs; no workflow writes to the repo; `scripts/release-readiness.sh` passes | Owner pauses or scopes the hourly :02 automation |
+| 2 | **Concurrency & safety debt** | Data-race-free core | #252 (#259 first; RoutingConfigStore → Mutex; monitors → @MainActor/actors), M4-T6 atomic Keychain, payload caps (#263) | ≤ 1 justified `@unchecked Sendable` (the NSObject delegate); a TSan job green | — |
+| 3 | **Apple Intelligence first** | Answers offline and keyless on device | M3.5-T1/T2 (#265), M3.5-T3 routing on-device first, M3.5-T4 + P-T4 compact prompt, M3.5-T5 Codex status | With no keys and offline, Ask answers on device (simulator: fake); unavailable shows the reason | HG5 (on-device check) |
+| 4 | **Free cloud gateway live** | Gemini → Groq → Workers AI through the owner's gateway | M3-T22 (after HG4), eval run, remote-config privacy floor test (new: `/v1/config` can't lower context level) | Round trip, failover and budget exhaustion verified; interim in-app keys deleted | **HG2** Cloudflare account + deploy; **HG3** GEMINI/GROQ/DEVICE_TOKEN secrets; **HG4** on-phone |
+| 5 | **Autonomous aspects** | One entity, context-driven, stable | #255 + #264 (dwell/hysteresis/persistence), P-T5 mask slip end to end, per-thread pin (decision 10b), aspect transitions in VisualState | Brain tests prove hold, override and relaunch; no ping-pong in a 20-turn transcript test | Owner confirms dwell constants |
+| 6 | **Operational memory** | Durable, private, recoverable | M4-T1 @ModelActor, M4-T2 VersionedSchema + migration fixture, M4-T3/T4 retention, M4-T5 UI (#257 base), export and clear, fallback-store disclosure | Migration from a legacy fixture is green; failure banner shown; retention bounded | — |
+| 7 | **App Intents & Siri** | Siri and Shortcuts drive the Brain from a cold start | M3.5-T9–T18 (MemoryEntity, Spotlight opt-in, snippets, supportedModes migration), discovery tests (#258) | Fake-backed tests for every intent; ≤ 10 phrases | HG5 (Siri cold start on phone) |
+| 8 | **Sanctum & visual identity** | Spatial navigation and the "ChatGPT + Siri + Loki" identity | M5-T12/T13 Invocation, MV-A/MV-B, Reduce Motion / Low Power pauses, snapshot tests for seeded motion | a11y audit passes on every destination; snapshot suite green | **HG-V**, **HG-P** |
+| 9 | **Hardening sweep** | Every failure has a calm path | Brain-level tests for invalid key, quota, malformed stream, network loss mid-stream, background interruption, memory-store failure; lifecycle tests | The failure matrix in Documentation/HARDENING.md is fully covered by tests | Airplane-mode, invalid-token and exhausted-budget checks on phone |
+| 10 | **Release freeze (SideStore 1.0)** | Known-good artifact | Documentation/RELEASE-READINESS.md all ticked; Archive IPA (Release) on the freeze SHA; M6 tasks | Readiness script `--ci` passes on the freeze SHA | **HG1** install, 7-day refresh, reinstall survival; device acceptance (CHR-55) closed by the owner |
+
+### High-leverage innovations (fit: privacy first, free tier, SideStore)
+1. **Split-brain routing:** the on-device model does everything personal (memory, device state, tools); the cloud gets only de-personalized knowledge questions. This makes Gemini's training risk irrelevant by construction (Phase 3/4).
+2. **Privacy floor that remote config can't lower:** the app clamps any `/v1/config` change to at least its compiled-in privacy level (Phase 4).
+3. **Aspect continuity as state, not mode:** a persisted aspect plus dwell clock (#264) drives prompts, motion and haptics from one source (Phase 5).
+4. **Free-budget awareness on the device:** the Codex shows the remaining daily cloud budget from gateway headers and pre-emptively routes on device near the limit (Phase 4/9).
+5. **Release readiness as code:** one read-only script gates the freeze, so humans only do what only humans can (Phase 10).
+6. **Architecture tripwires in CI:** source-level invariant tests (#254) stop regressions on the Brain path, the privacy choke point and secrets (Phase 1).
+
 ## 5. Risks
 
 1. **iOS 27 SDK gap.** CI's `latest-stable` Xcode (**currently 26.3**) has no iOS 27 SDK, so the newest Apple Intelligence APIs can't be adopted or CI-verified yet (see M3.5 *Deferred*). When the channel advances, re-check this gap.
