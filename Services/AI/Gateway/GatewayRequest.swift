@@ -3,7 +3,8 @@ import Core
 
 /// Encodes an `AIRequest` into a protocol v1 `GatewayChatRequest` / JSON body (M3-T8 / M3-T11).
 ///
-/// Message order: optional non-empty system → history (user/assistant) → current user prompt.
+/// Message order: optional non-empty system → windowed history (user/assistant) → current user prompt.
+/// History is capped by `HistoryBudget` (defence in depth behind CloudContextPolicy.cappedHistory).
 /// Context blocks come from CloudContextPolicy via `AIRequest.context`.
 public enum GatewayRequest {
     public static func makeChatBody(_ request: AIRequest) -> GatewayChatRequest {
@@ -11,7 +12,7 @@ public enum GatewayRequest {
         if let system = request.systemPrompt, !system.isEmpty {
             messages.append(GatewayMessage(role: "system", content: system))
         }
-        for turn in request.history {
+        for turn in HistoryBudget.window(request.history).turns {
             messages.append(GatewayMessage(role: turn.role.rawValue, content: turn.content))
         }
         messages.append(GatewayMessage(role: "user", content: request.prompt))
