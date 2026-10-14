@@ -5,6 +5,7 @@ import Core
 /// Not a settings screen. The user is altering the fundamental laws.
 struct CodexView: View {
     @Environment(DependencyContainer.self) private var container
+    @Environment(\.scenePhase) private var scenePhase
     @State private var viewModel: CodexViewModel?
     @Environment(\.dismiss) private var dismiss
 
@@ -52,6 +53,10 @@ struct CodexView: View {
         .scrollContentBackground(.hidden)
         .background(PersonaTheme.cosmicBlack)
         .onAppear { vm.refresh() }
+        // On-device availability can change in Settings while the Codex is open.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { vm.refresh() }
+        }
     }
 
     @ViewBuilder

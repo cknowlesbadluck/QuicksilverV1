@@ -36,7 +36,7 @@ extension AIService {
 
     /// M3.5-T4: warm the on-device model when the Invocation opens. No-op when unavailable.
     public func prewarmOnDevice(instructions: String? = nil) {
-        guard canAnswerOnDevice else { return }
+        guard canAnswerOnDevice, featureFlags.isEnabled("aiServiceEnabled") else { return }
         onDeviceProvider?.prewarm(instructions: instructions)
     }
 

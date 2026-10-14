@@ -36,7 +36,8 @@ final class CodexViewModelTests: XCTestCase {
         let availability = container.aiService.onDeviceAvailability
         XCTAssertEqual(vm.onDeviceStatus, availability.shortLabel)
         XCTAssertEqual(vm.onDeviceReason, availability.isAvailable ? nil : availability.userFacingReason)
-        XCTAssertEqual(vm.answerRoute, container.aiService.activeRouteName)
+        let expected = vm.aiEnabled ? container.aiService.activeRouteName : "Dormant (wake it above)"
+        XCTAssertEqual(vm.answerRoute, expected)
     }
 
     func testEmptyGrokKeyDoesNotEnableAI() throws {

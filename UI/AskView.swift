@@ -4,6 +4,7 @@ import Core
 struct AskView: View {
     private static let unboundNoticeID = "ask.unboundNotice"
     private static let errorMessageID = "ask.errorMessage"
+    private static let onDeviceReasonID = "ask.onDeviceReason"
 
     @Environment(DependencyContainer.self) private var container
     @State private var viewModel: AskViewModel?
@@ -65,6 +66,7 @@ struct AskView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                                 .accessibilityIdentifier("ask.onDeviceReason")
+                                .id(Self.onDeviceReasonID)
                         }
                     }
 
@@ -87,7 +89,7 @@ struct AskView: View {
             .onChange(of: vm.unboundNotice) { _, notice in
                 guard notice != nil else { return }
                 withAnimation {
-                    proxy.scrollTo(Self.unboundNoticeID, anchor: .bottom)
+                    proxy.scrollTo(vm.onDeviceReason == nil ? Self.unboundNoticeID : Self.onDeviceReasonID, anchor: .bottom)
                 }
             }
             .onChange(of: vm.errorMessage) { _, error in

@@ -39,7 +39,7 @@ final class AskViewModel {
     }
 
     func loadHistory() async {
-        container.aiService.prewarmOnDevice()
+        container.brain.prepareInvocation()
         await container.memoryManager.load()
         // M3-T10: Ask history is entity-wide. Aspect is metadata, not a filter.
         // Cap by recency after fetch — MemoryQuery.limit ranks by importance.
