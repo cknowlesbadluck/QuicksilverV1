@@ -251,7 +251,8 @@ extension MercuryBrain {
 
     /// M3-T7: skip the gateway while disconnected. On-device route is M3.5-T3.
     private func rejectAskWhileDisconnected() throws {
-        guard nexus.state.networkStatus == "disconnected" else { return }
+        // Offline is fine when the on-device mind can answer (M3.5-T3).
+        guard nexus.state.networkStatus == "disconnected", !aiService.canAnswerOnDevice else { return }
         try aiService.ensureReadyForNetworkRequest()
         refreshLivingStatus()
         throw AppError.networkUnavailable
@@ -356,7 +357,8 @@ extension MercuryBrain {
                     history: turn.history,
                     context: turn.context,
                     temperature: turn.config.preferredTemperature,
-                    maxTokens: turn.maxTokens
+                    maxTokens: turn.maxTokens,
+                    metadata: BrainComposition.requestMetadata(turn.config.id, activeRegister, nexus.state.networkStatus)
                 )
             )
             recordTurn(user: query, assistant: response.content)

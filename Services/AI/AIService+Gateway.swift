@@ -134,7 +134,7 @@ extension AIService {
     /// Throws `.apiKeyMissing` / `.intelligenceDisabled` when a request would not hit the network.
     /// Used by MercuryBrain offline fast-fail so unbound/disabled guidance wins over airplane mode.
     public func ensureReadyForNetworkRequest() throws {
-        guard primaryProvider != nil else {
+        guard primaryProvider != nil || canAnswerOnDevice else {
             logger.info("AI request refused: intelligence unbound", category: logger.ai)
             throw AppError.apiKeyMissing
         }

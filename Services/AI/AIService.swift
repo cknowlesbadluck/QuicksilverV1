@@ -12,6 +12,8 @@ public final class AIService {
     /// `AppError.apiKeyMissing`; no mock text is ever substituted (M1-T3).
     var primaryProvider: AIProvider?
     var secondaryProvider: AIProvider?
+    /// M3.5-T3: tried before any cloud route when available. `nil` in tests that inject a provider.
+    public var onDeviceProvider: OnDeviceAIProvider?
     private let eventBus: EventBus
     let logger: LoggerService
     let featureFlags: FeatureFlags
@@ -50,8 +52,10 @@ public final class AIService {
             featureFlags: featureFlags,
             routingConfigStore: routingConfigStore
         )
-        // When no injected provider, rebuild from Keychain (gateway / Gemini / Grok).
+        // When no injected provider, rebuild from Keychain (gateway / Gemini / Grok)
+        // and put the system on-device model first (M3.5-T3).
         if provider == nil {
+            onDeviceProvider = OnDeviceAIProvider(model: SystemOnDeviceModel.make())
             rebuildProviders()
         }
     }
@@ -141,9 +145,7 @@ public final class AIService {
     public static let unboundProviderName = "Unbound"
 
     /// True when a real provider is bound. False means Ask/Brain requests return the unbound state.
-    public var isBound: Bool { primaryProvider != nil }
-    public var currentProviderID: String { primaryProvider?.id ?? Self.unboundProviderID }
-    public var currentProviderName: String { primaryProvider?.displayName ?? Self.unboundProviderName }
+    public var isBound: Bool { primaryProvider != nil || canAnswerOnDevice }
     public var fallbackProviderName: String? { secondaryProvider?.displayName }
     public var hasGrokKey: Bool {
         !(KeychainStore.string(forKey: Self.grokAPIKeyKeychainAccount)?.isEmpty ?? true)
@@ -199,17 +201,22 @@ public final class AIService {
 
     private func execute(_ request: AIRequest) async throws -> AIResponse {
         try ensureReadyForNetworkRequest()
-        guard let provider = primaryProvider else {
-            // Unreachable after ensureReadyForNetworkRequest; keeps type narrowing.
-            throw AppError.apiKeyMissing
-        }
         isProcessing = true
         await eventBus.publish(.aiRequestStarted(requestID: request.id.uuidString))
         logger.debug("AI request started: \(request.id)", category: logger.ai)
         defer { isProcessing = false }
 
         do {
-            let raw = try await performProviderRequest(request, primary: provider)
+            let raw: AIResponse
+            if let local = try await answerOnDeviceFirst(request) {
+                raw = local
+            } else if request.metadata[Self.offlineKey] == "1" {
+                throw AppError.networkUnavailable
+            } else if let provider = primaryProvider {
+                raw = try await performProviderRequest(request, primary: provider)
+            } else {
+                throw AppError.apiKeyMissing
+            }
             switch ResponseValidator.validate(raw, preserveIncomplete: true) {
             case .accept(let response):
                 lastResponse = response

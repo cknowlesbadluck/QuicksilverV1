@@ -42,6 +42,27 @@ enum BrainComposition {
         )
     }
 
+    /// P-T4 / M3.5-T3: compact identity + aspect prompt for the small on-device model.
+    static func onDeviceInstructions(aspect: Aspect) -> String {
+        PromptBudget.composedHead(
+            core: PromptManager.coreCompactIdentity(),
+            aspect: PersonaConfiguration.forAspect(aspect).systemPrompt
+        )
+    }
+
+    /// Request metadata for the turn (snapshotted aspect via `personaID`):
+    /// compact on-device prompt, unless the plain register is latched (then the
+    /// on-device model gets the full plain-mode system prompt), plus the offline
+    /// flag so a failed or unavailable local answer never falls back to the cloud.
+    static func requestMetadata(_ personaID: String, _ register: Register, _ network: String) -> [String: String] {
+        var metadata: [String: String] = [:]
+        if register != .plain {
+            metadata[AIService.onDeviceInstructionsKey] = onDeviceInstructions(aspect: aspect(forPersonaID: personaID))
+        }
+        if network == "disconnected" { metadata[AIService.offlineKey] = "1" }
+        return metadata
+    }
+
     static func aspect(forPersonaID personaID: String) -> Aspect {
         switch personaID {
         case "forge": return .forge
