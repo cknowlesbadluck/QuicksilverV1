@@ -146,7 +146,7 @@ struct AskView: View {
                         in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                     )
                 if let provenance = turn.provenance {
-                    Label(provenance.badge, systemImage: provenance.origin == .onDevice ? "iphone" : "cloud")
+                    Label(provenance.badge, systemImage: Self.symbol(for: provenance.origin))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .accessibilityLabel(provenance.accessibilityLabel)
@@ -154,6 +154,14 @@ struct AskView: View {
                 }
             }
             if turn.role == .assistant { Spacer(minLength: 40) }
+        }
+    }
+
+    private static func symbol(for origin: AnswerProvenance.Origin) -> String {
+        switch origin {
+        case .onDevice: "iphone"
+        case .cloud: "cloud"
+        case .memory: "brain"
         }
     }
 }
