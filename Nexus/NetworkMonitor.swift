@@ -4,14 +4,14 @@ import Core
 
 /// Network path monitor using NWPathMonitor (public API only).
 ///
-/// Isolation note: NWPathMonitor delivers on a private queue. We hop to main
-/// before mutating state or invoking onChange so callers can safely assume
-/// main-thread delivery. `@unchecked Sendable` is required because the
-/// underlying Network framework types are not Sendable.
+/// Isolation (issue #252): `@MainActor` with an isolated conformance, replacing
+/// `@unchecked Sendable`. NWPathMonitor delivers on a private queue; the handler
+/// hops to the main actor before mutating state or invoking onChange.
 ///
 /// Lifecycle: `NWPathMonitor` is single-use after `cancel()`. `start()` always
 /// constructs a fresh monitor so stop → start cycles (backgrounding, Nexus restart) work.
-public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
+@MainActor
+public final class NetworkMonitor: @MainActor NetworkMonitoring {
     public var diagnosticID: String { "network" }
 
     private var monitor: NWPathMonitor?
@@ -33,17 +33,12 @@ public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
         monitor = pathMonitor
 
         pathMonitor.pathUpdateHandler = { [weak self] path in
-            guard let self else { return }
             let connected = path.status == .satisfied
             let expensive = path.isExpensive
             let constrained = path.isConstrained
-
             // Deliver on main so NexusCoordinator (MainActor) sees consistent state.
-            DispatchQueue.main.async {
-                self.isConnected = connected
-                self.isExpensive = expensive
-                self.isConstrained = constrained
-                self.onChange?(connected, expensive, constrained)
+            Task { @MainActor [weak self] in
+                self?.apply(connected: connected, expensive: expensive, constrained: constrained)
             }
         }
         pathMonitor.start(queue: queue)
@@ -55,6 +50,13 @@ public final class NetworkMonitor: NetworkMonitoring, @unchecked Sendable {
         monitor?.cancel()
         monitor?.pathUpdateHandler = nil
         monitor = nil
+    }
+
+    private func apply(connected: Bool, expensive: Bool, constrained: Bool) {
+        isConnected = connected
+        isExpensive = expensive
+        isConstrained = constrained
+        onChange?(connected, expensive, constrained)
     }
 
     deinit {
