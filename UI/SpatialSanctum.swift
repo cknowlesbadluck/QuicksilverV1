@@ -211,7 +211,12 @@ struct SpatialSanctum: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .multilineTextAlignment(.center)
-        .padding(.horizontal, 30)
+        // Solid backing so the greeting keeps WCAG contrast over the animated presence
+        // glow (a11y audit "Contrast failed" on "Oh. You again.").
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(PersonaTheme.chaosBlack.opacity(0.72), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 16)
         .offset(y: -118)
     }
 
