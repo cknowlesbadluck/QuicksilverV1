@@ -13,7 +13,8 @@ final class ArchitectureInvariantTests: XCTestCase {
 
     private static let brainFiles: Set<String> = [
         "App/MercuryBrain.swift", "App/MercuryBrain+Capabilities.swift",
-        "App/MercuryBrain+Ranking.swift", "App/MercuryBrainComposition.swift"
+        "App/MercuryBrain+Ranking.swift", "App/MercuryBrain+TurnHelpers.swift",
+        "App/MercuryBrainComposition.swift"
     ]
 
     private static let skippedDirectories: Set<String> = [
@@ -85,10 +86,13 @@ final class ArchitectureInvariantTests: XCTestCase {
     /// CloudContextPolicy and the Brain assembles context with it.
     func testCloudContextPolicyRemainsTheChokePoint() throws {
         let service = try files(in: ["Services/AI"], extensions: ["swift"])
-        let aiService = try XCTUnwrap(service.first { $0.path == "Services/AI/AIService.swift" })
-        XCTAssertTrue(aiService.text.contains("CloudContextPolicy."), "AIService must redact via CloudContextPolicy")
+        // AIService spans AIService.swift plus its AIService+*.swift extensions.
+        let aiService = service
+            .filter { $0.path == "Services/AI/AIService.swift" || $0.path.hasPrefix("Services/AI/AIService+") }
+            .map(\.text).joined(separator: "\n")
+        XCTAssertTrue(aiService.contains("CloudContextPolicy."), "AIService must redact via CloudContextPolicy")
 
-        XCTAssertTrue(aiService.text.contains("CloudContextPolicy.redactForTrainingProvider("))
+        XCTAssertTrue(aiService.contains("CloudContextPolicy.redactForTrainingProvider("))
 
         let brain = try files(in: ["App"], extensions: ["swift"])
             .filter { Self.brainFiles.contains($0.path) }

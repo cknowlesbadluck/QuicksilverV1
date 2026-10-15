@@ -40,6 +40,11 @@ extension AIService {
         onDeviceProvider?.prewarm(instructions: instructions)
     }
 
+    /// Frees the warmed on-device session (memory warning, AI off). The next ask builds a new one.
+    public func releaseOnDeviceResources() {
+        onDeviceProvider?.discardPrewarmed()
+    }
+
     /// Compact request for the on-device model: compact instructions when the
     /// Brain supplied them, and only the newest turns.
     public static func onDeviceRequest(from request: AIRequest) -> AIRequest {
