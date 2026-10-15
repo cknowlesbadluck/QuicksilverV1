@@ -244,7 +244,7 @@ public final class AIService {
                 throw CancellationError()
             }
             logger.error("AI request failed: \(error.localizedDescription)", category: logger.ai)
-            throw error
+            throw Self.typedSurface(error)
         }
     }
 }

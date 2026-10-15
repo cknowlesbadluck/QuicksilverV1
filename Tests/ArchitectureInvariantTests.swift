@@ -13,7 +13,8 @@ final class ArchitectureInvariantTests: XCTestCase {
 
     private static let brainFiles: Set<String> = [
         "App/MercuryBrain.swift", "App/MercuryBrain+Capabilities.swift",
-        "App/MercuryBrain+Ranking.swift", "App/MercuryBrainComposition.swift"
+        "App/MercuryBrain+Ranking.swift", "App/MercuryBrain+TurnHelpers.swift",
+        "App/MercuryBrainComposition.swift"
     ]
 
     private static let skippedDirectories: Set<String> = [
