@@ -82,7 +82,8 @@ public final class RoutingConfigStore: Sendable {
                   (200..<300).contains(http.statusCode) else {
                 return false
             }
-            let config = try AIRoutingConfig.decodeAndValidate(data)
+            // Privacy floor: remote config may tighten, never loosen, the compiled-in policy.
+            let config = try AIRoutingConfig.decodeAndValidate(data).clampedToPrivacyFloor()
             let encoded = try config.encodeForCache()
             // Write + publish under one generation check so an older refresh
             // cannot clobber a newer cache after losing the publish race.
@@ -156,7 +157,8 @@ public final class RoutingConfigStore: Sendable {
               let config = try? AIRoutingConfig.decodeAndValidate(data) else {
             return nil
         }
-        return config
+        // A cache written before the floor existed is clamped too.
+        return config.clampedToPrivacyFloor()
     }
 
 }
