@@ -121,9 +121,11 @@ struct SpatialSanctum: View {
                 if showGreeting {
                     greeting
                         .frame(maxWidth: proxy.size.width - 36)
+                        // No fade when motion is frozen (Reduce Motion / -uitest): a half-faded
+                        // greeting fails the accessibility contrast audit mid-transition.
                         .transition(
                             freezeMotion
-                                ? .opacity
+                                ? .identity
                                 : .opacity.combined(with: .scale(scale: 0.96))
                         )
                         .allowsHitTesting(false)
