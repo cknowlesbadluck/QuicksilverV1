@@ -121,9 +121,11 @@ struct SpatialSanctum: View {
                 if showGreeting {
                     greeting
                         .frame(maxWidth: proxy.size.width - 36)
+                        // No fade when motion is frozen (Reduce Motion / -uitest): a half-faded
+                        // greeting fails the accessibility contrast audit mid-transition.
                         .transition(
                             freezeMotion
-                                ? .opacity
+                                ? .identity
                                 : .opacity.combined(with: .scale(scale: 0.96))
                         )
                         .allowsHitTesting(false)
@@ -187,7 +189,11 @@ struct SpatialSanctum: View {
                 .font(.caption.weight(.medium))
                 .foregroundStyle(PersonaTheme.readableSecondary)
         }
+        // The audit intermittently flagged this element's caption-height frame as a too-small
+        // hit area (#278 logging). Give it the 44 pt minimum and mark it a header, not a control.
+        .frame(minHeight: 44)
         .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isHeader)
         .accessibilityLabel("Quicksilver's Sanctum, \(visualState.rawValue)")
     }
 
@@ -196,13 +202,21 @@ struct SpatialSanctum: View {
             Text(greetingTitle)
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(PersonaTheme.mercurySilver)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(greetingPrompt)
                 .font(.subheadline)
                 .foregroundStyle(PersonaTheme.readableSecondary)
+                // Wrap instead of clipping at large Dynamic Type sizes (a11y audit: "Text clipped").
+                .fixedSize(horizontal: false, vertical: true)
         }
         .multilineTextAlignment(.center)
-        .padding(.horizontal, 30)
+        // Solid backing so the greeting keeps WCAG contrast over the animated presence
+        // glow (a11y audit "Contrast failed" on "Oh. You again.").
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(PersonaTheme.chaosBlack.opacity(0.72), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 16)
         .offset(y: -118)
     }
 
