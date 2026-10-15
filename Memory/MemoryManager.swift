@@ -31,6 +31,7 @@ public final class MemoryManager {
         do {
             items = try await store.loadAll()
             if lastFailure == .load { lastFailure = nil }
+            await migrateTemporaryNotes()
             logger.info("Loaded \(items.count) memory items", category: logger.memory)
             await applyRetention()
         } catch {
@@ -156,6 +157,37 @@ public final class MemoryManager {
             throw AppError.configurationMissing("Unable to encode memory export")
         }
         return json
+    }
+
+    /// M4-T4: notes the user asked us to keep ("note.*" keys from Quick Note and
+    /// "remember …") used to be stored as `.temporary`, which decays with a 2-day
+    /// half-life. That silently lost user data. Move them to `.preference` once, and keep
+    /// their id, value and timestamps. This is idempotent: migrated items are no longer `.temporary`.
+    static func needsNoteMigration(_ item: MemoryItem) -> Bool {
+        item.category == .temporary && item.key.hasPrefix("note.")
+    }
+
+    private func migrateTemporaryNotes() async {
+        let pending = items.filter(Self.needsNoteMigration)
+        guard !pending.isEmpty else { return }
+        for old in pending {
+            var metadata = old.metadata
+            if metadata["source"] == nil { metadata["source"] = "user" }
+            let floor = MemoryScorer.score(category: .preference, value: old.value)
+            let migrated = MemoryItem(
+                id: old.id,
+                key: old.key,
+                category: .preference,
+                value: old.value,
+                createdAt: old.createdAt,
+                updatedAt: old.updatedAt,
+                metadata: metadata,
+                importance: max(old.importance, floor),
+                personaScope: old.personaScope
+            )
+            await persist(migrated)
+        }
+        logger.info("Migrated \(pending.count) notes to durable memory", category: logger.memory)
     }
 
     private func persist(_ item: MemoryItem) async {

@@ -95,7 +95,7 @@ final class AskViewModel {
                 role: .assistant,
                 text: result.text,
                 createdAt: Date(),
-                provenance: container.aiService.lastAnswerProvenance
+                provenance: result.provenance ?? container.aiService.lastAnswerProvenance
             )
             turns.append(assistantTurn)
             await persistTurn(assistantTurn, personaID: responseAspectID, writeHint: responseHint)
