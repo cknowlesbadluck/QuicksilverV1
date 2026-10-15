@@ -22,7 +22,11 @@ enum ViewModelTestSupport {
 
     /// Same harness over caller-owned defaults, so a test can "relaunch"
     /// (build a second container over the same persisted state).
-    static func makeContainer(provider: AIProvider?, defaults: UserDefaults) -> DependencyContainer {
+    static func makeContainer(
+        provider: AIProvider?,
+        defaults: UserDefaults,
+        memoryStore: MemoryStore = InMemoryMemoryStore()
+    ) -> DependencyContainer {
         let logger = LoggerService(subsystem: "com.quicksilver.tests")
         let eventBus = EventBus()
         let nexus = NexusCoordinator(
@@ -34,7 +38,7 @@ enum ViewModelTestSupport {
             eventBus: eventBus
         )
         return DependencyContainer(
-            memoryStore: InMemoryMemoryStore(),
+            memoryStore: memoryStore,
             aiProvider: provider,
             nexus: nexus,
             defaults: defaults

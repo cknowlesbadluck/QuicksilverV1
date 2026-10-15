@@ -212,6 +212,12 @@ final class GatewayAIProviderTests: XCTestCase {
         XCTAssertFalse(collected.snapshot().isEmpty, "Should receive at least one event before cancel")
         consumer.cancel()
         await consumer.value
+        // The transport's cancellation handler runs asynchronously after the consumer
+        // finishes (stream onTermination), so wait briefly instead of racing it.
+        let cancelDeadline = ContinuousClock.now + .seconds(2)
+        while !cancelled.value, ContinuousClock.now < cancelDeadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
         let events = collected.snapshot()
         XCTAssertTrue(cancelled.value, "Transport should observe cancellation")
         XCTAssertFalse(events.contains(.delta("two")), "No further deltas after cancel")
