@@ -6,6 +6,43 @@ import Security
 public enum KeychainStore: Sendable {
     private static let service = "com.quicksilver.keychain"
 
+    /// Typed read failure. A missing item is *not* an error (`readData` returns nil).
+    public enum ReadError: Error, Equatable, Sendable {
+        /// Device locked / data protection unavailable (`errSecInteractionNotAllowed`).
+        case locked
+        /// Any other Keychain status.
+        case failed(OSStatus)
+    }
+
+    /// Maps a `SecItemCopyMatching` status: success → data, not found → nil, otherwise typed error.
+    static func interpret(status: OSStatus, item: CFTypeRef?) throws(ReadError) -> Data? {
+        switch status {
+        case errSecSuccess:
+            guard let data = item as? Data else { throw .failed(errSecDecode) }
+            return data
+        case errSecItemNotFound:
+            return nil
+        case errSecInteractionNotAllowed:
+            throw .locked
+        default:
+            throw .failed(status)
+        }
+    }
+
+    /// Like `data(forKey:)` but distinguishes "absent" (nil) from "unreadable" (throws).
+    public static func readData(forKey key: String) throws(ReadError) -> Data? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: key,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        return try interpret(status: status, item: item)
+    }
+
     public static func data(forKey key: String) -> Data? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
