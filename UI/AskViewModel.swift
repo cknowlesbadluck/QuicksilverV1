@@ -11,6 +11,8 @@ struct ChatTurn: Identifiable, Equatable {
     let role: Role
     let text: String
     let createdAt: Date
+    /// Where an assistant reply came from (live turns only; restored history has none).
+    var provenance: AnswerProvenance?
 
     enum Role: String {
         case user, assistant
@@ -92,7 +94,8 @@ final class AskViewModel {
                 id: UUID(),
                 role: .assistant,
                 text: result.text,
-                createdAt: Date()
+                createdAt: Date(),
+                provenance: container.aiService.lastAnswerProvenance
             )
             turns.append(assistantTurn)
             await persistTurn(assistantTurn, personaID: responseAspectID, writeHint: responseHint)

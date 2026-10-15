@@ -29,6 +29,9 @@ public struct UnsupportedOnDeviceModel: OnDeviceLanguageModel {
 #if canImport(FoundationModels)
 @available(iOS 26.0, macOS 26.0, *)
 struct FoundationModelsLanguageModel: OnDeviceLanguageModel {
+    /// One warmed, unused session for the next request (single-use; see PrewarmedSessionCache).
+    private let warm = PrewarmedSessionCache<LanguageModelSession>()
+
     var availability: OnDeviceModelAvailability {
         switch SystemLanguageModel.default.availability {
         case .available:
@@ -45,8 +48,12 @@ struct FoundationModelsLanguageModel: OnDeviceLanguageModel {
 
     func prewarm(instructions: String?) {
         guard availability.isAvailable else { return }
-        Self.session(instructions: instructions).prewarm()
+        let session = Self.session(instructions: instructions)
+        session.prewarm()
+        warm.store(session, for: instructions)
     }
+
+    func discardPrewarmed() { warm.discard() }
 
     private static func session(instructions: String?) -> LanguageModelSession {
         if let instructions, !instructions.isEmpty {
@@ -56,7 +63,9 @@ struct FoundationModelsLanguageModel: OnDeviceLanguageModel {
     }
 
     func respond(instructions: String?, prompt: String) async throws -> String {
-        let session = Self.session(instructions: instructions)
+        // Reuse the warmed session only if it was built for these exact instructions.
+        let session = warm.take(for: instructions) ?? Self.session(instructions: instructions)
+        defer { prewarm(instructions: instructions) } // warm a fresh one for the next turn
         do {
             return try await session.respond(to: prompt).content
         } catch let error as LanguageModelSession.GenerationError {
