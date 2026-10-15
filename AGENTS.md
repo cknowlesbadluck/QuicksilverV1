@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: M3.5-T1 On-device model seam (the gateway track now waits on HG2/HG3). M3-T21 model evaluation harness (`npm run eval`, fake-only CI smoke) is done. M3-T20 gateway router (failover, per-candidate redaction, timeouts, `/v1/config`) is done. M3-T19 Workers AI adapter is done. M3-T18 Gemini (main) + OpenAI-compatible (Groq backup) adapters are done. M3-T17 unified stream + fake upstream is done. M3-T16 gateway auth + daily budgets + rate limits is done. M3-T14 Query-relevant retrieval is done. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
+Current focus: M3.5-T19 on-device `needsCloud` planner (local, deterministic; plugs into CloudContextPolicy). Done: M3.5-T1/T2 on-device seam (#265), M3.5-T3 on-device-first routing (#268), M3.5-T4 context budget + prewarm (#273, #275), M3.5-T5 Codex mind status (#272), privacy-gated cloud fallback (#277). The gateway track (M3-T16…T21 done) waits on HG2/HG3. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 
