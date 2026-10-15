@@ -28,6 +28,9 @@ public struct OnDeviceAIProvider: AIProvider {
         model.prewarm(instructions: instructions.map(Self.cappedInstructions))
     }
 
+    /// Drops the warmed session (memory pressure, intelligence switched off).
+    public func discardPrewarmed() { model.discardPrewarmed() }
+
     public func complete(_ request: AIRequest) async throws -> AIResponse {
         let availability = model.availability
         guard availability.isAvailable else { throw OnDeviceModelError.unavailable(availability) }

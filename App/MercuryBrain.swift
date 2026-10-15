@@ -20,7 +20,7 @@ final class MercuryBrain {
     private let personaManager: PersonaManager
     let memoryManager: MemoryManager
     let memoryIndex: EmbeddingIndex?
-    private let aiService: AIService
+    let aiService: AIService
     let nexus: NexusCoordinator
     let eventBus: EventBus
     private let logger: LoggerService
@@ -28,8 +28,8 @@ final class MercuryBrain {
     private let intentEngine = IntentEngine()
     private let aspectPolicy: AspectPolicy
     private let aspectContinuity: AspectContinuityStore
-    private let registerPolicy = RegisterPolicy()
-    private let broker = IntelligenceBroker()
+    let registerPolicy = RegisterPolicy()
+    let broker = IntelligenceBroker()
 
     private(set) var personality = PersonalityState()
     private(set) var primaryInsight: String?
@@ -212,27 +212,11 @@ extension MercuryBrain {
         await applyAspect(aspectPolicy.aspectForTurn(intent: intent), reason: "remember")
     }
 
-    private func storeMemoryItem(truncated: String, policy: MemoryPolicy) async {
-        await memoryManager.set(
-            key: "note.brain.\(UUID().uuidString.prefix(8))",
-            value: truncated,
-            category: .temporary,
-            metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
-            importanceBoost: policy.writeImportanceHint,
-            personaScope: nil
-        )
-    }
-
     private func completeRememberInteraction() {
         personality.noteInsight()
         refreshLivingStatus()
         visualState = .processing
         stabilizeVisualStateAfterSuccess()
-    }
-
-    private func evaluateBrokerDecision(intent: Intent, tokens: Int) throws -> ResourcePlan {
-        let decision = BrainComposition.brokerDecision(broker, intent: intent, aspect: activeAspect, tokens: tokens)
-        return try enforceBrokerDecision(decision)
     }
 
     /// Applies a broker decision. Internal so AppTests can force `.deny`
@@ -249,29 +233,6 @@ extension MercuryBrain {
             refreshLivingStatus()
             throw AppError.aiRequestFailed(reason)
         }
-    }
-
-    /// M3-T7: skip the gateway while disconnected. On-device route is M3.5-T3.
-    private func rejectAskWhileDisconnected() throws {
-        // Offline is fine when the on-device mind can answer (M3.5-T3).
-        guard nexus.state.networkStatus == "disconnected", !aiService.canAnswerOnDevice else { return }
-        try aiService.ensureReadyForNetworkRequest()
-        refreshLivingStatus()
-        throw AppError.networkUnavailable
-    }
-
-    /// Register is evaluated before `.thinking` so a critical Nexus signal stays visible.
-    private func evaluatedRegister(query: String, intent: Intent) -> Register {
-        let nexusCritical = nexus.state.recentInsights.first?.severity == .critical
-            || nexus.state.recentEvents.first?.severity == .critical
-        return registerPolicy.evaluate(
-            text: query,
-            visualState: visualState,
-            intent: intent,
-            previous: activeRegister,
-            thermalState: nexus.state.thermalState,
-            nexusSeverityCritical: nexusCritical
-        )
     }
 
     private struct PreparedAsk {
