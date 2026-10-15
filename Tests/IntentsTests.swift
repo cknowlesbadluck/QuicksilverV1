@@ -69,6 +69,27 @@ final class IntentsTests: XCTestCase {
             XCTFail("unexpected error: \(error)")
         }
     }
+
+    /// Every surface-backed intent on a cold (unconfigured) Brain fails with the same calm typed error.
+    func testEveryIntentOnColdBrainThrowsNexusNotReady() async {
+        IntentDependencies.shared.resetForTesting()
+        let attempts: [(String, () async throws -> Void)] = [
+            ("CaptureMemory", { _ = try await CaptureMemoryIntent(content: "note").perform() }),
+            ("GetContext", { _ = try await GetContextIntent().perform() }),
+            ("ReportStatus", { _ = try await ReportStatusIntent().perform() }),
+            ("QueryNexus", { _ = try await QueryNexusIntent(query: "ping").perform() })
+        ]
+        for (name, run) in attempts {
+            do {
+                try await run()
+                XCTFail("\(name) should fail on a cold Brain")
+            } catch {
+                guard case .nexusNotReady? = error as? AppError else {
+                    return XCTFail("\(name): unexpected \(error)")
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Fake surface

@@ -44,10 +44,13 @@ public protocol OnDeviceLanguageModel: Sendable {
     func respond(instructions: String?, prompt: String) async throws -> String
     /// M3.5-T4: load the model ahead of the first request. Best effort.
     func prewarm(instructions: String?)
+    /// Drops any warmed session (memory pressure, AI switched off). Best effort.
+    func discardPrewarmed()
 }
 
 extension OnDeviceLanguageModel {
     public func prewarm(instructions: String?) {}
+    public func discardPrewarmed() {}
 }
 
 /// Typed failures from the on-device model (M3.5-T2), mapped from framework errors.

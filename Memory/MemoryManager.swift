@@ -16,6 +16,8 @@ public final class MemoryManager {
     public private(set) var lastFailure: Failure?
 
     private let store: MemoryStore
+    /// M4-T4: applied on load and after a conversation write that exceeds the cap.
+    public var retention: MemoryRetentionPolicy = .default
     private let eventBus: EventBus
     private let logger: LoggerService
 
@@ -30,6 +32,7 @@ public final class MemoryManager {
             items = try await store.loadAll()
             if lastFailure == .load { lastFailure = nil }
             logger.info("Loaded \(items.count) memory items", category: logger.memory)
+            await applyRetention()
         } catch {
             lastFailure = .load
             logger.error("Failed to load memory: \(error.localizedDescription)", category: logger.memory)
@@ -135,6 +138,15 @@ public final class MemoryManager {
         return victims.count
     }
 
+    /// Removes only what `retention` allows (conversation turns, by age and count).
+    @discardableResult
+    public func applyRetention(now: Date = Date()) async -> Int {
+        let victims = retention.victims(in: items, now: now)
+        for item in victims { await delete(id: item.id) }
+        if !victims.isEmpty { logger.info("Retention pruned \(victims.count) conversation turns", category: logger.memory) }
+        return victims.count
+    }
+
     public func exportJSON() throws -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
@@ -152,6 +164,10 @@ public final class MemoryManager {
             if let index = items.firstIndex(where: { $0.id == item.id }) { items[index] = item } else { items.append(item) }
             if lastFailure == .save { lastFailure = nil }
             await eventBus.publish(.memoryDidUpdate(itemID: item.id.uuidString))
+            if item.category == .conversation,
+               items.lazy.filter(MemoryRetentionPolicy.isPrunable).count > retention.maxConversationItems {
+                await applyRetention()
+            }
         } catch {
             lastFailure = .save
             logger.error("Failed to save memory item: \(error.localizedDescription)", category: logger.memory)

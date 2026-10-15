@@ -2,12 +2,17 @@ import Foundation
 import Core
 
 /// Storage pressure monitor using FileManager (public API only).
-/// Samples on a timer; all state mutation and callbacks occur on the main queue.
-public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
+/// Main-actor isolated (issue #252): replaces `@unchecked Sendable`. All state
+/// mutation and callbacks already happened on the main queue; now the compiler checks it.
+/// The conformance is isolated (`@MainActor StorageMonitoring`); NexusCoordinator,
+/// its only owner, is `@MainActor`.
+@MainActor
+public final class StorageMonitor: @MainActor StorageMonitoring {
     public var diagnosticID: String { "storage" }
 
     private var isRunning = false
-    private var timer: Timer?
+    /// Sampling loop. `Task` is Sendable, so the nonisolated deinit may cancel it.
+    private var sampler: Task<Void, Never>?
     public private(set) var availableGB: Double = 0
     public private(set) var totalGB: Double = 0
     public var onChange: ((Double, Double) -> Void)?
@@ -18,12 +23,11 @@ public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
         guard !isRunning else { return }
         isRunning = true
         sample()
-
-        // Timer must be scheduled on the main run loop.
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.isRunning else { return }
-            self.timer?.invalidate()
-            self.timer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
+        sampler?.cancel()
+        sampler = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(120))
+                guard !Task.isCancelled else { return }
                 self?.sample()
             }
         }
@@ -31,14 +35,12 @@ public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
 
     public func stop() {
         isRunning = false
-        DispatchQueue.main.async { [weak self] in
-            self?.timer?.invalidate()
-            self?.timer = nil
-        }
+        sampler?.cancel()
+        sampler = nil
     }
 
     deinit {
-        timer?.invalidate()
+        sampler?.cancel()
     }
 
     private func sample() {
@@ -46,21 +48,9 @@ public final class StorageMonitor: StorageMonitoring, @unchecked Sendable {
             let attrs = try FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())
             if let free = attrs[.systemFreeSize] as? NSNumber,
                let total = attrs[.systemSize] as? NSNumber {
-                let available = free.doubleValue / 1_073_741_824
-                let totalGB = total.doubleValue / 1_073_741_824
-
-                let apply = { [weak self] in
-                    guard let self else { return }
-                    self.availableGB = available
-                    self.totalGB = totalGB
-                    self.onChange?(available, totalGB)
-                }
-
-                if Thread.isMainThread {
-                    apply()
-                } else {
-                    DispatchQueue.main.async(execute: apply)
-                }
+                availableGB = free.doubleValue / 1_073_741_824
+                totalGB = total.doubleValue / 1_073_741_824
+                onChange?(availableGB, totalGB)
             }
         } catch {
             // Best-effort; storage sampling must never crash the app.

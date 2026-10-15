@@ -95,7 +95,7 @@ When secrets are present you get both artifacts: unsigned + signed.
 - Build floor: iOS 18.0 | Primary validation device: iPhone 16e / iOS 27
 - Built with Swift 6 strict concurrency.
 - Memory is warm-loaded at launch so Ask / Intents work without opening Memory first.
-- LoggerService and QuicksilverLogger default to `.private` privacy.
+- LoggerService (the only logger) defaults to `.private` privacy; `LogPrivacyGuardTests` fails on any public interpolation.
 
 ## Failure modes
 
