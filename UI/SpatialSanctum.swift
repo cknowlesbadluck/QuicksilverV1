@@ -202,10 +202,13 @@ struct SpatialSanctum: View {
             Text(greetingTitle)
                 .font(.title2.weight(.semibold))
                 .foregroundStyle(PersonaTheme.mercurySilver)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(greetingPrompt)
                 .font(.subheadline)
                 .foregroundStyle(PersonaTheme.readableSecondary)
+                // Wrap instead of clipping at large Dynamic Type sizes (a11y audit: "Text clipped").
+                .fixedSize(horizontal: false, vertical: true)
         }
         .multilineTextAlignment(.center)
         .padding(.horizontal, 30)
