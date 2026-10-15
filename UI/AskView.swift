@@ -135,15 +135,24 @@ struct AskView: View {
     ) -> some View {
         HStack {
             if turn.role == .user { Spacer(minLength: 40) }
-            Text(turn.text)
-                .font(.body.weight(turn.role == .assistant ? assistantWeight : .regular))
-                .padding(12)
-                .background(
-                    turn.role == .user
-                        ? accent.opacity(0.18)
-                        : Color.secondary.opacity(assistantOpacity),
-                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                )
+            VStack(alignment: .leading, spacing: 4) {
+                Text(turn.text)
+                    .font(.body.weight(turn.role == .assistant ? assistantWeight : .regular))
+                    .padding(12)
+                    .background(
+                        turn.role == .user
+                            ? accent.opacity(0.18)
+                            : Color.secondary.opacity(assistantOpacity),
+                        in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    )
+                if let provenance = turn.provenance {
+                    Label(provenance.badge, systemImage: provenance.origin == .onDevice ? "iphone" : "cloud")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(provenance.accessibilityLabel)
+                        .accessibilityIdentifier("ask.provenance")
+                }
+            }
             if turn.role == .assistant { Spacer(minLength: 40) }
         }
     }
