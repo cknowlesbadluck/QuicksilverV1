@@ -13,7 +13,7 @@ extension MercuryBrain {
         await memoryManager.set(
             key: "note.brain.\(UUID().uuidString.prefix(8))",
             value: truncated,
-            category: .temporary,
+            category: .preference, // M4-T4: user-requested notes are durable
             metadata: ["source": "mercury-brain", "aspect": activeAspect.rawValue],
             importanceBoost: policy.writeImportanceHint,
             personaScope: nil
