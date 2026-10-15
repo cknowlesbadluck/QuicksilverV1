@@ -32,7 +32,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 ## Status
 
 - **Aspect architecture** — merged to `main` (PR #98). IntentEngine, AspectPolicy, Brain-owned active aspect, Sanctum presence, Workshop/Observatory surfaces.
-- **Provider routing** — Interim Codex bind: free Gemini key recommended; optional Grok. **If Grok is bound, it is primary** (Gemini fallback) and can consume xAI credits — bind Grok only when you already have credits. Credentials stay in Keychain. Gateway routing lands in M3.
+- **Intelligence routing** — Apple Intelligence on-device first (iOS 26+, when enabled). If on-device is unavailable or fails, the bound cloud route is used (gateway: Gemini → Groq → Workers AI once deployed; interim Codex keys: Gemini, optional Grok, which is primary when bound and can consume xAI credits). Personal turns are kept off the cloud after an on-device failure. Credentials stay in Keychain. See [docs/ROADMAP.md](docs/ROADMAP.md).
 - **Crash reporting** — none. Sentry was removed on 2026-09-29 (owner decision); the app sends no crash, performance or diagnostic data.
 - **SideStore hardening** remains solid (Privacy Manifest, monitor isolation, Archive verification). See [Documentation/HARDENING.md](Documentation/HARDENING.md) and [Documentation/SIDESTORE.md](Documentation/SIDESTORE.md).
 - **Hygiene (2026-09-19)** — Logger privacy defaulted to `.private`, primary validation device updated to iPhone 16e, AppConfiguration version aligned.
@@ -47,7 +47,7 @@ Artifacts (logs + IPA + dSYMs) are downloadable from the workflow run page on yo
 | **Ask** | Aspect-aware conversation with Memory history |
 | **Memory** | Policy-filtered notes, delete / clear / export |
 | **Diagnostics** | Live insights + signals |
-| **Codex** | Bind/unbind provider keys (Gemini, optional Grok) + automatic provider routing; with no key bound, Mercury shows "Intelligence unbound" |
+| **Codex** | On-device mind status + active route, gateway bind, provider keys (Gemini, optional Grok); with nothing bound and no on-device model, Mercury shows "Intelligence unbound" |
 
 ## Architecture
 

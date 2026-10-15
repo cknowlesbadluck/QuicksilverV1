@@ -28,9 +28,10 @@ extension CloudContextPolicy {
         return ([request.prompt] + request.history.map(\.content)).contains(where: isPersonalText)
     }
 
-    /// Cloud fallback after an on-device failure is allowed only for non-personal turns.
+    /// Cloud fallback after an on-device failure.
+    /// Delegates to the M3.5-T19 planner: only clearly impersonal knowledge questions qualify.
     public static func allowsCloudFallback(_ request: AIRequest) -> Bool {
-        !isPersonal(request)
+        plan(request).isCloudEligible
     }
 
     /// Phrase / whole-word match over normalized text. No network, no model.
