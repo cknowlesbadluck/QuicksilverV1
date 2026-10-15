@@ -27,7 +27,7 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 ### P0 — Correctness & Safety
 - BatteryMonitor / NetworkMonitor / StorageMonitor / DeviceMetricsMonitor: main-queue delivery, token-based observers, explicit lifecycle
 - GrokAIProvider: Task cancellation, 45 s timeout, no secret leakage in errors
-- **LoggerService + QuicksilverLogger**: default privacy `.private`; improved `redact` covers token/secret/Bearer; explicit `isPrivate` opt-out only when intentional
+- **LoggerService** (the only logger; the unused `QuicksilverLogger` was removed 2026-10-15): default privacy `.private`; improved `redact` covers token/secret/Bearer; explicit `isPrivate` opt-out only when intentional
 - **PrivacyInfo.xcprivacy** present and embedded
 - MercuryBrain: structured aspect switch (`switchAspect`) with error logging
 
