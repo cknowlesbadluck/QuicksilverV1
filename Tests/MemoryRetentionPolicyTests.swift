@@ -64,8 +64,11 @@ final class MemoryRetentionPolicyTests: XCTestCase {
     @MainActor
     func testLoadAppliesRetention() async throws {
         let store = InMemoryMemoryStore()
-        try await store.save(item(.conversation, ageDays: 400))
-        try await store.save(item(.temporary, ageDays: 400, source: "mercury-brain"))
+        // load() uses the real clock, so date these relative to Date(), not the fixed `now`.
+        let old = Date().addingTimeInterval(-400 * day)
+        try await store.save(MemoryItem(key: "chat.old", category: .conversation, value: "v", createdAt: old, updatedAt: old))
+        try await store.save(MemoryItem(key: "note.old", category: .temporary, value: "v", createdAt: old, updatedAt: old,
+                                        metadata: ["source": "mercury-brain"]))
         let manager = MemoryManager(store: store, eventBus: EventBus(), logger: LoggerService())
         await manager.load()
         XCTAssertEqual(manager.items.map(\.category), [.temporary])
