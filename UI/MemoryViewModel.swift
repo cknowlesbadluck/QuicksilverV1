@@ -54,7 +54,8 @@ final class MemoryViewModel {
         await container.memoryManager.set(
             key: "note.\(UUID().uuidString.prefix(8))",
             value: trimmed,
-            category: .temporary,
+            category: .preference,
+            metadata: ["source": "user"],
             importanceBoost: policy.writeImportanceHint,
             personaScope: personaID
         )

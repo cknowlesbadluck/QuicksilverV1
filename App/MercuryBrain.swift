@@ -84,6 +84,9 @@ final class MercuryBrain {
 
     func askWithAspect(_ query: String) async throws -> AskResult {
         personaManager.recordInteraction()
+        if let recall = MemoryRecall.answer(to: query, from: memoryManager.items) {
+            return answerFromMemory(query: query, text: recall.text) // no model call, nothing leaves the device
+        }
         try rejectAskWhileDisconnected()
         let intent = intentEngine.classify(query)
         let turnRegister = evaluatedRegister(query: query, intent: intent)
@@ -99,6 +102,16 @@ final class MercuryBrain {
     struct AskResult: Sendable {
         let text: String
         let aspectID: String
+        /// Set when the Brain answered without AIService (e.g. memory recall).
+        var provenance: AnswerProvenance?
+    }
+
+    private func answerFromMemory(query: String, text: String) -> AskResult {
+        recordTurn(user: query, assistant: text)
+        visualState = .success
+        refreshLivingStatus()
+        stabilizeVisualStateAfterSuccess()
+        return AskResult(text: text, aspectID: activeAspect.rawValue, provenance: .memory)
     }
 
     /// Explicit aspect entry (diagnostics, chamber awaken, Intents).

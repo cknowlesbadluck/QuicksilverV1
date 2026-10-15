@@ -71,6 +71,7 @@ final class MemoryRetentionPolicyTests: XCTestCase {
                                         metadata: ["source": "mercury-brain"]))
         let manager = MemoryManager(store: store, eventBus: EventBus(), logger: LoggerService())
         await manager.load()
-        XCTAssertEqual(manager.items.map(\.category), [.temporary])
+        // M4-T4: the old user note survives retention and is migrated to durable memory.
+        XCTAssertEqual(manager.items.map(\.category), [.preference])
     }
 }
