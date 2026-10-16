@@ -63,9 +63,9 @@ final class CloudBudgetRoutingTests: XCTestCase {
     private static let happy = "event: meta\ndata: {\"route\":\"cloud\",\"model\":\"fake\",\"trainsOnPrompts\":false}\n\n"
         + "event: delta\ndata: {\"text\":\"cloud\"}\n\nevent: done\ndata: {\"usage\":{\"promptTokens\":1,\"completionTokens\":1}}\n\n"
 
-    private func makeService(model: ScriptedOnDeviceModel, opens: Mutex<Int>) throws -> AIService {
+    private func makeService(model: ScriptedOnDeviceModel, opens: OpenCounter) throws -> AIService {
         let transport = GatewayStreamTransport { _ in
-            opens.withLock { $0 += 1 }
+            opens.increment()
             let lines = Self.happy.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
             return GatewayOpenedStream(statusCode: 200, lines: AsyncThrowingStream { continuation in
                 lines.forEach { continuation.yield($0) }
@@ -90,7 +90,7 @@ final class CloudBudgetRoutingTests: XCTestCase {
     }
 
     func testExhaustedBudgetSkipsGatewayAfterOnDeviceFailure() async throws {
-        let opens = Mutex(0)
+        let opens = OpenCounter()
         let service = try makeService(model: ScriptedOnDeviceModel(availability: .available, outcome: .fail(.generationFailed("x"))), opens: opens)
         CloudBudgetMonitor.shared.record(today(0, of: 100))
         do {
@@ -99,27 +99,33 @@ final class CloudBudgetRoutingTests: XCTestCase {
         } catch {
             guard case AppError.budgetExhausted = error else { return XCTFail("got \(error)") }
         }
-        XCTAssertEqual(opens.withLock { $0 }, 0, "no gateway round trip when the budget is spent")
+        XCTAssertEqual(opens.value, 0, "no gateway round trip when the budget is spent")
     }
 
     func testNearLimitGivesOnDeviceASecondTryBeforeCloud() async throws {
-        let opens = Mutex(0)
+        let opens = OpenCounter()
         let model = ScriptedOnDeviceModel(availability: .available, outcome: .fail(.generationFailed("x")))
         let service = try makeService(model: model, opens: opens)
         CloudBudgetMonitor.shared.record(today(5, of: 100))
         let response = try await service.complete(AIRequest(prompt: "what is the capital of peru"))
         XCTAssertEqual(response.content, "cloud")
         XCTAssertEqual(model.calls.count, 2, "one extra on-device attempt near the limit")
-        XCTAssertEqual(opens.withLock { $0 }, 1)
+        XCTAssertEqual(opens.value, 1)
     }
 
     func testHealthyBudgetKeepsSingleOnDeviceAttempt() async throws {
-        let opens = Mutex(0)
+        let opens = OpenCounter()
         let model = ScriptedOnDeviceModel(availability: .available, outcome: .fail(.generationFailed("x")))
         let service = try makeService(model: model, opens: opens)
         CloudBudgetMonitor.shared.record(today(90, of: 100))
         _ = try await service.complete(AIRequest(prompt: "what is the capital of peru"))
         XCTAssertEqual(model.calls.count, 1)
-        XCTAssertEqual(opens.withLock { $0 }, 1)
+        XCTAssertEqual(opens.value, 1)
     }
+}
+
+private final class OpenCounter: Sendable {
+    private let count = Mutex(0)
+    var value: Int { count.withLock { $0 } }
+    func increment() { count.withLock { $0 += 1 } }
 }
