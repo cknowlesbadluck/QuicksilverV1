@@ -190,4 +190,15 @@ public enum GatewayBindError: Error, Equatable, Sendable {
 extension AIService {
     /// Latest gateway budget reading (free-budget awareness). Shared because there is one gateway binding per app.
     public var cloudBudget: CloudBudgetMonitor { .shared }
+
+    /// True when no route is bound only because the Keychain is locked (before first unlock
+    /// after a reboot). The Codex then says "locked" instead of "unbound".
+    public var credentialsLocked: Bool {
+        guard primaryProvider == nil else { return false }
+        let accounts = [
+            Self.gatewayBaseURLKeychainAccount, GatewayAIProvider.deviceTokenKeychainAccount,
+            Self.grokAPIKeyKeychainAccount, Self.geminiAPIKeyKeychainAccount
+        ]
+        return accounts.contains { KeychainStore.credentialState(forKey: $0) == .locked }
+    }
 }

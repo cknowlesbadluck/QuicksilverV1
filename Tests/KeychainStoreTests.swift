@@ -40,3 +40,25 @@ final class KeychainStoreTests: XCTestCase {
         XCTAssertTrue(KeychainStore.set(nil as Data?, forKey: key))
     }
 }
+
+/// Keychain read typing: "locked" is not "missing".
+final class KeychainCredentialStateTests: XCTestCase {
+    func testStatesMapFromReadResults() {
+        XCTAssertEqual(KeychainStore.credentialState(from: .success(Data("k".utf8))), .present)
+        XCTAssertEqual(KeychainStore.credentialState(from: .success(nil)), .missing)
+        XCTAssertEqual(KeychainStore.credentialState(from: .success(Data())), .missing)
+        XCTAssertEqual(KeychainStore.credentialState(from: .failure(.locked)), .locked)
+        XCTAssertEqual(KeychainStore.credentialState(from: .failure(.failed(-1))), .unreadable(-1))
+    }
+
+    func testInterpretMapsInteractionNotAllowedToLocked() {
+        XCTAssertThrowsError(try KeychainStore.interpret(status: errSecInteractionNotAllowed, item: nil)) { error in
+            XCTAssertEqual(error as? KeychainStore.ReadError, .locked)
+        }
+        XCTAssertNil(try KeychainStore.interpret(status: errSecItemNotFound, item: nil))
+    }
+
+    func testMissingKeyReadsAsMissing() {
+        XCTAssertEqual(KeychainStore.credentialState(forKey: "test.absent.\(UUID().uuidString)"), .missing)
+    }
+}

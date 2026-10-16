@@ -14,6 +14,28 @@ public enum KeychainStore: Sendable {
         case failed(OSStatus)
     }
 
+    /// What a credential read tells the UI: present, absent, or unreadable because the
+    /// device hasn't been unlocked since boot (items are `AfterFirstUnlockThisDeviceOnly`).
+    public enum CredentialState: Equatable, Sendable {
+        case present
+        case missing
+        case locked
+        case unreadable(OSStatus)
+    }
+
+    public static func credentialState(forKey key: String) -> CredentialState {
+        credentialState(from: Result { () throws(ReadError) -> Data? in try readData(forKey: key) })
+    }
+
+    static func credentialState(from result: Result<Data?, ReadError>) -> CredentialState {
+        switch result {
+        case .success(let data?): return data.isEmpty ? .missing : .present
+        case .success(nil): return .missing
+        case .failure(.locked): return .locked
+        case .failure(.failed(let status)): return .unreadable(status)
+        }
+    }
+
     /// Maps a `SecItemCopyMatching` status: success → data, not found → nil, otherwise typed error.
     static func interpret(status: OSStatus, item: CFTypeRef?) throws(ReadError) -> Data? {
         switch status {
