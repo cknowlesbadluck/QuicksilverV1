@@ -104,10 +104,14 @@ final class SanctumSmokeTests: XCTestCase {
         waitForStableFrame(app.buttons["The Workshop"])
     }
 
+    /// Waits until the element is gone or no longer hittable (off screen), then lets the dim fade.
     private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 10) {
-        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: element)
-        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: timeout), .completed, "Still on screen before audit: \(element)")
-        Thread.sleep(forTimeInterval: 1) // dismissal animation's dimming fades after the element leaves the tree
+        let deadline = Date().addingTimeInterval(timeout)
+        while element.exists && element.isHittable && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        XCTAssertFalse(element.exists && element.isHittable, "Still on screen before audit: \(element)")
+        Thread.sleep(forTimeInterval: 1) // dismissal animation's dimming fades after the element leaves
     }
 
     /// Polls an element's frame until it is unchanged for three consecutive 0.25s samples (max ~6s).
