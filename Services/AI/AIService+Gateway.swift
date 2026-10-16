@@ -164,6 +164,8 @@ public enum GatewayBindError: Error, Equatable, Sendable {
             return "Gateway URL is not valid."
         case .invalidURL(.hasUserInfo), .invalidURL(.hasQueryOrFragment), .invalidURL(.tokenInURL):
             return "Gateway URL must be an https origin with no credentials or query."
+        case .invalidURL(.privateHost):
+            return "Gateway URL must be a public host, not a private, local or link-local address."
         case .emptyToken:
             return "Enter a non-empty device token."
         case .invalidToken:
