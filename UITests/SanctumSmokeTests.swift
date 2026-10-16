@@ -211,7 +211,7 @@ final class SanctumSmokeTests: XCTestCase {
     private func dismissAsk() {
         let bar = app.navigationBars["Ask"]
         for _ in 0..<4 where bar.exists {
-            if app.keyboards.count > 0 { app.keyboards.firstMatch.swipeDown() }
+            if app.keyboards.firstMatch.exists { app.keyboards.firstMatch.swipeDown() }
             bar.swipeDown(velocity: .fast)
             _ = bar.waitForNonExistence(timeout: 3)
         }
