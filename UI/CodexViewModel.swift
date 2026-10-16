@@ -31,6 +31,8 @@ final class CodexViewModel {
     private(set) var onDeviceStatus: String = ""
     private(set) var onDeviceReason: String?
     private(set) var answerRoute: String = ""
+    /// Cloud requests left today, from the gateway budget headers. nil until a gateway reply is seen.
+    private(set) var cloudBudgetLabel: String?
 
     private let container: DependencyContainer
     /// Cancels in-flight `/v1/config` refresh on unbind / rebind.
@@ -59,6 +61,7 @@ final class CodexViewModel {
         onDeviceStatus = availability.shortLabel
         onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason
         answerRoute = aiEnabled ? container.aiService.activeRouteName : "Dormant (wake it above)"
+        cloudBudgetLabel = hasGatewayBinding ? container.aiService.cloudBudget.current()?.label : nil
     }
 
     func saveGrokKey() {

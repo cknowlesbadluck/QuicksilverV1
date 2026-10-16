@@ -39,6 +39,13 @@ final class KeychainStoreTests: XCTestCase {
         // Deleting a missing item is still a success.
         XCTAssertTrue(KeychainStore.set(nil as Data?, forKey: key))
     }
+
+    func testDeleteReportsSuccessIncludingMissingItem() throws {
+        try requireKeychain()
+        XCTAssertTrue(KeychainStore.delete(forKey: key))
+        XCTAssertNil(KeychainStore.data(forKey: key))
+        XCTAssertTrue(KeychainStore.delete(forKey: key), "missing item counts as removed")
+    }
 }
 
 /// Keychain read typing: "locked" is not "missing".
