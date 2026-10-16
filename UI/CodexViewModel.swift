@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import Core
+import Memory
 import ServicesAI
 
 @MainActor
@@ -65,6 +66,23 @@ final class CodexViewModel {
         answerRoute = aiEnabled ? container.aiService.activeRouteName : "Dormant (wake it above)"
         cloudBudgetLabel = hasGatewayBinding ? container.aiService.cloudBudget.current()?.label : nil
         recentRoutes = container.aiService.routeLog.recent(limit: 10)
+    }
+
+    /// Content-free diagnostics text for the share sheet. Counts, states and config only.
+    func diagnosticsText() -> String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let memory = container.memoryManager
+        return DiagnosticsReport(
+            appVersion: info["CFBundleShortVersionString"] as? String ?? "",
+            build: info["CFBundleVersion"] as? String ?? "",
+            routes: container.aiService.routeLog.recent(),
+            budget: container.aiService.cloudBudget.current(),
+            credentials: container.aiService.credentialStates(),
+            memoryTotal: memory.items.count,
+            memoryNotes: memory.items.filter { $0.key.hasPrefix("note.") }.count,
+            memoryUsingBackupStore: memory.usesBackupStore,
+            onDeviceAvailable: container.aiService.onDeviceAvailability.isAvailable
+        ).text
     }
 
     func saveGrokKey() {

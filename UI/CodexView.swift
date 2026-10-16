@@ -35,6 +35,15 @@ struct CodexView: View {
             gatewaySection(vm)
             covenantSection(vm)
 
+            Section {
+                ShareLink(item: vm.diagnosticsText()) {
+                    Label("Export diagnostics", systemImage: "square.and.arrow.up")
+                }
+                .accessibilityIdentifier("codex.exportDiagnostics")
+            } footer: {
+                Text("Counts and states only. Never your questions, replies, notes or keys.")
+            }
+
             if let message = vm.statusMessage {
                 Section {
                     Text(message)
