@@ -11,11 +11,14 @@ final class MemoryRecallBrainTests: XCTestCase {
         let container = try ViewModelTestSupport.makeContainer(provider: provider, testCase: self)
         container.featureFlags.set("aiServiceEnabled", enabled: true)
         await container.brain.remember("My bike is a blue Brompton")
+        container.aiService.routeLog.clear()
         let result = try await container.brain.askWithAspect("What did I tell you about my bike?")
         XCTAssertTrue(result.text.contains("blue Brompton"))
         XCTAssertEqual(result.provenance, .memory)
         XCTAssertEqual(result.provenance?.badge, "From memory")
         XCTAssertEqual(provider.calls, 0)
+        XCTAssertEqual(container.aiService.routeLog.recent().first?.route, .memoryRecall)
+        XCTAssertFalse(container.aiService.routeLog.recent().first?.summary.contains("Brompton") ?? true)
     }
 
     func testRecallMissFallsBackToModel() async throws {
