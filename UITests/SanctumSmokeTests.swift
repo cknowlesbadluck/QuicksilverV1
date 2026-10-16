@@ -71,7 +71,8 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(invoke.waitForExistence(timeout: 8))
         invoke.tap()
         XCTAssertTrue(app.navigationBars["Ask"].waitForExistence(timeout: 8))
-        app.swipeDown()
+        dismissAsk()
+        XCTAssertFalse(app.navigationBars["Ask"].exists, "Ask sheet did not dismiss")
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
     }
 
@@ -205,10 +206,19 @@ final class SanctumSmokeTests: XCTestCase {
     // presented, so the audit mostly covers Ask. Truly dismissing it surfaces
     // Sanctum header findings (contrast, Dynamic Type) to fix in product code
     // before tightening this helper.
-    private func returnToSanctumIfNeeded() {
-        if app.navigationBars["Ask"].exists {
-            app.swipeDown()
+    /// The first swipe can only dismiss the keyboard (Ask focuses its field), leaving the
+    /// sheet up over a Sanctum that still "exists" behind it. Swipe from the nav bar until gone.
+    private func dismissAsk() {
+        let bar = app.navigationBars["Ask"]
+        for _ in 0..<4 where bar.exists {
+            if app.keyboards.count > 0 { app.keyboards.firstMatch.swipeDown() }
+            bar.swipeDown(velocity: .fast)
+            _ = bar.waitForNonExistence(timeout: 3)
         }
+    }
+
+    private func returnToSanctumIfNeeded() {
+        dismissAsk()
         if app.buttons["Done"].exists && !app.buttons["The Workshop"].exists {
             app.buttons["Done"].tap()
         }
