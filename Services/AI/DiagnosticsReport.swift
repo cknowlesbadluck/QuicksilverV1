@@ -26,9 +26,15 @@ public struct DiagnosticsReport: Sendable, Equatable {
     public var onDeviceAvailable: Bool
 
     public init(
-        appVersion: String, build: String, routes: [RouteRecord], budget: CloudBudget?,
+        appVersion: String,
+        build: String,
+        routes: [RouteRecord],
+        budget: CloudBudget?,
         credentials: [CredentialSlot: KeychainStore.CredentialState],
-        memoryTotal: Int, memoryNotes: Int, memoryUsingBackupStore: Bool, onDeviceAvailable: Bool
+        memoryTotal: Int,
+        memoryNotes: Int,
+        memoryUsingBackupStore: Bool,
+        onDeviceAvailable: Bool
     ) {
         self.appVersion = Self.versionSafe(appVersion)
         self.build = Self.versionSafe(build)
