@@ -90,6 +90,11 @@ final class SanctumSmokeTests: XCTestCase {
     /// Waits until the presence title exists and the key labels stop moving.
     /// This never skips an element; it only makes sure the audit sees the final layout.
     private func waitForSettledSanctum() {
+        // A sheet (Ask) or realm cover still animating away dims the Sanctum behind it; the
+        // audit then fails contrast on whichever bottom label the dimming covers (Eternal,
+        // Workshop). Wait until both are fully gone.
+        waitUntilGone(app.navigationBars["Ask"])
+        waitUntilGone(app.buttons["Done"])
         let presence = app.staticTexts.matching(
             NSPredicate(format: "label IN %@", ["The core is awake", "The core rests"])
         ).firstMatch
@@ -97,6 +102,12 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Eternal"].waitForExistence(timeout: 8), "Eternal subtitle never appeared before audit")
         waitForStableFrame(presence)
         waitForStableFrame(app.buttons["The Workshop"])
+    }
+
+    private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 10) {
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: element)
+        XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: timeout), .completed, "Still on screen before audit: \(element)")
+        Thread.sleep(forTimeInterval: 1) // dismissal animation's dimming fades after the element leaves the tree
     }
 
     /// Polls an element's frame until it is unchanged for three consecutive 0.25s samples (max ~6s).
