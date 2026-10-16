@@ -80,7 +80,35 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
         // Sanctum portals and Speak with Quicksilver must be idle before audit.
         // Decorative motion is frozen via -uitest in AmbientLayer/core/Sanctum.
+        // Audit a settled, complete screen: past failures were state-dependent
+        // ("The core is awake", "Eternal", "·") because those labels were sometimes
+        // mid-transition or not yet on screen. Waiting makes them always audited.
+        waitForSettledSanctum()
         try performAccessibilityAuditRetryingTimeouts()
+    }
+
+    /// Waits until the presence title exists and the key labels stop moving.
+    /// This never skips an element; it only makes sure the audit sees the final layout.
+    private func waitForSettledSanctum() {
+        let presence = app.staticTexts.matching(
+            NSPredicate(format: "label IN %@", ["The core is awake", "The core rests"])
+        ).firstMatch
+        XCTAssertTrue(presence.waitForExistence(timeout: 8), "Presence title never appeared before audit")
+        XCTAssertTrue(app.staticTexts["Eternal"].waitForExistence(timeout: 8), "Eternal subtitle never appeared before audit")
+        waitForStableFrame(presence)
+        waitForStableFrame(app.buttons["The Workshop"])
+    }
+
+    /// Polls an element's frame until it is unchanged for three consecutive 0.25s samples (max ~6s).
+    private func waitForStableFrame(_ element: XCUIElement) {
+        var last = element.frame
+        var stableSamples = 0
+        for _ in 0..<24 where stableSamples < 3 {
+            Thread.sleep(forTimeInterval: 0.25)
+            let current = element.frame
+            stableSamples = current == last ? stableSamples + 1 : 0
+            last = current
+        }
     }
 
     /// Retries only the audit's own "failed to complete in time" error.
