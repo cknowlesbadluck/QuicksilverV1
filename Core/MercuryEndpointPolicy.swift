@@ -44,6 +44,10 @@ public struct MercuryEndpointPolicy: Sendable {
         if bare.hasPrefix("fe80:") {
             return .linkLocal
         }
+        let lowered = bare.lowercased()
+        if lowered.contains(":"), lowered.hasPrefix("fc") || lowered.hasPrefix("fd") {
+            return .privateAddress // IPv6 unique local, fc00::/7
+        }
         let parts = bare.split(separator: ".")
         let octets = parts.compactMap { UInt8($0) }
         guard octets.count == 4, parts.count == 4 else {
