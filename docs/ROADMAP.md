@@ -644,3 +644,6 @@ Sources:
 - Cloudflare: https://developers.cloudflare.com/workers-ai/platform/pricing/ · https://developers.cloudflare.com/workers-ai/platform/data-usage/
 - OpenRouter: https://openrouter.ai/docs/api/reference/limits
 - Mistral: https://help.mistral.ai/en/articles/455207-can-i-opt-out-of-my-input-or-output-data-being-used-for-training
+
+## Hygiene note 2026-10-16
+Live CI green. Device acceptance (CHR-55) remains the hard gate — no real IPA evidence recorded. Open PRs focus on diagnostics export, keychain locked state, privacy gate, a11y stability, gateway policy. No mock in shipping path. Innovation continues on on-device intelligence and bounded surfaces.
