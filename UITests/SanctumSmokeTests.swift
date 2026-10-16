@@ -206,15 +206,14 @@ final class SanctumSmokeTests: XCTestCase {
     // presented, so the audit mostly covers Ask. Truly dismissing it surfaces
     // Sanctum header findings (contrast, Dynamic Type) to fix in product code
     // before tightening this helper.
-    /// The first swipe can only dismiss the keyboard (Ask focuses its field), leaving the
-    /// sheet up over a Sanctum that still "exists" behind it. Swipe from the nav bar until gone.
+    /// Swipes were unreliable (the keyboard ate them), leaving the sheet over a Sanctum that
+    /// still "exists" behind it, so the audit ran on a dimmed screen. Use the Close button.
     private func dismissAsk() {
         let bar = app.navigationBars["Ask"]
-        for _ in 0..<4 where bar.exists {
-            if app.keyboards.firstMatch.exists { app.keyboards.firstMatch.swipeDown() }
-            bar.swipeDown(velocity: .fast)
-            _ = bar.waitForNonExistence(timeout: 3)
-        }
+        guard bar.exists else { return }
+        let close = app.buttons["ask.close"]
+        if close.waitForExistence(timeout: 3) { close.tap() } else { bar.swipeDown(velocity: .fast) }
+        _ = bar.waitForNonExistence(timeout: 5)
     }
 
     private func returnToSanctumIfNeeded() {
