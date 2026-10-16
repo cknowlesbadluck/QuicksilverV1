@@ -154,6 +154,37 @@ jobs:
           path: spm-test.log
           retention-days: 7
 
+  spm-tsan:
+    # ROADMAP 4a Phase 2 exit criterion: "a TSan job green". Separate scratch path so
+    # the sanitized build never shares artifacts with the coverage build.
+    name: SPM Thread Sanitizer
+    runs-on: macos-15
+    timeout-minutes: 30
+    needs: structure
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Run tests under TSan
+        env:
+          TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+        run: |
+          set -euo pipefail
+          swift test --sanitize=thread --scratch-path .build-tsan 2>&1 | tee spm-tsan.log
+
+      - name: Upload TSan log
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: spm-tsan-log
+          path: spm-tsan.log
+          retention-days: 7
+
   ios-simulator-build:
     name: iOS Simulator Build
     runs-on: macos-15
@@ -253,7 +284,40 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             test \
             -only-testing:QuicksilverAppTests \
+            -resultBundlePath AppTests.xcresult \
             2>&1 | tee app-tests.log
+
+      # Simulator proof bundle: the unsigned Debug simulator .app, the AppTests result bundle and
+      # a manifest tying them to this commit. Not a device build and not installable on an iPhone.
+      - name: Package simulator proof bundle
+        if: success()
+        run: |
+          set -euo pipefail
+          APP=$(find DerivedData/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
+          test -n "$APP"
+          mkdir -p sim-proof
+          ditto -c -k --keepParent "$APP" sim-proof/Quicksilver-simulator-unsigned.zip
+          {
+            echo "commit: ${GITHUB_SHA}"
+            echo "ref: ${GITHUB_REF}"
+            echo "run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "destination: ${{ steps.dest.outputs.destination }}"
+            echo "xcode: $(xcodebuild -version | tr '\n' ' ')"
+            echo "signing: none (CODE_SIGNING_ALLOWED=NO); simulator only, not device evidence"
+            echo "app_sha256: $(shasum -a 256 sim-proof/Quicksilver-simulator-unsigned.zip | cut -d' ' -f1)"
+          } > sim-proof/MANIFEST.txt
+          cat sim-proof/MANIFEST.txt
+
+      - name: Upload simulator proof bundle
+        if: success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: simulator-proof-${{ github.sha }}
+          path: |
+            sim-proof
+            AppTests.xcresult
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Build diagnostics on failure
         if: failure()

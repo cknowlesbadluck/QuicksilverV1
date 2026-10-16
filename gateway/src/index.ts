@@ -20,6 +20,7 @@ import {
   DailyBudgets,
   RpmLimiter,
   firstCandidateWithBudget,
+  budgetHeaders,
   routingConfig,
   type RoutingConfig,
 } from "./limits";
@@ -109,7 +110,7 @@ async function handleChat(request: Request, env: Env, state: GatewayState, now: 
 
   // 200 + typed error event: the app reads it and goes on-device.
   if (firstCandidateWithBudget(state.config, state.budgets, now) === null) {
-    return errorResponse(200, { code: "budget_exhausted" });
+    return errorResponse(200, { code: "budget_exhausted" }, budgetHeaders(state.config, state.budgets, now));
   }
 
   const body = await readChatBody(request);
@@ -134,7 +135,8 @@ async function handleChat(request: Request, env: Env, state: GatewayState, now: 
     now,
     signal: request.signal,
   });
-  return streamResponse(opened);
+  // Read after routing so the count reflects this request.
+  return streamResponse(opened, budgetHeaders(state.config, state.budgets, now));
 }
 
 /** `GET /v1/config`: device token required; client-safe routing only (no keys, budgets). */

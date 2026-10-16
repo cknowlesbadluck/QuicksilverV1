@@ -114,9 +114,15 @@ extension AIService {
             return nil
         }
         let timeouts = routingConfigStore?.loadValidated().gatewayTimeouts ?? .defaults
+        // A new or rebuilt binding starts with no reading, so a previous gateway's count never shows.
+        cloudBudget.reset()
+        let transport = GatewayStreamTransport
+            .urlSession(GatewayStreamTransport.makeSecureSession())
+            .recordingBudget(into: cloudBudget)
         return try? GatewayAIProvider(
             endpoint: endpoint,
             deviceToken: token,
+            transport: transport,
             timeouts: timeouts
         )
     }
@@ -172,6 +178,8 @@ public enum GatewayBindError: Error, Equatable, Sendable {
             return "Gateway URL is not valid."
         case .invalidURL(.hasUserInfo), .invalidURL(.hasQueryOrFragment), .invalidURL(.tokenInURL):
             return "Gateway URL must be an https origin with no credentials or query."
+        case .invalidURL(.privateHost):
+            return "Gateway URL must be a public host, not a private, local or link-local address."
         case .emptyToken:
             return "Enter a non-empty device token."
         case .invalidToken:
@@ -187,4 +195,9 @@ public enum GatewayBindError: Error, Equatable, Sendable {
             return "That endpoint is not a Mercury gateway."
         }
     }
+}
+
+extension AIService {
+    /// Latest gateway budget reading (free-budget awareness). Shared because there is one gateway binding per app.
+    public var cloudBudget: CloudBudgetMonitor { .shared }
 }

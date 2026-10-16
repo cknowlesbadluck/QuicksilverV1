@@ -1,3 +1,4 @@
+import Core
 import Foundation
 
 /// Bind target for the owner-owned Mercury gateway (M3).
@@ -32,6 +33,12 @@ public struct GatewayEndpoint: Equatable, Sendable {
         clean.host = host
         clean.port = components.port
         guard let normalized = clean.url else { throw GatewayEndpointError.invalid }
+        // Fail closed on private, link-local and loopback hosts over HTTPS (MercuryEndpointPolicy).
+        // The only local exception is plain-HTTP localhost dev, handled above.
+        if scheme == "https", let refusal = MercuryEndpointPolicy().evaluate(normalized.absoluteString).refusal,
+           [.loopback, .privateAddress, .linkLocal].contains(refusal) {
+            throw GatewayEndpointError.privateHost
+        }
         self.url = normalized
     }
 
@@ -87,4 +94,6 @@ public enum GatewayEndpointError: Error, Equatable, Sendable {
     case hasUserInfo
     case hasQueryOrFragment
     case tokenInURL
+    /// Host is loopback, private (RFC 1918 / IPv6 ULA) or link-local.
+    case privateHost
 }
