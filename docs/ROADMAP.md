@@ -547,19 +547,23 @@ Squash-merged with main green between each: #281 · #289 · #290 · #291 · #293
 - **Phase 8:** accessibility-check flakes in the Sanctum fixed (#288, #302, #304).
 - **Gates unchanged:** CHR-55 open, HG2/HG3 owner-only, `release.yml` (#250) needs owner OK, the `aiServiceEnabled` default stays off. There's no IPA from current main. Scored delta: `docs/AUDIT-2026-10-15.md`.
 
-### Status 2026-10-16 (early morning)
-Merged: #306 ratchet (24521e8) · #310 header separator contrast (1fc2407) · #308 prune unused UI (3c79fe4). Open: #309 TSan job (green except an intermittent "Eternal" contrast flake in the UI check), #311 free-budget awareness (green), #312 audit delta (green), #284 LoggerService (owner draft). M4-T5 failure banner and backup-store disclosure are prepared on `feat/m4-t5-memory-notices`.
-10-phase progress:
-1. Stabilize ✅ except #250 (owner).
-2. Concurrency: done once #284 and #309 land.
-3. Apple Intelligence first: code done; HG5 open.
-4. Gateway: privacy floor ✅ (#305), budget awareness 🟡 (#311); HG2–HG4 open.
-5. Aspects: code done; owner to confirm the dwell constants.
-6. Memory: M4-T4 ✅, M4-T6 ✅, M4-T5 🟡; M4-T2 fixture next.
-7. App Intents: M3.5-T9 MemoryEntity next.
-8. Sanctum: accessibility flakes keep surfacing (see the "Eternal" subtitle); snapshot tests next.
-9. Hardening: add budget exhaustion and mid-stream network loss tests.
-10. Freeze: blocked on an IPA from current main plus CHR-55/HG1 (owner).
+### Portfolio-aligned 10 phases (2026-10-16)
+Aligned with the portfolio roadmap in `cknowlesbadluck/Conduit/ROADMAP.md`, using its phase names and its Quicksilver exit checks, extended with ours. The table above keeps its task IDs; this one is the current exit gate per phase. A phase is done only when every check is true. HG = owner-only human gate.
+
+| # | Phase | Quicksilver exit criteria | Status (2026-10-16) |
+|---|---|---|---|
+| 1 | Green, pinned CI | Main CI green; every action SHA-pinned, including `release.yml` (#250) | 🟡 Main green; #250 needs owner OK |
+| 2 | Lean code | Dead UI pruned (#308 ✅); zero `@unchecked Sendable` (#284); ratchet (#306 ✅); no unreferenced modules | 🟡 #284 is the owner's draft; `Nexus/Integration` is runtime-unused (owner decides) |
+| 3 | Fail-closed (client) | Privacy floor can't be lowered remotely (#305 ✅); gate fails closed on non-English (#319); honest Keychain states (#321, #322) | 🟡 In review |
+| 4 | Bounded surface | Bounded memory (#296 ✅); budget awareness (#311); route log capped at 20 with no content (#320) | 🟡 In review |
+| 5 | Transport + data security | Device-only atomic Keychain ✅; memory failure banner and backup-store disclosure (#314); own Supabase restored (owner) | 🟡 Owner item open |
+| 6 | Honest posture | Codex shows the true route per turn (#320), budget (#311), locked vs. unbound (#322), on-device reason ✅ | 🟡 In review |
+| 7 | Contracts + coverage | TSan job (#309); gateway contract client tests (#316); MemoryEntity tests (#317) | 🟡 In review |
+| 8 | Operable release | Fresh Archive/IPA from main; CHR-55 device acceptance with real evidence (HG1) | 🔴 Owner only |
+| 9 | Adapters, chambers, on-device | On-device path works offline (code ✅, HG5 device check open); Resonance used only via its documented contract | 🟡 Device check open |
+| 10 | Free tiers, SideStore, privacy | Reproducible, documented SideStore build; privacy manifest ✅; no third-party telemetry ✅; free-budget aware (#311) | 🟡 SideStore build docs and fresh IPA missing |
+
+Gates unchanged: CHR-55 open (owner only, real device evidence); HG2/HG3 gateway account and secrets are owner only; the `aiServiceEnabled` default stays off.
 
 ## 5. Risks
 
