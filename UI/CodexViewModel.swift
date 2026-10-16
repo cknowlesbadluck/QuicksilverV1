@@ -31,6 +31,8 @@ final class CodexViewModel {
     private(set) var onDeviceStatus: String = ""
     private(set) var onDeviceReason: String?
     private(set) var answerRoute: String = ""
+    /// Content-free log of recent routing decisions (newest first, at most 10).
+    private(set) var recentRoutes: [RouteRecord] = []
     /// Cloud requests left today, from the gateway budget headers. nil until a gateway reply is seen.
     private(set) var cloudBudgetLabel: String?
 
@@ -61,6 +63,7 @@ final class CodexViewModel {
         onDeviceStatus = availability.shortLabel
         onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason
         answerRoute = aiEnabled ? container.aiService.activeRouteName : "Dormant (wake it above)"
+        recentRoutes = container.aiService.routeLog.recent(limit: 10)
         cloudBudgetLabel = hasGatewayBinding ? container.aiService.cloudBudget.current()?.label : nil
     }
 
