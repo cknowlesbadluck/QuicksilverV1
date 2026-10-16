@@ -1,8 +1,9 @@
 import Foundation
 import Synchronization
 import Core
+@testable import ServicesAI
 
-/// Scripted streaming provider for SPM, AppTests, and `-uitest`.
+/// Scripted streaming provider for SPM tests (test target only; never shipped in the app).
 ///
 /// Never selected by production routing. Emits a predetermined event sequence with optional
 /// inter-event delays and an optional mid-stream failure. Cancelling the consuming task
