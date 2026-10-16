@@ -208,6 +208,7 @@ struct CodexView: View {
     private func boundSummary(_ vm: CodexViewModel) -> String {
         if vm.hasGatewayBinding { return "Yes — Gateway" }
         if vm.hasGrokKey || vm.hasGeminiKey { return "Yes — Keychain" }
+        if vm.credentialsLocked { return "Locked — unlock this device once" }
         return "Unbound"
     }
 }
