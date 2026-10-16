@@ -32,8 +32,10 @@ extension AIService {
 
     func recordRoute(_ provenance: AnswerProvenance, trainsOnPrompts: Bool) {
         switch provenance.origin {
-        case .onDevice, .memory:
+        case .onDevice:
             routeLog.record(RouteRecord(route: .onDevice))
+        case .memory:
+            routeLog.record(RouteRecord(route: .memoryRecall))
         case .cloud:
             routeLog.record(RouteRecord(
                 route: trainsOnPrompts ? .cloudMinimal : .cloudStandard,

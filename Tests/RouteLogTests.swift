@@ -15,7 +15,7 @@ final class RouteLogTests: XCTestCase {
     }
 
     func testSummariesAreFixedTextWithoutContent() {
-        let routes: [RouteRecord.Route] = [.onDevice, .cloudMinimal, .cloudStandard, .keptOnDevice, .budgetSpent, .failed]
+        let routes: [RouteRecord.Route] = [.onDevice, .memoryRecall, .cloudMinimal, .cloudStandard, .keptOnDevice, .budgetSpent, .failed]
         let summaries = routes.map { RouteRecord(route: $0, providerName: "Gemini").summary }
         XCTAssertEqual(Set(summaries).count, routes.count)
     }

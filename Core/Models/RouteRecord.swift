@@ -7,6 +7,7 @@ import Foundation
 public struct RouteRecord: Sendable, Equatable, Identifiable {
     public enum Route: String, Sendable, Equatable {
         case onDevice
+        case memoryRecall
         case cloudMinimal
         case cloudStandard
         case keptOnDevice
@@ -31,6 +32,7 @@ public struct RouteRecord: Sendable, Equatable, Identifiable {
     public var summary: String {
         switch route {
         case .onDevice: return "On device: nothing left the phone"
+        case .memoryRecall: return "From saved notes on device: no model call"
         case .cloudMinimal: return "Cloud (\(providerName ?? "cloud")): minimal context, provider may train"
         case .cloudStandard: return "Cloud (\(providerName ?? "cloud")): standard context"
         case .keptOnDevice: return "Kept on device: personal turn, cloud blocked by the privacy gate"
