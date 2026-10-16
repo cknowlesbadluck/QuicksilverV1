@@ -22,6 +22,9 @@ final class DependencyContainer {
     let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
 
+    /// Spotlight opt-in for saved notes (off by default; M3.5-T9).
+    @ObservationIgnored lazy var noteSpotlight = NoteSpotlightSync(flags: featureFlags, surface: brain)
+
     /// Central intelligence coordinator. UI and Intents should prefer the Brain
     /// for complex reasoning instead of reaching into individual services.
     let brain: MercuryBrain

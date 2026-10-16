@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import Core
 import ServicesAI
+import QuicksilverIntents
 
 @MainActor
 @Observable
@@ -29,6 +30,8 @@ final class CodexViewModel {
     private(set) var onDeviceStatus: String = ""
     private(set) var onDeviceReason: String?
     private(set) var answerRoute: String = ""
+    /// Spotlight opt-in for saved notes. Off by default.
+    private(set) var spotlightNotesEnabled = false
 
     private let container: DependencyContainer
     /// Cancels in-flight `/v1/config` refresh on unbind / rebind.
@@ -56,6 +59,12 @@ final class CodexViewModel {
         onDeviceStatus = availability.shortLabel
         onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason
         answerRoute = aiEnabled ? container.aiService.activeRouteName : "Dormant (wake it above)"
+        spotlightNotesEnabled = container.featureFlags.isEnabled(NoteSpotlightSync.flagKey)
+    }
+
+    func setSpotlightNotes(_ enabled: Bool) {
+        spotlightNotesEnabled = enabled
+        Task { await container.noteSpotlight.setEnabled(enabled) }
     }
 
     func saveGrokKey() {
