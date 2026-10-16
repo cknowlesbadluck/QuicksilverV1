@@ -284,7 +284,40 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             test \
             -only-testing:QuicksilverAppTests \
+            -resultBundlePath AppTests.xcresult \
             2>&1 | tee app-tests.log
+
+      # Simulator proof bundle: the unsigned Debug simulator .app, the AppTests result bundle and
+      # a manifest tying them to this commit. Not a device build and not installable on an iPhone.
+      - name: Package simulator proof bundle
+        if: success()
+        run: |
+          set -euo pipefail
+          APP=$(find DerivedData/Build/Products/Debug-iphonesimulator -maxdepth 1 -name '*.app' | head -1)
+          test -n "$APP"
+          mkdir -p sim-proof
+          ditto -c -k --keepParent "$APP" sim-proof/Quicksilver-simulator-unsigned.zip
+          {
+            echo "commit: ${GITHUB_SHA}"
+            echo "ref: ${GITHUB_REF}"
+            echo "run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+            echo "destination: ${{ steps.dest.outputs.destination }}"
+            echo "xcode: $(xcodebuild -version | tr '\n' ' ')"
+            echo "signing: none (CODE_SIGNING_ALLOWED=NO); simulator only, not device evidence"
+            echo "app_sha256: $(shasum -a 256 sim-proof/Quicksilver-simulator-unsigned.zip | cut -d' ' -f1)"
+          } > sim-proof/MANIFEST.txt
+          cat sim-proof/MANIFEST.txt
+
+      - name: Upload simulator proof bundle
+        if: success()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: simulator-proof-${{ github.sha }}
+          path: |
+            sim-proof
+            AppTests.xcresult
+          retention-days: 14
+          if-no-files-found: error
 
       - name: Build diagnostics on failure
         if: failure()
