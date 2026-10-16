@@ -250,6 +250,11 @@ struct SpatialSanctum: View {
             }
         }
         .frame(maxWidth: .infinity)
+        // Near-opaque backing: the presence glow and portal halos sit behind this row, and the
+        // audit failed contrast on the "Eternal" subtitle over them (main run after #318).
+        .padding(.vertical, 8)
+        .padding(.horizontal, 6)
+        .background(PersonaTheme.chaosBlack.opacity(0.9), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 
