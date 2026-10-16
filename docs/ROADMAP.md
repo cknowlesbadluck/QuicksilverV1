@@ -547,6 +547,20 @@ Squash-merged with main green between each: #281 · #289 · #290 · #291 · #293
 - **Phase 8:** accessibility-check flakes in the Sanctum fixed (#288, #302, #304).
 - **Gates unchanged:** CHR-55 open, HG2/HG3 owner-only, `release.yml` (#250) needs owner OK, the `aiServiceEnabled` default stays off. There's no IPA from current main. Scored delta: `docs/AUDIT-2026-10-15.md`.
 
+### Status 2026-10-16 (early morning)
+Merged: #306 ratchet (24521e8) · #310 header separator contrast (1fc2407) · #308 prune unused UI (3c79fe4). Open: #309 TSan job (green except an intermittent "Eternal" contrast flake in the UI check), #311 free-budget awareness (green), #312 audit delta (green), #284 LoggerService (owner draft). M4-T5 failure banner and backup-store disclosure are prepared on `feat/m4-t5-memory-notices`.
+10-phase progress:
+1. Stabilize ✅ except #250 (owner).
+2. Concurrency: done once #284 and #309 land.
+3. Apple Intelligence first: code done; HG5 open.
+4. Gateway: privacy floor ✅ (#305), budget awareness 🟡 (#311); HG2–HG4 open.
+5. Aspects: code done; owner to confirm the dwell constants.
+6. Memory: M4-T4 ✅, M4-T6 ✅, M4-T5 🟡; M4-T2 fixture next.
+7. App Intents: M3.5-T9 MemoryEntity next.
+8. Sanctum: accessibility flakes keep surfacing (see the "Eternal" subtitle); snapshot tests next.
+9. Hardening: add budget exhaustion and mid-stream network loss tests.
+10. Freeze: blocked on an IPA from current main plus CHR-55/HG1 (owner).
+
 ## 5. Risks
 
 1. **iOS 27 SDK gap.** CI's `latest-stable` Xcode (**currently 26.3**) has no iOS 27 SDK, so the newest Apple Intelligence APIs can't be adopted or CI-verified yet (see M3.5 *Deferred*). When the channel advances, re-check this gap.
