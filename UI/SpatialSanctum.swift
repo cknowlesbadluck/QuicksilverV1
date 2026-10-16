@@ -326,7 +326,8 @@ private struct SpatialPortalButton: View {
 
                 Text(destination.subtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    // readableSecondary, not .secondary: the audit failed contrast on "Eternal".
+                    .foregroundStyle(PersonaTheme.readableSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
