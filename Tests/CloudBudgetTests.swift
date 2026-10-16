@@ -60,7 +60,7 @@ final class CloudBudgetRoutingTests: XCTestCase {
     override func setUp() { CloudBudgetMonitor.shared.reset() }
     override func tearDown() { CloudBudgetMonitor.shared.reset() }
 
-    private static let happy = "event: meta\ndata: {\"route\":\"cloud\",\"model\":\"fake\",\"trainsOnPrompts\":false}\n\n"
+    nonisolated private static let happy = "event: meta\ndata: {\"route\":\"cloud\",\"model\":\"fake\",\"trainsOnPrompts\":false}\n\n"
         + "event: delta\ndata: {\"text\":\"cloud\"}\n\nevent: done\ndata: {\"usage\":{\"promptTokens\":1,\"completionTokens\":1}}\n\n"
 
     private func makeService(model: ScriptedOnDeviceModel, opens: OpenCounter) throws -> AIService {
