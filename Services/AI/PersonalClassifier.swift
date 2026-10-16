@@ -1,0 +1,97 @@
+import Foundation
+import NaturalLanguage
+
+/// On-device "is this personal?" check for the privacy gate. NaturalLanguage public APIs only;
+/// no network, no model download, no third-party code.
+///
+/// Runs only after the phrase and word lists find nothing. Fail-closed by design: when the text
+/// is self-referential ("my", "me", "our"…) and the classifier can't decide (no sentence
+/// embedding on this device), the turn is treated as personal and stays on device.
+/// Text with no possessive or objective first person ("how do I sort an array") is never
+/// flagged here, so knowledge questions keep their cloud fallback.
+public enum PersonalClassifier {
+    public enum Verdict: Equatable, Sendable {
+        case impersonal
+        case personal(Reason)
+    }
+
+    public enum Reason: String, Sendable {
+        case namedPerson        // self-reference plus a person's name ("my friend John Smith")
+        case semantic           // close to a personal prototype sentence
+        case undecidedFailClosed // self-reference, but no embedding to decide with
+    }
+
+    /// Cosine distance (0 identical … 2 opposite) at or below which text counts as personal.
+    public static let semanticThreshold = 0.85
+
+    /// Self-referential markers. "I" alone is excluded: "how do I…" is a knowledge question.
+    static let selfReference: Set<String> = ["my", "mine", "myself", "me", "our", "ours", "ourselves", "us"]
+
+    /// Short descriptions of what personal turns are about. Compared by meaning, not words.
+    static let prototypes = [
+        "my health, symptoms, diagnosis or medication",
+        "my feelings, anxiety, depression or mental state",
+        "my relationship with my partner, family or friends",
+        "my money, salary, debt, bank account or taxes",
+        "where I live, my home address or my location",
+        "my job situation, my boss or my performance review",
+        "my passwords, account logins or private codes",
+        "my children, my pregnancy or my family plans"
+    ]
+
+    public static func classify(_ text: String, similarity: SentenceSimilarity = NLSentenceSimilarity.shared) -> Verdict {
+        let words = lowercasedWords(text)
+        guard !words.isDisjoint(with: selfReference) else { return .impersonal }
+        if containsPersonName(text) { return .personal(.namedPerson) }
+        guard let distance = similarity.minimumDistance(from: text, to: prototypes) else {
+            return .personal(.undecidedFailClosed)
+        }
+        return distance <= semanticThreshold ? .personal(.semantic) : .impersonal
+    }
+
+    public static func isPersonal(_ text: String, similarity: SentenceSimilarity = NLSentenceSimilarity.shared) -> Bool {
+        classify(text, similarity: similarity) != .impersonal
+    }
+
+    static func lowercasedWords(_ text: String) -> Set<String> {
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = text
+        var words: Set<String> = []
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
+            words.insert(text[range].lowercased())
+            return true
+        }
+        return words
+    }
+
+    static func containsPersonName(_ text: String) -> Bool {
+        let tagger = NLTagger(tagSchemes: [.nameType])
+        tagger.string = text
+        var found = false
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType,
+                             options: [.omitWhitespace, .omitPunctuation, .joinNames]) { tag, _ in
+            if tag == .personalName { found = true }
+            return !found
+        }
+        return found
+    }
+}
+
+/// Sentence similarity source. `nil` means "can't decide on this device".
+public protocol SentenceSimilarity: Sendable {
+    func minimumDistance(from text: String, to candidates: [String]) -> Double?
+}
+
+/// Apple's on-device English sentence embedding (public NaturalLanguage API).
+public final class NLSentenceSimilarity: SentenceSimilarity, Sendable {
+    public static let shared = NLSentenceSimilarity()
+    private init() {}
+
+    public func minimumDistance(from text: String, to candidates: [String]) -> Double? {
+        guard let embedding = NLEmbedding.sentenceEmbedding(for: .english) else { return nil }
+        let distances = candidates.map { embedding.distance(between: text, and: $0, distanceType: .cosine) }
+        // NLEmbedding reports 2.0 when it can't embed a string; treat all-unknown as undecided.
+        let known = distances.filter { $0.isFinite && $0 < 2.0 }
+        return known.min()
+    }
+}

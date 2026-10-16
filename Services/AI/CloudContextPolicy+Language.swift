@@ -36,6 +36,7 @@ extension CloudContextPolicy {
     /// NaturalLanguage-assisted check, used after the phrase and word lists find nothing.
     static func isPersonalByLanguageAnalysis(_ text: String) -> Bool {
         if isConfidentlyNonEnglish(text) { return true }
-        return !lemmas(text).isDisjoint(with: personalWords)
+        if !lemmas(text).isDisjoint(with: personalWords) { return true }
+        return PersonalClassifier.isPersonal(text)
     }
 }
