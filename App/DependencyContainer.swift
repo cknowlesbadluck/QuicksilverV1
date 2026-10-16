@@ -18,6 +18,8 @@ final class DependencyContainer {
     let eventBus: EventBus
     let personaManager: PersonaManager
     let memoryManager: MemoryManager
+    /// Which memory store opened this session (M4-T5 backup-store disclosure).
+    let memoryBackend: MemoryBackend
     let aiService: AIService
     let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
@@ -49,12 +51,15 @@ final class DependencyContainer {
         let resolvedMemoryStore: MemoryStore
         if let memoryStore {
             resolvedMemoryStore = memoryStore
+            self.memoryBackend = .injected
             logger.info("Memory backend: injected", category: logger.memory)
         } else if let swiftDataStore = try? SwiftDataMemoryStore() {
             resolvedMemoryStore = swiftDataStore
+            self.memoryBackend = .swiftData
             logger.info("Memory backend: SwiftData", category: logger.memory)
         } else {
             resolvedMemoryStore = KeychainMemoryStore()
+            self.memoryBackend = .keychainFallback
             logger.info("Memory backend: Keychain (SwiftData unavailable)", category: logger.memory)
         }
         self.memoryManager = MemoryManager(store: resolvedMemoryStore, eventBus: eventBus, logger: logger)
