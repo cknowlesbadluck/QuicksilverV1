@@ -13,7 +13,8 @@ public enum MemoryBackend: String, Sendable, Equatable {
     public var disclosure: String? {
         switch self {
         case .keychainFallback:
-            return "Using the backup store: the main memory store couldn't open, so memories are saved in the Keychain. They stay private and on this device."
+            return "Using the backup store: the main memory store couldn't open, "
+                + "so memories are saved in the Keychain. They stay private and on this device."
         case .swiftData, .injected:
             return nil
         }
