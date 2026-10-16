@@ -181,9 +181,12 @@ struct SpatialSanctum: View {
                 .tracking(1.6)
                 .foregroundStyle(PersonaTheme.readableText)
 
-            Text("\u{00B7}")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(PersonaTheme.readableText)
+            // A shape, not Text("\u{00B7}"): a 4 pt glyph still surfaced to the audit as
+            // StaticText and failed contrast intermittently, even inside the collapsed element.
+            Circle()
+                .fill(PersonaTheme.readableText)
+                .frame(width: 3, height: 3)
+                .accessibilityHidden(true)
 
             Text(visualState.rawValue.uppercased())
                 .font(.caption.weight(.medium))
