@@ -114,6 +114,8 @@ extension AIService {
             return nil
         }
         let timeouts = routingConfigStore?.loadValidated().gatewayTimeouts ?? .defaults
+        // A new or rebuilt binding starts with no reading, so a previous gateway's count never shows.
+        cloudBudget.reset()
         let transport = GatewayStreamTransport
             .urlSession(GatewayStreamTransport.makeSecureSession())
             .recordingBudget(into: cloudBudget)

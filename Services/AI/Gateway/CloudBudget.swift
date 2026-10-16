@@ -23,6 +23,7 @@ public struct CloudBudget: Sendable, Equatable {
     public var isExhausted: Bool { remaining == 0 }
 
     /// At or below 10% of the daily total (at least 1 request) counts as "near the limit".
+    /// Deliberately includes 0: with no cloud fallback left, a second on-device attempt is the most valuable one.
     public var isNearLimit: Bool { remaining <= max(1, limit / 10) }
 
     public var label: String {
