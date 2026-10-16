@@ -28,7 +28,7 @@ final class DiagnosticsReportTests: XCTestCase {
         XCTAssertTrue(text.contains("Keychain Gemini key: unreadable (-25300)"))
         XCTAssertTrue(text.contains("Keychain Gateway URL: missing"))
         XCTAssertTrue(text.contains("Memory: 12 items, 4 notes, store=backup"))
-        XCTAssertTrue(text.contains("non-English fails closed"))
+        XCTAssertTrue(text.contains("Privacy gate: floor=remote may tighten, never loosen"))
         XCTAssertTrue(text.contains("On-device model: unavailable"))
     }
 
@@ -49,11 +49,15 @@ final class DiagnosticsReportTests: XCTestCase {
 
     /// Structural guarantee: the only inputs are counts, enums, Bools and two filtered version strings.
     func testNoPromptReplyMemoryOrKeyCanAppear() {
-        let secrets = ["What is my blood test result", "Your appointment is at 3pm", "remember the gate code 4471", "sk-live-SECRETKEY"]
+        let secrets = [
+            "What is my blood test result", "Your appointment is at 3pm", "remember the gate code 4471", "sk-live-SECRETKEY"
+        ]
         let text = report(routes: [RouteRecord(route: .keptOnDevice)]).text
         for secret in secrets { XCTAssertFalse(text.contains(secret)) }
-        let allowedPrefixes = ["Quicksilver diagnostics", "Version:", "On-device model:", "Recent routes:", "Cloud budget:",
-                               "Keychain ", "Memory:", "Privacy gate:"]
+        let allowedPrefixes = [
+            "Quicksilver diagnostics", "Version:", "On-device model:", "Recent routes:", "Cloud budget:",
+            "Keychain ", "Memory:", "Privacy gate:"
+        ]
         for line in text.split(separator: "\n") {
             XCTAssertTrue(allowedPrefixes.contains { line.hasPrefix($0) }, "unexpected line: \(line)")
         }

@@ -61,7 +61,9 @@ public struct DiagnosticsReport: Sendable, Equatable {
         var lines = ["Quicksilver diagnostics (no prompts, replies, notes or keys)"]
         lines.append("Version: \(appVersion) (\(build))")
         lines.append("On-device model: \(onDeviceAvailable ? "available" : "unavailable")")
-        let order: [RouteRecord.Route] = [.onDevice, .memoryRecall, .cloudMinimal, .cloudStandard, .keptOnDevice, .budgetSpent, .failed]
+        let order: [RouteRecord.Route] = [
+            .onDevice, .memoryRecall, .cloudMinimal, .cloudStandard, .keptOnDevice, .budgetSpent, .failed
+        ]
         let routes = order.map { "\($0.rawValue)=\(routeCounts[$0, default: 0])" }.joined(separator: " ")
         lines.append("Recent routes: \(routes)")
         if let remaining = budgetRemaining, let limit = budgetLimit {
@@ -74,9 +76,8 @@ public struct DiagnosticsReport: Sendable, Equatable {
         }
         lines.append("Memory: \(memoryTotal) items, \(memoryNotes) notes, store=\(memoryUsingBackupStore ? "backup" : "primary")")
         lines.append(
-            "Privacy gate: floor=remote may tighten, never loosen; phrases=\(CloudContextPolicy.personalPhrases.count) "
-                + "words=\(CloudContextPolicy.personalWords.count); non-English fails closed at "
-                + "\(CloudContextPolicy.nonEnglishConfidence) (min \(CloudContextPolicy.languageMinimumLetters) letters)"
+            "Privacy gate: floor=remote may tighten, never loosen; "
+                + "phrases=\(CloudContextPolicy.personalPhrases.count) words=\(CloudContextPolicy.personalWords.count)"
         )
         return lines.joined(separator: "\n")
     }
@@ -86,7 +87,8 @@ extension AIService {
     /// Keychain state per fixed slot (never values).
     public func credentialStates() -> [DiagnosticsReport.CredentialSlot: KeychainStore.CredentialState] {
         let accounts: [DiagnosticsReport.CredentialSlot: String] = [
-            .gatewayURL: Self.gatewayBaseURLKeychainAccount, .gatewayToken: GatewayAIProvider.deviceTokenKeychainAccount,
+            .gatewayURL: Self.gatewayBaseURLKeychainAccount,
+            .gatewayToken: GatewayAIProvider.deviceTokenKeychainAccount,
             .grokKey: Self.grokAPIKeyKeychainAccount, .geminiKey: Self.geminiAPIKeyKeychainAccount
         ]
         return accounts.mapValues { KeychainStore.credentialState(forKey: $0) }
