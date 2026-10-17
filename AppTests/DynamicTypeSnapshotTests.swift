@@ -62,16 +62,24 @@ final class DynamicTypeSnapshotTests: XCTestCase {
                 .preferredColorScheme(.dark)
         )
         host.traitOverrides.preferredContentSizeCategory = .accessibilityExtraExtraExtraLarge
-        let window = UIWindow(frame: CGRect(origin: .zero, size: Self.size))
+        // Attach to the host app's scene: a scene-less window never renders, so drawHierarchy
+        // captured a blank image on CI.
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
+        window.frame = CGRect(origin: .zero, size: Self.size)
         window.rootViewController = host
         window.makeKeyAndVisible()
         host.view.setNeedsLayout()
         host.view.layoutIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.5)) // let SwiftUI/Form settle
+        RunLoop.main.run(until: Date().addingTimeInterval(1.0)) // let SwiftUI/Form settle
+        CATransaction.flush()
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         let image = UIGraphicsImageRenderer(size: Self.size, format: format).image { _ in
-            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+            if !window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) {
+                // Fallback when the window isn't on screen: render the layer tree directly.
+                window.layer.render(in: UIGraphicsGetCurrentContext()!)
+            }
         }
         window.isHidden = true
         return image
