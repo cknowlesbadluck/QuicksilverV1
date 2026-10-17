@@ -29,3 +29,22 @@ extension IntelligenceSurface {
         snapshot(limit: 5)
     }
 }
+
+// MARK: - Memory notes for App Intents (M3.5-T11)
+
+extension IntelligenceSurface {
+    /// User notes only (keys `note.*`, which includes "remember …"). Conversation turns
+    /// and system items are never exposed to Shortcuts, Siri or Spotlight.
+    public func memoryNotes(matching query: String? = nil, limit: Int = 20) -> [MemoryItem] {
+        let needle = query?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        return snapshot(limit: 500)
+            .filter { $0.key.hasPrefix("note.") && $0.category != .conversation }
+            .filter { needle.isEmpty || $0.value.lowercased().contains(needle) }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    public func memoryNote(id: UUID) -> MemoryItem? {
+        memoryNotes(limit: 500).first { $0.id == id }
+    }
+}
