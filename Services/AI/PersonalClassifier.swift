@@ -53,7 +53,7 @@ public enum PersonalClassifier {
         ],
         "feelings": [
             "feel", "lonely", "sad", "overwhelm", "overwhelming", "anxious", "worried", "worry", "afraid",
-            "stress", "stressed", "upset", "angry", "hurt", "cry", "miss", "grief", "unsafe", "ashamed", "argue"
+            "stress", "stressed", "upset", "angry", "hurt", "cry", "grief", "unsafe", "ashamed", "argue"
         ],
         "work": [
             "manager", "boss", "colleague", "coworker", "interview", "interviewing", "fired",
@@ -111,8 +111,10 @@ public enum PersonalClassifier {
         tagger.string = text
         var found = false
         tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .nameType,
-                             options: [.omitWhitespace, .omitPunctuation, .joinNames]) { tag, _ in
-            if tag == .personalName { found = true }
+                             options: [.omitWhitespace, .omitPunctuation, .joinNames]) { tag, range in
+            // All-caps tokens ("CI", "NASA") are acronyms, not people: the tagger mislabels them.
+            let token = text[range]
+            if tag == .personalName, token != token.uppercased() { found = true }
             return !found
         }
         return found

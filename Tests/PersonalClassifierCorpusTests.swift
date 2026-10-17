@@ -13,6 +13,11 @@ import XCTest
 ///   overlapped the same way (personal 0.88–1.12, hard negatives 1.04–1.16).
 /// - What separates is self-reference plus a personal-domain lemma, which is why `domainLemmas`
 ///   exists. Tuning corpus: recall 19/20, hard-negative false positives 0/10.
+/// - Held out, first run: recall 7/12, false positives 2/10 ("missing" lemmatised to "miss";
+///   the tagger read "CI" as a name). Both were precision fixes (drop "miss", ignore all-caps
+///   names); recall misses (toddler, hands shaking, card declined, sick cat, nervous) were left
+///   unfixed so the held-out number stays honest. In routing these still stay local when they
+///   are the prompt: the planner keeps every first-person prompt on device.
 final class PersonalClassifierCorpusTests: XCTestCase {
     private struct NoEmbedding: SentenceSimilarity {
         func minimumDistance(from text: String, to candidates: [String]) -> Double? { nil }

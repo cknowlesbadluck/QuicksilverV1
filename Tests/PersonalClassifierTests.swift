@@ -52,6 +52,10 @@ final class PersonalClassifierTests: XCTestCase {
         XCTAssertEqual(PersonalClassifier.classify("How do I rent a car in Lisbon", similarity: far), .impersonal)
     }
 
+    func testAcronymIsNotAPersonName() {
+        XCTAssertFalse(PersonalClassifier.containsPersonName("my unit tests fail only on CI"))
+    }
+
     func testWeCountsAsSelfReference() {
         XCTAssertEqual(PersonalClassifier.classify("we keep fighting about chores", similarity: unavailable),
                        .personal(.undecidedFailClosed))
