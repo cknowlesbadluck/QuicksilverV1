@@ -93,6 +93,13 @@ struct MemoryView: View {
                                 importanceBadge(item.importance)
                             }
                             Text(item.value).font(.body)
+                            if let summary = vm.summaries[item.id] {
+                                Label(summary, systemImage: "text.append")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityLabel("Summary: \(summary)")
+                                    .accessibilityIdentifier("memory.noteSummary")
+                            }
                             HStack {
                                 Text(item.updatedAt, style: .relative)
                                     .font(.caption2)
@@ -110,6 +117,16 @@ struct MemoryView: View {
                                 Task { await vm.delete(id: item.id) }
                             } label: {
                                 Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions(edge: .leading) {
+                            if vm.canSummarize(item) {
+                                Button {
+                                    Task { await vm.summarize(id: item.id) }
+                                } label: {
+                                    Label("Summarize", systemImage: "text.append")
+                                }
+                                .tint(accent)
                             }
                         }
                     }
