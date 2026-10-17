@@ -19,6 +19,7 @@ final class AppIntentsDiscoveryTests: XCTestCase {
         XCTAssertFalse(GetContextIntent.openAppWhenRun)
         XCTAssertFalse(ReportStatusIntent.openAppWhenRun)
         XCTAssertFalse(QueryNexusIntent.openAppWhenRun)
+        XCTAssertFalse(FindNotesIntent.openAppWhenRun)
     }
 
     func testOpenDiagnosticsForegroundsTheApp() {
