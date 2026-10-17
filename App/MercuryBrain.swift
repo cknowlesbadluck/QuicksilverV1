@@ -111,6 +111,7 @@ final class MercuryBrain {
         visualState = .success
         refreshLivingStatus()
         stabilizeVisualStateAfterSuccess()
+        aiService.routeLog.record(RouteRecord(route: .memoryRecall)) // content-free (Codex "Recent routes")
         return AskResult(text: text, aspectID: activeAspect.rawValue, provenance: .memory)
     }
 
