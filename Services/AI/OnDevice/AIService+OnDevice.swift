@@ -66,16 +66,7 @@ extension AIService {
     func answerOnDeviceFirst(_ request: AIRequest) async throws -> AIResponse? {
         guard let onDevice = onDeviceProvider, onDevice.isAvailable else { return nil }
         do {
-            let response = try await AIStreamExecutor.collect(
-                request: Self.onDeviceRequest(from: request),
-                provider: onDevice,
-                policy: AIStreamExecutor.RetryPolicy(maxRetries: 0, honorRetryAfter: false),
-                sleep: retrySleep
-            )
-            // An empty local answer is a failure, not a reply: let the cloud try.
-            guard !response.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-                throw OnDeviceModelError.generationFailed("empty response")
-            }
+            let response = try await collectOnDevice(request, provider: onDevice)
             logger.info("AI answered on device", category: logger.ai)
             return response
         } catch {
@@ -96,9 +87,49 @@ extension AIService {
                 logger.info("On-device failed; personal turn kept on device", category: logger.ai)
                 throw AppError.keptOnDevice
             }
+            // Budget spent today: don't make a gateway round trip that can only say so.
+            if primaryProvider is GatewayAIProvider, cloudBudget.current()?.isExhausted == true {
+                logger.info("On-device failed; cloud budget spent today", category: logger.ai)
+                throw AppError.budgetExhausted
+            }
             logger.info("On-device failed; falling back to \(currentProviderName)", category: logger.ai)
             return nil
         }
+    }
+}
+
+extension AIService {
+    /// One on-device attempt, or two when the gateway budget is near today's limit
+    /// (free-budget awareness), so a transient local failure doesn't spend scarce cloud requests.
+    /// Guardrail refusals and cancellation are never retried.
+    func collectOnDevice(_ request: AIRequest, provider: OnDeviceAIProvider) async throws -> AIResponse {
+        let attempts = cloudBudgetIsNearLimit ? 2 : 1
+        var lastError: Error = OnDeviceModelError.generationFailed("no attempt")
+        for _ in 0..<attempts {
+            do {
+                let response = try await AIStreamExecutor.collect(
+                    request: Self.onDeviceRequest(from: request),
+                    provider: provider,
+                    policy: AIStreamExecutor.RetryPolicy(maxRetries: 0, honorRetryAfter: false),
+                    sleep: retrySleep
+                )
+                // An empty local answer is a failure, not a reply: let the cloud try.
+                guard !response.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                    throw OnDeviceModelError.generationFailed("empty response")
+                }
+                return response
+            } catch {
+                if AIClientClassifier.isCancellation(error) { throw error }
+                if case OnDeviceModelError.guardrailViolation = error { throw error }
+                lastError = error
+            }
+        }
+        throw lastError
+    }
+
+    /// True only for a gateway route whose budget reading for today is near the limit.
+    var cloudBudgetIsNearLimit: Bool {
+        primaryProvider is GatewayAIProvider && cloudBudget.current()?.isNearLimit == true
     }
 }
 

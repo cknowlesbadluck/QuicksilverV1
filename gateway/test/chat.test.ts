@@ -97,6 +97,25 @@ describe("POST /v1/chat limits", () => {
     await expect(reset.text()).resolves.toBe(upstreamUnavailableSse);
   });
 
+  it("reports budget headers (counts only) on budget_exhausted and on routed replies", async () => {
+    const state = createState();
+    const candidates = orderedCandidates(state.config);
+    const limit = candidates.reduce((sum, c) => sum + c.dailyBudget, 0);
+
+    const routed = await handleRequest(chat(TOKEN), ENV, state, T0);
+    expect(routed.headers.get("x-mercury-budget-limit")).toBe(String(limit));
+    const remaining = Number(routed.headers.get("x-mercury-budget-remaining"));
+    expect(remaining).toBeGreaterThanOrEqual(0);
+    expect(remaining).toBeLessThanOrEqual(limit);
+
+    for (const candidate of candidates) {
+      while (state.budgets.tryConsume(candidate, T0));
+    }
+    const exhausted = await handleRequest(chat(TOKEN), ENV, state, T0);
+    expect(exhausted.headers.get("x-mercury-budget-remaining")).toBe("0");
+    expect(exhausted.headers.get("x-mercury-budget-limit")).toBe(String(limit));
+  });
+
   it("keeps serving while any candidate has budget left", async () => {
     const state = createState();
     const [main] = orderedCandidates(state.config);
