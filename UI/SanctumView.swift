@@ -37,8 +37,18 @@ struct SanctumView: View {
         }
         .onDisappear { viewModel?.stopLiveRefresh() }
         .sheet(isPresented: $showAsk) {
-            NavigationStack { AskView() }
-                .preferredColorScheme(.dark)
+            NavigationStack {
+                AskView()
+                    .toolbar {
+                        // Explicit close: a swipe can be eaten by the keyboard, and VoiceOver
+                        // and Switch Control users need a visible way out.
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Close") { showAsk = false }
+                                .accessibilityIdentifier("ask.close")
+                        }
+                    }
+            }
+            .preferredColorScheme(.dark)
         }
         .fullScreenCover(item: $destination) { selected in
             destinationView(selected)
