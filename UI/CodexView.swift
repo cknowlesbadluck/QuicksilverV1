@@ -32,6 +32,15 @@ struct CodexView: View {
     private func codexContent(_ vm: CodexViewModel) -> some View {
         Form {
             mindSection(vm)
+            Section {
+                Toggle("Show notes in Spotlight", isOn: Binding(
+                    get: { vm.spotlightNotesEnabled },
+                    set: { vm.setSpotlightNotes($0) }
+                ))
+                .accessibilityIdentifier("codex.spotlightNotes")
+            } footer: {
+                Text("Off by default. Only saved notes, never conversations. Turning it off removes them from search.")
+            }
             gatewaySection(vm)
             covenantSection(vm)
 
