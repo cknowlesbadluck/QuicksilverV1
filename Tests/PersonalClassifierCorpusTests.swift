@@ -15,13 +15,17 @@ final class PersonalClassifierCorpusTests: XCTestCase {
         func minimumDistance(from text: String, to candidates: [String]) -> Double? { nil }
     }
 
+    private struct NoWords: WordSimilarity {
+        func minimumDistance(from words: Set<String>, toSeeds seeds: [String]) -> Double? { nil }
+    }
+
     func testFailClosedRecallIsTotalWithoutEmbedding() {
-        let missed = PrivacyCorpus.personal.filter { !PersonalClassifier.isPersonal($0.text, similarity: NoEmbedding()) }
+        let missed = PrivacyCorpus.personal.filter { !PersonalClassifier.isPersonal($0.text, similarity: NoEmbedding(), wordNeighbors: NoWords()) }
         XCTAssertTrue(missed.isEmpty, "fail-closed missed: \(missed.map(\.text))")
     }
 
     func testNoSelfReferenceIsNeverFlagged() {
-        let flagged = PrivacyCorpus.impersonal.filter { PersonalClassifier.isPersonal($0, similarity: NoEmbedding()) }
+        let flagged = PrivacyCorpus.impersonal.filter { PersonalClassifier.isPersonal($0, similarity: NoEmbedding(), wordNeighbors: NoWords()) }
         XCTAssertTrue(flagged.isEmpty, "false positives: \(flagged)")
     }
 
@@ -42,6 +46,18 @@ final class PersonalClassifierCorpusTests: XCTestCase {
         }
         for text in PrivacyCorpus.impersonal {
             lines.append(String(format: "CALIB impersonal - %.3f %@", distance(text), text))
+        }
+        let words = NLWordSimilarity.shared
+        func wordDistance(_ text: String) -> Double {
+            words.minimumDistance(from: PersonalClassifier.lowercasedWords(text), toSeeds: PersonalClassifier.domainSeeds) ?? -1
+        }
+        for item in PrivacyCorpus.personal {
+            let verdict = PersonalClassifier.classify(item.text, similarity: NLSentenceSimilarity.shared, wordNeighbors: NoWords())
+            lines.append(String(format: "WORD personal %.3f %@ %@", wordDistance(item.text), "\(verdict)", item.text))
+        }
+        for text in PrivacyCorpus.impersonalSelfReferential {
+            let verdict = PersonalClassifier.classify(text, similarity: NLSentenceSimilarity.shared, wordNeighbors: NoWords())
+            lines.append(String(format: "WORD hardneg %.3f %@ %@", wordDistance(text), "\(verdict)", text))
         }
         print(lines.joined(separator: "\n"))
         let personalHits = PrivacyCorpus.personal.filter { PersonalClassifier.isPersonal($0.text) }.count
