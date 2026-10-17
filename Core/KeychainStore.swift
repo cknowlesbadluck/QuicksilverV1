@@ -123,7 +123,9 @@ public enum KeychainStore: Sendable {
         set(value?.data(using: .utf8), forKey: key)
     }
 
-    public static func delete(forKey key: String) {
-        _ = set(nil as Data?, forKey: key)
+    /// Removes the item. Returns false when the Keychain refused (missing items count as success).
+    @discardableResult
+    public static func delete(forKey key: String) -> Bool {
+        set(nil as Data?, forKey: key)
     }
 }

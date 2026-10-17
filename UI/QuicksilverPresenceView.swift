@@ -28,11 +28,16 @@ struct QuicksilverPresenceView: View {
                     .font(.title3.weight(.semibold))
                     .tracking(0.45)
                     .foregroundStyle(PersonaTheme.mercurySilver)
+                    .multilineTextAlignment(.center)
+                    // Wrap instead of clipping at large Dynamic Type (audit: "Text clipped" on "The core is awake").
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 24)
 
                 Text(livingStatus)
                     .font(.subheadline)
                     .foregroundStyle(PersonaTheme.readableSecondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 24)
             }
         }
