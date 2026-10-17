@@ -53,4 +53,34 @@ enum PrivacyCorpus {
         "Compare Python and Rust for command line tools",
         "How does a heat pump work"
     ]
+
+    /// Held out: written after the domain lexicon was frozen and never used to tune it.
+    /// The tests record honest generalisation on these, including known misses.
+    static let heldOutPersonal: [String] = [
+        "my sister just got engaged and I don't know what to get her",
+        "I think my landlord is going to evict us",
+        "how do I tell my parents I'm dropping out",
+        "my toddler won't eat anything green",
+        "is it normal that my hands shake every morning",
+        "we can't afford the car repairs this month",
+        "my credit card got declined at the shop",
+        "our cat has been sick for days",
+        "remind me to pay the electricity bill on friday",
+        "my coworker keeps making comments about my weight",
+        "I'm nervous about my driving test tomorrow",
+        "my husband snores and I can't sleep"
+    ]
+
+    static let heldOutImpersonalSelfReferential: [String] = [
+        "my unit tests fail only on CI, any idea why",
+        "convert my recipe from cups to grams",
+        "why is my React component rendering twice",
+        "summarize my notes on the Krebs cycle",
+        "my python script is slow, how can I profile it",
+        "teach me the basics of chess openings",
+        "can you rate my haiku about the sea",
+        "show me how to center a div",
+        "explain my compiler error: missing return in closure",
+        "give me a mnemonic for the order of the planets"
+    ]
 }
