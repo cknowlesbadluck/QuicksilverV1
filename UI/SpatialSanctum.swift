@@ -320,8 +320,10 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption)
-                    // Full-strength readable color: the audit failed contrast on "Workshop" at 0.78 opacity.
+                    // Semibold: at regular caption weight the audit's contrast sampling of the thin,
+                    // anti-aliased glyphs failed "Workshop" even though the rendered crop is ~15:1
+                    // (xcresult attachment, run 38988415167). Heavier strokes give it solid pixels.
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(PersonaTheme.readableSecondary)
                     .multilineTextAlignment(.center)
                     // Grow vertically instead of truncating or scaling: the audit still reported
