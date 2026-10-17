@@ -117,3 +117,21 @@ export function firstCandidateWithBudget(
 ): Candidate | null {
   return orderedCandidates(config).find((c) => budgets.remaining(c, now) > 0) ?? null;
 }
+
+/**
+ * Budget headers for the app (free-budget awareness): requests left today summed over
+ * all candidates, and the daily total. Counts only, with no provider names or keys.
+ */
+export function budgetHeaders(
+  config: RoutingConfig,
+  budgets: DailyBudgets,
+  now: number,
+): Record<string, string> {
+  const candidates = orderedCandidates(config);
+  const limit = candidates.reduce((sum, c) => sum + c.dailyBudget, 0);
+  const remaining = candidates.reduce((sum, c) => sum + budgets.remaining(c, now), 0);
+  return {
+    "x-mercury-budget-remaining": String(remaining),
+    "x-mercury-budget-limit": String(limit),
+  };
+}
