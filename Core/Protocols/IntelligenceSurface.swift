@@ -22,10 +22,37 @@ public protocol IntelligenceSurface: AnyObject {
 
     /// Compact diagnostic report (aspect + Nexus health signals).
     func statusReport() throws -> String
+
+    /// Deletes one saved user note (M3.5 memory delete). Notes only: conversation turns and
+    /// system items are refused. Returns true only when the note existed and is now gone.
+    func forgetNote(id: UUID) async -> Bool
 }
 
 extension IntelligenceSurface {
     public func snapshot() -> [MemoryItem] {
         snapshot(limit: 5)
+    }
+
+    /// Fail-closed default: a conformer that does not implement deletion refuses it.
+    /// Keeps test fakes and other conformers source-compatible (additive requirement).
+    public func forgetNote(id: UUID) async -> Bool { false }
+}
+
+// MARK: - Memory notes for App Intents (M3.5-T11)
+
+extension IntelligenceSurface {
+    /// User notes only (keys `note.*`, which includes "remember …"). Conversation turns
+    /// and system items are never exposed to Shortcuts, Siri or Spotlight.
+    public func memoryNotes(matching query: String? = nil, limit: Int = 20) -> [MemoryItem] {
+        let needle = query?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        return snapshot(limit: 500)
+            .filter { $0.key.hasPrefix("note.") && $0.category != .conversation }
+            .filter { needle.isEmpty || $0.value.lowercased().contains(needle) }
+            .prefix(limit)
+            .map { $0 }
+    }
+
+    public func memoryNote(id: UUID) -> MemoryItem? {
+        memoryNotes(limit: 500).first { $0.id == id }
     }
 }
