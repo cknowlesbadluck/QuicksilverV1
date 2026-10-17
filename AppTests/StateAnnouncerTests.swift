@@ -5,17 +5,19 @@ import Core
 
 /// VoiceOver announcements of Brain state: meaningful states only, rate-limited, critical
 /// always speaks, silent when VoiceOver is off, and driven by Observation.
+/// Internal (not private): the @Observable macro's generated extension can't see private nested types.
+@MainActor
+@Observable
+final class StateAnnouncerFakeBrain {
+    var visualState: VisualState = .idle
+}
+
 @MainActor
 final class StateAnnouncerTests: XCTestCase {
-    @Observable
-    private final class FakeBrain {
-        var visualState: VisualState = .idle
-    }
-
     private var spoken: [String] = []
     private var clock = Date(timeIntervalSince1970: 1_000)
 
-    private func announcer(enabled: Bool = true, brain: FakeBrain = FakeBrain()) -> StateAnnouncer {
+    private func announcer(enabled: Bool = true, brain: StateAnnouncerFakeBrain = StateAnnouncerFakeBrain()) -> StateAnnouncer {
         StateAnnouncer(
             read: { brain.visualState },
             post: { [unowned self] in self.spoken.append($0) },
@@ -68,7 +70,7 @@ final class StateAnnouncerTests: XCTestCase {
     }
 
     func testFollowsBrainStateThroughObservation() async throws {
-        let brain = FakeBrain()
+        let brain = StateAnnouncerFakeBrain()
         let subject = announcer(brain: brain)
         subject.start()
         subject.start() // idempotent: no duplicate chain
