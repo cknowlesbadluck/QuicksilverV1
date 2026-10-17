@@ -181,6 +181,8 @@ struct SpatialSanctum: View {
                 .font(.caption.weight(.semibold))
                 .tracking(1.6)
                 .foregroundStyle(PersonaTheme.readableText)
+                // Wrap rather than truncate at larger Dynamic Type (audit: "SANCTUM" Text clipped).
+                .fixedSize(horizontal: false, vertical: true)
 
             // A shape, not Text("\u{00B7}"): a 4 pt glyph still surfaced to the audit as
             // StaticText and failed contrast intermittently, even inside the collapsed element.
@@ -192,6 +194,7 @@ struct SpatialSanctum: View {
             Text(visualState.rawValue.uppercased())
                 .font(.caption.weight(.medium))
                 .foregroundStyle(PersonaTheme.readableSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         // The audit intermittently flagged this element's caption-height frame as a too-small
         // hit area (#278 logging). Give it the 44 pt minimum and mark it a header, not a control.
