@@ -242,7 +242,7 @@ export async function openV1Stream(
 }
 
 /** 200 + the stream, or 200 + one typed `error` event (the app then goes on-device). */
-export function streamResponse(opened: OpenedStream): Response {
-  if (!opened.ok) return errorResponse(200, opened.error);
-  return new Response(opened.body, { status: 200, headers: { ...SSE_HEADERS } });
+export function streamResponse(opened: OpenedStream, extraHeaders: Record<string, string> = {}): Response {
+  if (!opened.ok) return errorResponse(200, opened.error, extraHeaders);
+  return new Response(opened.body, { status: 200, headers: { ...SSE_HEADERS, ...extraHeaders } });
 }
