@@ -565,6 +565,8 @@ Aligned with the portfolio roadmap in `cknowlesbadluck/Conduit/ROADMAP.md`, usin
 
 Merged 2026-10-16 (5–8 PM ET): #315, #318, #331, #309, #325, #326, #311, #321, #320 (SHAs in `docs/AUDIT-2026-10-16.md`). That closes the Phase 1 TSan item, the Phase 3 private-host refusal, the Phase 4 budget and route log, and the Phase 6 route honesty. Phases 8 and 9 still need the device.
 
+Open as of 11 PM ET 2026-10-16: #324 (Sanctum a11y, green), #335 (Dynamic Type snapshots), #336 (config/health use the secure session). Phase 1: only `release.yml` is unpinned (owner). Phase 2: the last `@unchecked Sendable` is #284 (owner).
+
 Gates unchanged: CHR-55 open (owner only, real device evidence); HG2/HG3 gateway account and secrets are owner only; the `aiServiceEnabled` default stays off.
 
 ## 5. Risks
