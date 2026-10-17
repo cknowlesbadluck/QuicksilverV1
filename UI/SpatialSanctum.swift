@@ -76,6 +76,7 @@ struct SpatialSanctum: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Freeze decorative time under Reduce Motion or `-uitest` (CI a11y audit).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
     @State private var showGreeting = false
     @State private var orbit: Double = 0
@@ -95,30 +96,33 @@ struct SpatialSanctum: View {
 
                 spatialArchitecture(in: proxy.size)
 
-                VStack(spacing: 0) {
-                    topPresence
-                    Spacer()
-
-                    QuicksilverPresenceView(
-                        personaID: activeAspect.rawValue,
-                        livingStatus: livingStatus,
-                        visualState: visualState
-                    )
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onInvoke() }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityLabel("Speak with Quicksilver")
-
-                    Spacer()
-                    navigationPrompt
+                // Accessibility text sizes: everything scrolls in one column and the floating
+                // greeting is dropped (the presence line already carries its prompt). At
+                // accessibility5 the greeting covered the portal grid and the stack overflowed (#335).
+                if dynamicTypeSize.isAccessibilitySize {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            topPresence
+                            presence
+                            navigationPrompt
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        topPresence
+                        Spacer()
+                        presence
+                        Spacer()
+                        navigationPrompt
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 18)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 18)
 
-                if showGreeting {
+                if showGreeting && !dynamicTypeSize.isAccessibilitySize {
                     greeting
                         .frame(maxWidth: proxy.size.width - 36)
                         // No fade when motion is frozen (Reduce Motion / -uitest): a half-faded
@@ -180,6 +184,8 @@ struct SpatialSanctum: View {
                 .font(.caption.weight(.semibold))
                 .tracking(1.6)
                 .foregroundStyle(PersonaTheme.readableText)
+                // Wrap rather than truncate at larger Dynamic Type (audit: "SANCTUM" Text clipped).
+                .fixedSize(horizontal: false, vertical: true)
 
             // A shape, not Text("\u{00B7}"): a 4 pt glyph still surfaced to the audit as
             // StaticText and failed contrast intermittently, even inside the collapsed element.
@@ -191,6 +197,7 @@ struct SpatialSanctum: View {
             Text(visualState.rawValue.uppercased())
                 .font(.caption.weight(.medium))
                 .foregroundStyle(PersonaTheme.readableSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         // The audit intermittently flagged this element's caption-height frame as a too-small
         // hit area (#278 logging). Give it the 44 pt minimum and mark it a header, not a control.
@@ -241,8 +248,30 @@ struct SpatialSanctum: View {
         return "What are we getting into?"
     }
 
+    /// Fewer, wider columns as text grows, so single long words ("Governance", "Planetarium")
+    /// fit instead of truncating (audit: "Text clipped" at larger Dynamic Type sizes).
+    private var portalColumns: Int {
+        if dynamicTypeSize >= .accessibility2 { return 1 }
+        if dynamicTypeSize >= .xLarge { return 2 }
+        return 3
+    }
+
+    private var presence: some View {
+        QuicksilverPresenceView(
+            personaID: activeAspect.rawValue,
+            livingStatus: livingStatus,
+            visualState: visualState
+        )
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+        .onTapGesture { onInvoke() }
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Speak with Quicksilver")
+    }
+
     private var navigationPrompt: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 12) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: portalColumns), spacing: 12) {
             ForEach(SpatialDestination.allCases) { destination in
                 SpatialPortalButton(destination: destination) {
                     onDestination(destination)
@@ -320,13 +349,15 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption)
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.78))
+                    // Semibold: at regular caption weight the audit's contrast sampling of the thin,
+                    // anti-aliased glyphs failed "Workshop" even though the rendered crop is ~15:1
+                    // (xcresult attachment, run 38988415167). Heavier strokes give it solid pixels.
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PersonaTheme.readableSecondary)
                     .multilineTextAlignment(.center)
-                    // A single long word ("Planetarium") can't wrap in the narrow column; scale
-                    // down instead of clipping at large Dynamic Type (audit: Text clipped).
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    // Grow vertically instead of truncating or scaling: the audit still reported
+                    // "Planetarium" as clipped with lineLimit(1) + minimumScaleFactor.
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
 
                 Text(destination.subtitle)
