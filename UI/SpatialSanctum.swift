@@ -174,25 +174,35 @@ struct SpatialSanctum: View {
     /// middot and IDLE label still audited as StaticText (contrast on `\u{00B7}`,
     /// Dynamic Type on caption2). Same collapse SpatialPortalButton already uses.
     private var headerIdentity: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(accent)
-                .frame(width: 7, height: 7)
-                .shadow(color: accent.opacity(0.8), radius: 4)
+        // Accessibility sizes stack the state under the title, so "SANCTUM" never hyphenates
+        // ("SANC-TUM" at accessibility5 in the #335 snapshot).
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(accent)
+                    .frame(width: 7, height: 7)
+                    .shadow(color: accent.opacity(0.8), radius: 4)
 
-            Text("SANCTUM")
-                .font(.caption.weight(.semibold))
-                .tracking(1.6)
-                .foregroundStyle(PersonaTheme.readableText)
-                // Wrap rather than truncate at larger Dynamic Type (audit: "SANCTUM" Text clipped).
-                .fixedSize(horizontal: false, vertical: true)
+                Text("SANCTUM")
+                    .font(.caption.weight(.semibold))
+                    .tracking(1.6)
+                    .foregroundStyle(PersonaTheme.readableText)
+                    // Wrap rather than truncate at larger Dynamic Type (audit: "SANCTUM" Text clipped).
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-            // A shape, not Text("\u{00B7}"): a 4 pt glyph still surfaced to the audit as
-            // StaticText and failed contrast intermittently, even inside the collapsed element.
-            Circle()
-                .fill(PersonaTheme.readableText)
-                .frame(width: 3, height: 3)
-                .accessibilityHidden(true)
+            if !stacked {
+                // A shape, not Text("\u{00B7}"): a 4 pt glyph still surfaced to the audit as
+                // StaticText and failed contrast intermittently, even inside the collapsed element.
+                Circle()
+                    .fill(PersonaTheme.readableText)
+                    .frame(width: 3, height: 3)
+                    .accessibilityHidden(true)
+            }
 
             Text(visualState.rawValue.uppercased())
                 .font(.caption.weight(.medium))
