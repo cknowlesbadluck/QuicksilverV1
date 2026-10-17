@@ -74,6 +74,13 @@ Foundation Stability · Device Intelligence · Memory System · AI Integration �
 
 ---
 
+### Update 2026-10-16
+- Concurrency: 0 `@unchecked Sendable` outside LoggerService (#284 pending); #306 ratchet on main; TSan job in #309 (459 tests clean).
+- Privacy: remote config can't lower the compiled-in privacy floor (#305).
+- Memory: user notes no longer decay (#303); M4-T5 failure banner and backup-store disclosure in progress.
+- Accessibility: Sanctum header separator, greeting and destination-title fixes (#302, #304, #310). The "Eternal" subtitle (`.secondary`) still fails contrast intermittently.
+- Device validation: **not done.** No IPA from current main; CHR-55 open.
+
 ## Branch Hygiene Recommendation
 
 Keep:

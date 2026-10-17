@@ -22,7 +22,7 @@ Repo: `cknowlesbadluck/QuicksilverV1` @ `main` `43cdb47` (2026-09-25). Evidence 
 
 ## 1. Definition of production-ready (checklist)
 
-- [ ] **CI:** all 4 CI jobs are green on `main`. SwiftLint `--strict` covers the **whole repo**, not only changed files. App-layer logic (MercuryBrain, view models) is unit-tested in CI. A UI smoke test plus an accessibility audit runs on the iPhone 16e simulator.
+- [ ] **CI:** all 6 CI jobs are green on `main`. SwiftLint `--strict` covers the **whole repo**, not only changed files. App-layer logic (MercuryBrain, view models) is unit-tested in CI. A UI smoke test plus an accessibility audit runs on the iPhone 16e simulator.
 - [ ] **Install:** a fresh *Archive IPA* (Release) installs through SideStore on the owner's iPhone 16e / iOS 27. It launches to the Sanctum, and data and keys survive the 7-day refresh and a reinstall over the existing app.
 - [ ] **AI (free-only architecture):** the device is the source of truth; no provider key is stored in the app. Cloud requests go only to the owner's **Mercury Gateway** (Cloudflare Workers Free), bound in the Codex as URL + device token (Keychain only, never in URLs or logs). The gateway holds the provider keys, picks the model from a routing config, fails over (before the first streamed token only), enforces per-provider daily budgets under the free limits, and streams one event format. Responses stream in the app, with timeouts and user cancellation (cancel never triggers failover). Offline, unbound, gateway failure or budget exhausted → the on-device model answers, or a clear message appears. No mock text ever reaches the user. A fake provider covers all of this in CI, and an eval harness has compared the candidate models on the Forge/Eternal prompts.
 - [ ] **Cloud privacy:** one choke point (`CloudContextPolicy`) builds every cloud payload: the question plus trimmed relevant context. Raw diagnostics and private memories never leave the device. Routes to providers that train on free-tier prompts get the minimal level (no memories, no device line).
@@ -44,7 +44,7 @@ Repo: `cknowlesbadluck/QuicksilverV1` @ `main` `43cdb47` (2026-09-25). Evidence 
 
 ## 2. Current state (honest summary)
 
-The core is in good shape. `main` has been green since #132, and the four CI jobs pass on `latest-stable` Xcode (currently 26.3). The architecture is layered as specified: Core protocols, Nexus monitors with a signal pipeline, and a Brain-owned aspect and VisualState. #133 added the EventBus AsyncStream, #134 split the oversized files, and #135 (event-driven Forge/Eternal/Diagnostics) is merged. Memory is SwiftData with a Keychain fallback. Keys are in Keychain with `AfterFirstUnlockThisDeviceOnly`. The code has no `fatalError`, `try!` or `print`.
+The core is in good shape. `main` has been green since #132, and the CI jobs (now six) pass on `latest-stable` Xcode (currently 26.3). The architecture is layered as specified: Core protocols, Nexus monitors with a signal pipeline, and a Brain-owned aspect and VisualState. #133 added the EventBus AsyncStream, #134 split the oversized files, and #135 (event-driven Forge/Eternal/Diagnostics) is merged. Memory is SwiftData with a Keychain fallback. Keys are in Keychain with `AfterFirstUnlockThisDeviceOnly`. The code has no `fatalError`, `try!` or `print`.
 
 It is **not production-ready**. The M1 ship-blockers are resolved:
 
@@ -83,7 +83,7 @@ Other gaps:
 
 ## 4. Milestones
 
-Conventions: **S** is at most about 150 changed lines and **M** at most about 300. "AppTests" means the app-hosted XCTest target added in M2-T1, which runs inside the *iOS Simulator Build* job. Each task keeps all 4 CI jobs green.
+Conventions: **S** is at most about 150 changed lines and **M** at most about 300. "AppTests" means the app-hosted XCTest target added in M2-T1, which runs inside the *iOS Simulator Build* job. Each task keeps all 6 CI jobs green.
 
 ### M0 — In flight (other worker)
 **Goal:** land the work already in progress. **Exit:** #135 merged; no `Task.sleep` polling in Forge/Eternal/Diagnostics VMs.
@@ -489,7 +489,7 @@ Agents must not create the account, deploy or enable anything.
 | M6-T2 | Document dormant release paths | README.md, Documentation/SIDESTORE.md (docs only; **do not modify** codemagic.yaml, fastlane/ or release.yml) | README states that Codemagic, Fastlane and the TestFlight step are dormant and that SideStore is the only supported path. Structure job passes. | S | M1-T12 |
 | M6-T4 | CHANGELOG | CHANGELOG.md | Entries from 0.2.0 (build 7) to now, generated from merged PRs. | S | — |
 | M6-T5 | Owner release checklist | Documentation/RELEASE.md, README link | Lists HG1–HG9, HG-P and HG-V with steps and pass criteria. | S | M1-T12 |
-| M6-T6 | Bump to 1.0.0 | project.yml (`MARKETING_VERSION 1.0.0`, `CURRENT_PROJECT_VERSION`+1), docs | Archive banner shows 1.0.0. All 4 CI jobs are green. | S | all above |
+| M6-T6 | Bump to 1.0.0 | project.yml (`MARKETING_VERSION 1.0.0`, `CURRENT_PROJECT_VERSION`+1), docs | Archive banner shows 1.0.0. All 6 CI jobs are green. | S | all above |
 
 **HUMAN GATE HG8:** run *Archive IPA* (Release) for 1.0.0 and install it over the previous build. Confirm memory and keys persist. Wait through or force a SideStore 7-day refresh and confirm data persists. Run the full first-run checklist.
 **HUMAN GATE HG9:** final sign-off. Tag `v1.0.0` (this triggers `release.yml`). Merge decisions stay with the owner (AGENTS.md autonomy policy).
@@ -535,7 +535,7 @@ Also landed: M3.5-T3 on-device-first routing (#268, 8a21d32). Open issues: #250 
 ### Status 2026-10-14
 #270 RoutingConfigStore Mutex + redirect rejector (#252) · #271 Ask on-device reason · #272 M3.5-T5 Codex mind status · #273 M3.5-T4 budget/prewarm/4-pair local history · #274 gateway dev-dep patch bumps · #275 Codex-review follow-ups (local memories/device in on-device prompt, plain directive kept under cap, prewarm via Brain).
 Cloud fallback after an on-device failure is now privacy-gated (#277, de0422c): a local heuristic in CloudContextPolicy (health, distress, memory, contacts, location incl. street/ZIP, finance, identity incl. phone/SSN/DOB, credentials/tokens/email; English only; misses paraphrases); the `needsCloud` planner (M3.5-T19) is still open. #278 adds element logging to the flaky Sanctum a11y audit. The `aiServiceEnabled` default (off) is awaiting the owner's decision. #252 is down to LoggerService + 4 Nexus monitors. CHR-55 remains open.
-Evening: these PRs are open and none is merged: #280 Brain split, #281 docs sync, #282 needsCloud planner (M3.5-T19), #283–#287 the remaining #252 types, #288 Sanctum header a11y fix (green; confirms the flake source), #289 module-boundary test, #290 bundle-hardening test, #291 Brain failure matrix, #292 per-reply provenance badge. Scored audit: `docs/AUDIT-2026-10-14.md`.
+Evening: these PRs are open and none is merged: #280 Brain split, #281 docs sync, #282 needsCloud planner (M3.5-T19), #283–#287 the remaining #252 types, #288 Sanctum header a11y fix (green; confirms the flake source), #289 module-boundary test, #290 bundle-hardening test, #291 Brain failure matrix, #292 per-reply provenance badge. Scored audit: `docs/AUDIT-2026-10-14.md`. *(Update 2026-10-17: all of these are now merged except #284, which is owner-gated.)*
 Late evening: #292 provenance badge got a lint fix (AIService cloud leg moved to `AIService+CloudRoute.swift`; the invariant test now reads AIService across its extensions). #294 adds the read-only `scripts/pr-queue-status.sh`. #295 is the M3.5-T4 follow-up: it reuses the warmed on-device session (single-use, keyed by instructions, dropped on memory pressure or background). With #295, M3.5-T4 is done in code, but there's no device measurement.
 Oct 15, 1 AM: M4-T6 atomic Keychain writes were already on main. #296 adds M4-T4 bounded memory, conversation turns only (90 days / 1,000 cap); user notes are never auto-pruned, and the reclassification migration landed in #303. #297 answers "what did I tell you about X" from notes on device with no model call and a "From memory" badge (stacked on #280 and #292). The privacy manifest declares UserDefaults, FileTimestamp, DiskSpace and SystemBootTime reasons; DiskSpace uses E174.1, which needs owner review because StorageMonitor reports free space to the Brain. CHR-55 stays open.
 
@@ -546,6 +546,28 @@ Squash-merged with main green between each: #281 · #289 · #290 · #291 · #293
 - **Phase 6:** M4-T4 ✅. Retention covers conversation turns only (#296), and the user-note migration from `.temporary` to `.preference` is done (#303). Notes no longer decay on a 2-day half-life.
 - **Phase 8:** accessibility-check flakes in the Sanctum fixed (#288, #302, #304).
 - **Gates unchanged:** CHR-55 open, HG2/HG3 owner-only, `release.yml` (#250) needs owner OK, the `aiServiceEnabled` default stays off. There's no IPA from current main. Scored delta: `docs/AUDIT-2026-10-15.md`.
+
+### Portfolio-aligned 10 phases (2026-10-16)
+Aligned with the portfolio roadmap in `cknowlesbadluck/Conduit/ROADMAP.md`, using its phase names and its Quicksilver exit checks, extended with ours. The table above keeps its task IDs; this one is the current exit gate per phase. A phase is done only when every check is true. HG = owner-only human gate.
+
+| # | Phase | Quicksilver exit criteria | Status (2026-10-16) |
+|---|---|---|---|
+| 1 | Green, pinned CI | Main CI green; every action SHA-pinned, including `release.yml` (#250) | 🟡 Main green; #250 needs owner OK |
+| 2 | Lean code | Dead UI pruned (#308 ✅); zero `@unchecked Sendable` (#284); ratchet (#306 ✅); no unreferenced modules | 🟡 #284 is the owner's draft; `Nexus/Integration` is runtime-unused (owner decides) |
+| 3 | Fail-closed (client) | Privacy floor can't be lowered remotely (#305 ✅); gate fails closed on non-English (#319); honest Keychain states (#321, #322) | 🟡 In review |
+| 4 | Bounded surface | Bounded memory (#296 ✅); budget awareness (#311); route log capped at 20 with no content (#320) | 🟡 In review |
+| 5 | Transport + data security | Device-only atomic Keychain ✅; memory failure banner and backup-store disclosure (#314); own Supabase restored (owner) | 🟡 Owner item open |
+| 6 | Honest posture | Codex shows the true route per turn (#320), budget (#311), locked vs. unbound (#322), on-device reason ✅ | 🟡 In review |
+| 7 | Contracts + coverage | TSan job (#309); gateway contract client tests (#316); MemoryEntity tests (#317) | 🟡 In review |
+| 8 | Operable release | Fresh Archive/IPA from main; CHR-55 device acceptance with real evidence (HG1) | 🔴 Owner only |
+| 9 | Adapters, chambers, on-device | On-device path works offline (code ✅, HG5 device check open); Resonance used only via its documented contract | 🟡 Device check open |
+| 10 | Free tiers, SideStore, privacy | Reproducible, documented SideStore build; privacy manifest ✅; no third-party telemetry ✅; free-budget aware (#311) | 🟡 SideStore build docs and fresh IPA missing |
+
+Merged 2026-10-16 (5–8 PM ET): #315, #318, #331, #309, #325, #326, #311, #321, #320 (SHAs in `docs/AUDIT-2026-10-16.md`). That closes the Phase 1 TSan item, the Phase 3 private-host refusal, the Phase 4 budget and route log, and the Phase 6 route honesty. Phases 8 and 9 still need the device.
+
+Open as of 11 PM ET 2026-10-16: #324 (Sanctum a11y, green), #335 (Dynamic Type snapshots), #336 (config/health use the secure session). Phase 1: only `release.yml` is unpinned (owner). Phase 2: the last `@unchecked Sendable` is #284 (owner).
+
+Gates unchanged: CHR-55 open (owner only, real device evidence); HG2/HG3 gateway account and secrets are owner only; the `aiServiceEnabled` default stays off.
 
 ## 5. Risks
 
