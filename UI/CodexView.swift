@@ -74,12 +74,36 @@ struct CodexView: View {
             LabeledContent("On-device mind", value: vm.onDeviceStatus)
                 .accessibilityHint(vm.onDeviceReason ?? "")
             LabeledContent("Answers via", value: vm.answerRoute)
+            if let budget = vm.cloudBudgetLabel {
+                LabeledContent("Cloud budget", value: budget)
+            }
             LabeledContent("Policy route", value: vm.activeRouteLabel)
             LabeledContent("Policy model", value: vm.activeModelLabel)
         } header: {
             Text("Mind")
         } footer: {
             Text("Credentials remain sealed in the device Keychain. They never leave the device in logs or defaults.")
+        }
+
+        Section {
+            if vm.recentRoutes.isEmpty {
+                Text("No turns yet this session")
+                    .foregroundStyle(PersonaTheme.readableSecondary)
+            } else {
+                ForEach(vm.recentRoutes) { record in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(record.summary)
+                        Text(record.date, style: .time)
+                            .font(.caption)
+                            .foregroundStyle(PersonaTheme.readableSecondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        } header: {
+            Text("Recent routes")
+        } footer: {
+            Text("Which route each recent turn took and why. No prompts or replies are stored, and this clears on relaunch.")
         }
     }
 
