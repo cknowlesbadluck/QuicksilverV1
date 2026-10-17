@@ -212,6 +212,7 @@ public final class AIService {
         do {
             let raw: AIResponse
             let provenance: AnswerProvenance
+            var trains = false
             if let local = try await answerOnDeviceFirst(request) {
                 raw = local
                 provenance = .onDevice
@@ -221,6 +222,7 @@ public final class AIService {
                 let answered = try await performProviderRequest(request, primary: provider)
                 raw = answered.response
                 provenance = AnswerProvenance(origin: .cloud, providerName: answered.provider.displayName)
+                trains = answered.provider.trainsOnPrompts
             } else {
                 throw AppError.apiKeyMissing
             }
@@ -228,6 +230,7 @@ public final class AIService {
             case .accept(let response):
                 lastResponse = response
                 lastAnswerProvenance = provenance
+                recordRoute(provenance, trainsOnPrompts: trains)
                 await eventBus.publish(.aiRequestCompleted(requestID: request.id.uuidString))
                 if response.finishReason == .incomplete {
                     logger.info("AI request incomplete (partial kept): \(response.id)", category: logger.ai)
@@ -244,6 +247,7 @@ public final class AIService {
                 throw CancellationError()
             }
             logger.error("AI request failed: \(error.localizedDescription)", category: logger.ai)
+            recordRoute(failure: error)
             throw Self.typedSurface(error)
         }
     }
