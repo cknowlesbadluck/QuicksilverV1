@@ -21,7 +21,7 @@ Native iOS intelligence platform. Primary target: iPhone 16e / iOS 27. CI floor:
 - The owner retains the right to revoke autonomy or require a gate at any time. Final merge decisions remain under human control when the owner so chooses.
 
 ## Who merges
-- **Quicksilver Dev** (Christopher's Grok Bot agent) owns merges to `main`: squash-merge only, after all four Quicksilver CI jobs are green and review comments are addressed.
+- **Quicksilver Dev** (Christopher's Grok Bot agent) owns merges to `main`: squash-merge only, after all six Quicksilver CI jobs are green and review comments are addressed.
 - Codex, Grok and every other agent open PRs from their own branches and **never merge**, including via auto-merge or `--admin`.
 - The owner may merge anything himself at any time.
 
