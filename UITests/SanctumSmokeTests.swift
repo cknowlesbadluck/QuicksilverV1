@@ -71,7 +71,8 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(invoke.waitForExistence(timeout: 8))
         invoke.tap()
         XCTAssertTrue(app.navigationBars["Ask"].waitForExistence(timeout: 8))
-        app.swipeDown()
+        dismissAsk()
+        XCTAssertFalse(app.navigationBars["Ask"].exists, "Ask sheet did not dismiss")
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
     }
 
@@ -80,7 +81,50 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
         // Sanctum portals and Speak with Quicksilver must be idle before audit.
         // Decorative motion is frozen via -uitest in AmbientLayer/core/Sanctum.
+        // Audit a settled, complete screen: past failures were state-dependent
+        // ("The core is awake", "Eternal", "·") because those labels were sometimes
+        // mid-transition or not yet on screen. Waiting makes them always audited.
+        waitForSettledSanctum()
         try performAccessibilityAuditRetryingTimeouts()
+    }
+
+    /// Waits until the presence title exists and the key labels stop moving.
+    /// This never skips an element; it only makes sure the audit sees the final layout.
+    private func waitForSettledSanctum() {
+        // A sheet (Ask) or realm cover still animating away dims the Sanctum behind it; the
+        // audit then fails contrast on whichever bottom label the dimming covers (Eternal,
+        // Workshop). Wait until both are fully gone.
+        waitUntilGone(app.navigationBars["Ask"])
+        waitUntilGone(app.buttons["Done"])
+        let presence = app.staticTexts.matching(
+            NSPredicate(format: "label IN %@", ["The core is awake", "The core rests"])
+        ).firstMatch
+        XCTAssertTrue(presence.waitForExistence(timeout: 8), "Presence title never appeared before audit")
+        XCTAssertTrue(app.staticTexts["Eternal"].waitForExistence(timeout: 8), "Eternal subtitle never appeared before audit")
+        waitForStableFrame(presence)
+        waitForStableFrame(app.buttons["The Workshop"])
+    }
+
+    /// Waits until the element is gone or no longer hittable (off screen), then lets the dim fade.
+    private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval = 10) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while element.exists && element.isHittable && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.25)
+        }
+        XCTAssertFalse(element.exists && element.isHittable, "Still on screen before audit: \(element)")
+        Thread.sleep(forTimeInterval: 1) // dismissal animation's dimming fades after the element leaves
+    }
+
+    /// Polls an element's frame until it is unchanged for three consecutive 0.25s samples (max ~6s).
+    private func waitForStableFrame(_ element: XCUIElement) {
+        var last = element.frame
+        var stableSamples = 0
+        for _ in 0..<24 where stableSamples < 3 {
+            Thread.sleep(forTimeInterval: 0.25)
+            let current = element.frame
+            stableSamples = current == last ? stableSamples + 1 : 0
+            last = current
+        }
     }
 
     /// Retries only the audit's own "failed to complete in time" error.
@@ -162,10 +206,18 @@ final class SanctumSmokeTests: XCTestCase {
     // presented, so the audit mostly covers Ask. Truly dismissing it surfaces
     // Sanctum header findings (contrast, Dynamic Type) to fix in product code
     // before tightening this helper.
+    /// Swipes were unreliable (the keyboard ate them), leaving the sheet over a Sanctum that
+    /// still "exists" behind it, so the audit ran on a dimmed screen. Use the Close button.
+    private func dismissAsk() {
+        let bar = app.navigationBars["Ask"]
+        guard bar.exists else { return }
+        let close = app.buttons["ask.close"]
+        if close.waitForExistence(timeout: 3) { close.tap() } else { bar.swipeDown(velocity: .fast) }
+        _ = bar.waitForNonExistence(timeout: 5)
+    }
+
     private func returnToSanctumIfNeeded() {
-        if app.navigationBars["Ask"].exists {
-            app.swipeDown()
-        }
+        dismissAsk()
         if app.buttons["Done"].exists && !app.buttons["The Workshop"].exists {
             app.buttons["Done"].tap()
         }
