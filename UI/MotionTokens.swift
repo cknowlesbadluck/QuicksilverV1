@@ -57,6 +57,28 @@ enum MotionTokens {
         }
     }
 
+    // MARK: - Ambient cadence (energy-aware)
+
+    /// Full-life decorative frame interval (30 fps).
+    static let ambientFrameInterval: TimeInterval = 1.0 / 30.0
+    /// Slower decorative layers (chaos field).
+    static let ambientSlowFrameInterval: TimeInterval = 1.0 / 24.0
+    /// Reduce Motion fallback for layers that keep a trickle of life (8 fps).
+    static let reducedFrameInterval: TimeInterval = 1.0 / 8.0
+    /// Ceiling while the device conserves energy (Low Power Mode, serious thermal): 10 fps.
+    static let conservingFrameInterval: TimeInterval = 1.0 / 10.0
+
+    /// Frame interval for a decorative TimelineView. Never faster than `preferred`; while the
+    /// device conserves energy, never faster than `conservingFrameInterval`.
+    static func ambientInterval(_ preferred: TimeInterval, energy: AmbientEnergy) -> TimeInterval {
+        energy.isConserving ? max(preferred, conservingFrameInterval) : preferred
+    }
+
+    /// Decorative time stops entirely under critical thermal pressure.
+    static func ambientPaused(_ energy: AmbientEnergy) -> Bool {
+        energy.thermal == .critical
+    }
+
     // MARK: - Reduce Motion fallbacks
 
     /// When Reduce Motion is on, prefer a short cross-fade over spatial or repeating motion.
