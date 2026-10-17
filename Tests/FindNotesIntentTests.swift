@@ -79,4 +79,5 @@ private final class FindNotesSurface: IntelligenceSurface {
     func snapshot(limit: Int) -> [MemoryItem] { Array(items.prefix(limit)) }
     func switchAspect(to aspect: Aspect) async throws {}
     func statusReport() throws -> String { "" }
+    func forgetNote(id: UUID) async -> Bool { false }
 }

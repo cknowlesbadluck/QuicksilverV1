@@ -22,6 +22,10 @@ public protocol IntelligenceSurface: AnyObject {
 
     /// Compact diagnostic report (aspect + Nexus health signals).
     func statusReport() throws -> String
+
+    /// Deletes one saved user note (M3.5 memory delete). Notes only: conversation turns and
+    /// system items are refused. Returns true only when the note existed and is now gone.
+    func forgetNote(id: UUID) async -> Bool
 }
 
 extension IntelligenceSurface {

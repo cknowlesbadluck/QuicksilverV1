@@ -50,4 +50,11 @@ extension MercuryBrain: IntelligenceSurface {
         let diagnostic = try nexus.bridge.triggerDiagnostic(named: "full")
         return "\(aspect) | \(diagnostic)"
     }
+
+    /// "Forget this" from Shortcuts/Siri: only a saved note can be deleted, never a chat turn.
+    func forgetNote(id: UUID) async -> Bool {
+        guard memoryNote(id: id) != nil else { return false }
+        await memoryManager.delete(id: id)
+        return memoryNote(id: id) == nil
+    }
 }
