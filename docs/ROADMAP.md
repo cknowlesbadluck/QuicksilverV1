@@ -563,6 +563,8 @@ Aligned with the portfolio roadmap in `cknowlesbadluck/Conduit/ROADMAP.md`, usin
 | 9 | Adapters, chambers, on-device | On-device path works offline (code ✅, HG5 device check open); Resonance used only via its documented contract | 🟡 Device check open |
 | 10 | Free tiers, SideStore, privacy | Reproducible, documented SideStore build; privacy manifest ✅; no third-party telemetry ✅; free-budget aware (#311) | 🟡 SideStore build docs and fresh IPA missing |
 
+Merged 2026-10-16 (5–8 PM ET): #315, #318, #331, #309, #325, #326, #311, #321, #320 (SHAs in `docs/AUDIT-2026-10-16.md`). That closes the Phase 1 TSan item, the Phase 3 private-host refusal, the Phase 4 budget and route log, and the Phase 6 route honesty. Phases 8 and 9 still need the device.
+
 Gates unchanged: CHR-55 open (owner only, real device evidence); HG2/HG3 gateway account and secrets are owner only; the `aiServiceEnabled` default stays off.
 
 ## 5. Risks
