@@ -83,7 +83,9 @@ public struct DiagnosticsReport: Sendable, Equatable {
         lines.append("Memory: \(memoryTotal) items, \(memoryNotes) notes, store=\(memoryUsingBackupStore ? "backup" : "primary")")
         lines.append(
             "Privacy gate: floor=remote may tighten, never loosen; "
-                + "phrases=\(CloudContextPolicy.personalPhrases.count) words=\(CloudContextPolicy.personalWords.count)"
+                + "phrases=\(CloudContextPolicy.personalPhrases.count) words=\(CloudContextPolicy.personalWords.count); "
+                + "non-English fails closed at \(CloudContextPolicy.nonEnglishConfidence) "
+                + "(min \(CloudContextPolicy.languageMinimumLetters) letters)"
         )
         return lines.joined(separator: "\n")
     }

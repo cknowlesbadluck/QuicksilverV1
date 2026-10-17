@@ -29,6 +29,7 @@ final class DiagnosticsReportTests: XCTestCase {
         XCTAssertTrue(text.contains("Keychain Gateway URL: missing"))
         XCTAssertTrue(text.contains("Memory: 12 items, 4 notes, store=backup"))
         XCTAssertTrue(text.contains("Privacy gate: floor=remote may tighten, never loosen"))
+        XCTAssertTrue(text.contains("non-English fails closed at 0.9 (min 16 letters)"))
         XCTAssertTrue(text.contains("On-device model: unavailable"))
     }
 
