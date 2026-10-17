@@ -96,30 +96,33 @@ struct SpatialSanctum: View {
 
                 spatialArchitecture(in: proxy.size)
 
-                VStack(spacing: 0) {
-                    topPresence
-                    Spacer()
-
-                    QuicksilverPresenceView(
-                        personaID: activeAspect.rawValue,
-                        livingStatus: livingStatus,
-                        visualState: visualState
-                    )
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onInvoke() }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityLabel("Speak with Quicksilver")
-
-                    Spacer()
-                    navigationPrompt
+                // Accessibility text sizes: everything scrolls in one column and the floating
+                // greeting is dropped (the presence line already carries its prompt). At
+                // accessibility5 the greeting covered the portal grid and the stack overflowed (#335).
+                if dynamicTypeSize.isAccessibilitySize {
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            topPresence
+                            presence
+                            navigationPrompt
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        topPresence
+                        Spacer()
+                        presence
+                        Spacer()
+                        navigationPrompt
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 18)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 18)
 
-                if showGreeting {
+                if showGreeting && !dynamicTypeSize.isAccessibilitySize {
                     greeting
                         .frame(maxWidth: proxy.size.width - 36)
                         // No fade when motion is frozen (Reduce Motion / -uitest): a half-faded
@@ -251,6 +254,20 @@ struct SpatialSanctum: View {
         if dynamicTypeSize >= .accessibility2 { return 1 }
         if dynamicTypeSize >= .xLarge { return 2 }
         return 3
+    }
+
+    private var presence: some View {
+        QuicksilverPresenceView(
+            personaID: activeAspect.rawValue,
+            livingStatus: livingStatus,
+            visualState: visualState
+        )
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+        .onTapGesture { onInvoke() }
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Speak with Quicksilver")
     }
 
     private var navigationPrompt: some View {
