@@ -13,6 +13,8 @@ final class CodexViewModel {
     private(set) var hasGrokKey: Bool = false
     private(set) var hasGeminiKey: Bool = false
     private(set) var hasGatewayBinding: Bool = false
+    /// Saved keys exist but can't be read until the device is unlocked once after boot.
+    private(set) var credentialsLocked: Bool = false
     private(set) var gatewayURLDisplay: String = ""
     private(set) var providerName: String = ""
     private(set) var fallbackProviderName: String?
@@ -49,6 +51,7 @@ final class CodexViewModel {
         hasGrokKey = container.aiService.hasGrokKey
         hasGeminiKey = container.aiService.hasGeminiKey
         hasGatewayBinding = container.aiService.hasGatewayBinding
+        credentialsLocked = container.aiService.credentialsLocked
         gatewayURLDisplay = container.aiService.gatewayBaseURLDisplay ?? ""
         providerName = container.aiService.currentProviderName
         fallbackProviderName = container.aiService.fallbackProviderName
