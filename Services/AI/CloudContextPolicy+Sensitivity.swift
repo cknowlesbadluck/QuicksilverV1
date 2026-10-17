@@ -45,7 +45,8 @@ extension CloudContextPolicy {
         if valueLooksLikeCredential(text) || containsEmailAddress(lower) || containsSecretShapedToken(text) { return true }
         if containsStructuredIdentifier(text) { return true }
         let words = Set(lower.split { !$0.isLetter && !$0.isNumber && $0 != "'" }.map(String.init))
-        return !words.isDisjoint(with: personalWords)
+        if !words.isDisjoint(with: personalWords) { return true }
+        return isPersonalByLanguageAnalysis(text)
     }
 
     /// Phone numbers (7+ digits in one run of digits/spaces/()-.+) and SSN-shaped values.
