@@ -9,15 +9,19 @@ public struct GatewayOpenedStream: Sendable {
     /// Parsed from the `Retry-After` response header when present (seconds).
     public var retryAfter: TimeInterval?
     public var lines: AsyncThrowingStream<String, Error>
+    /// Parsed from the `x-mercury-budget-*` headers when the gateway sends them.
+    public var budget: CloudBudget?
 
     public init(
         statusCode: Int,
         lines: AsyncThrowingStream<String, Error>,
-        retryAfter: TimeInterval? = nil
+        retryAfter: TimeInterval? = nil,
+        budget: CloudBudget? = nil
     ) {
         self.statusCode = statusCode
         self.retryAfter = retryAfter
         self.lines = lines
+        self.budget = budget
     }
 }
 
@@ -61,7 +65,8 @@ public struct GatewayStreamTransport: Sendable {
             return GatewayOpenedStream(
                 statusCode: http.statusCode,
                 lines: lines,
-                retryAfter: Self.parseRetryAfter(http)
+                retryAfter: Self.parseRetryAfter(http),
+                budget: CloudBudget.parse(http.allHeaderFields)
             )
         }
     }
