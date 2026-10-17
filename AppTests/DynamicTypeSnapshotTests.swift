@@ -75,10 +75,10 @@ final class DynamicTypeSnapshotTests: XCTestCase {
         CATransaction.flush()
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
-        let image = UIGraphicsImageRenderer(size: Self.size, format: format).image { _ in
+        let image = UIGraphicsImageRenderer(size: Self.size, format: format).image { context in
             if !window.drawHierarchy(in: window.bounds, afterScreenUpdates: true) {
                 // Fallback when the window isn't on screen: render the layer tree directly.
-                window.layer.render(in: UIGraphicsGetCurrentContext()!)
+                window.layer.render(in: context.cgContext)
             }
         }
         window.isHidden = true
