@@ -321,12 +321,12 @@ private struct SpatialPortalButton: View {
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
                     .font(.caption)
-                    .foregroundStyle(PersonaTheme.mercurySilver.opacity(0.78))
+                    // Full-strength readable color: the audit failed contrast on "Workshop" at 0.78 opacity.
+                    .foregroundStyle(PersonaTheme.readableSecondary)
                     .multilineTextAlignment(.center)
-                    // A single long word ("Planetarium") can't wrap in the narrow column; scale
-                    // down instead of clipping at large Dynamic Type (audit: Text clipped).
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    // Grow vertically instead of truncating or scaling: the audit still reported
+                    // "Planetarium" as clipped with lineLimit(1) + minimumScaleFactor.
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
 
                 Text(destination.subtitle)
