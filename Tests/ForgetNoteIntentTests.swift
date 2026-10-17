@@ -69,6 +69,12 @@ final class ForgetNoteIntentTests: XCTestCase {
         XCTAssertLessThan(confirm.lowerBound, delete.lowerBound)
     }
 
+    func testConformerWithoutDeletionRefusesByDefault() async {
+        let surface: IntelligenceSurface = MinimalSurface()
+        let forgotten = await surface.forgetNote(id: UUID())
+        XCTAssertFalse(forgotten)
+    }
+
     func testUnconfiguredSurfaceThrows() async {
         IntentDependencies.shared.resetForTesting()
         do {
@@ -91,4 +97,14 @@ private final class ForgettingSurface: IntelligenceSurface {
         items.removeAll { $0.id == id }
         return memoryNote(id: id) == nil
     }
+}
+
+/// Implements only the pre-#343 requirements: proves `forgetNote` is additive and fails closed.
+@MainActor
+private final class MinimalSurface: IntelligenceSurface {
+    func ask(_ query: String) async throws -> String { "" }
+    func remember(_ content: String) async {}
+    func snapshot(limit: Int) -> [MemoryItem] { [] }
+    func switchAspect(to aspect: Aspect) async throws {}
+    func statusReport() throws -> String { "" }
 }

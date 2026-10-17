@@ -125,5 +125,4 @@ private final class FakeIntelligenceSurface: IntelligenceSurface {
     func statusReport() throws -> String {
         "\(activeAspect.diagnosticLabel) (\(activeAspect.rawValue)) | \(statusText)"
     }
-    func forgetNote(id: UUID) async -> Bool { false }
 }

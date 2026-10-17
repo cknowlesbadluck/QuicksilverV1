@@ -32,6 +32,10 @@ extension IntelligenceSurface {
     public func snapshot() -> [MemoryItem] {
         snapshot(limit: 5)
     }
+
+    /// Fail-closed default: a conformer that does not implement deletion refuses it.
+    /// Keeps test fakes and other conformers source-compatible (additive requirement).
+    public func forgetNote(id: UUID) async -> Bool { false }
 }
 
 // MARK: - Memory notes for App Intents (M3.5-T11)
