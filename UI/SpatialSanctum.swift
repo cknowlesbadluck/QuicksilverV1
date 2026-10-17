@@ -76,6 +76,7 @@ struct SpatialSanctum: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Freeze decorative time under Reduce Motion or `-uitest` (CI a11y audit).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
     @State private var showGreeting = false
     @State private var orbit: Double = 0
@@ -241,8 +242,16 @@ struct SpatialSanctum: View {
         return "What are we getting into?"
     }
 
+    /// Fewer, wider columns as text grows, so single long words ("Governance", "Planetarium")
+    /// fit instead of truncating (audit: "Text clipped" at larger Dynamic Type sizes).
+    private var portalColumns: Int {
+        if dynamicTypeSize >= .accessibility2 { return 1 }
+        if dynamicTypeSize >= .xLarge { return 2 }
+        return 3
+    }
+
     private var navigationPrompt: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 12) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: portalColumns), spacing: 12) {
             ForEach(SpatialDestination.allCases) { destination in
                 SpatialPortalButton(destination: destination) {
                     onDestination(destination)
