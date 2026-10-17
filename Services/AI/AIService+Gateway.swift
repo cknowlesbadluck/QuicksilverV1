@@ -114,21 +114,35 @@ extension AIService {
             return nil
         }
         let timeouts = routingConfigStore?.loadValidated().gatewayTimeouts ?? .defaults
+        // A new or rebuilt binding starts with no reading, so a previous gateway's count never shows.
+        cloudBudget.reset()
+        let transport = GatewayStreamTransport
+            .urlSession(GatewayStreamTransport.makeSecureSession())
+            .recordingBudget(into: cloudBudget)
         return try? GatewayAIProvider(
             endpoint: endpoint,
             deviceToken: token,
+            transport: transport,
             timeouts: timeouts
         )
     }
 
-    public func clearAllAPIKeys() {
-        KeychainStore.delete(forKey: Self.grokAPIKeyKeychainAccount)
-        KeychainStore.delete(forKey: Self.geminiAPIKeyKeychainAccount)
-        KeychainStore.delete(forKey: Self.gatewayBaseURLKeychainAccount)
-        KeychainStore.delete(forKey: GatewayAIProvider.deviceTokenKeychainAccount)
+    /// Returns false when any credential could not be removed from the Keychain.
+    @discardableResult
+    public func clearAllAPIKeys() -> Bool {
+        let accounts = [
+            Self.grokAPIKeyKeychainAccount, Self.geminiAPIKeyKeychainAccount,
+            Self.gatewayBaseURLKeychainAccount, GatewayAIProvider.deviceTokenKeychainAccount
+        ]
+        // Previously failures were ignored, so "cleared" could leave a credential behind silently.
+        let failed = accounts.filter { !KeychainStore.delete(forKey: $0) }.count
+        if failed > 0 {
+            logger.error("Keychain refused to remove \(failed) credential item(s)", category: logger.ai)
+        }
         primaryProvider = nil
         secondaryProvider = nil
         logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
+        return failed == 0
     }
 
     /// Throws `.apiKeyMissing` / `.intelligenceDisabled` when a request would not hit the network.
@@ -164,6 +178,8 @@ public enum GatewayBindError: Error, Equatable, Sendable {
             return "Gateway URL is not valid."
         case .invalidURL(.hasUserInfo), .invalidURL(.hasQueryOrFragment), .invalidURL(.tokenInURL):
             return "Gateway URL must be an https origin with no credentials or query."
+        case .invalidURL(.privateHost):
+            return "Gateway URL must be a public host, not a private, local or link-local address."
         case .emptyToken:
             return "Enter a non-empty device token."
         case .invalidToken:
@@ -179,4 +195,9 @@ public enum GatewayBindError: Error, Equatable, Sendable {
             return "That endpoint is not a Mercury gateway."
         }
     }
+}
+
+extension AIService {
+    /// Latest gateway budget reading (free-budget awareness). Shared because there is one gateway binding per app.
+    public var cloudBudget: CloudBudgetMonitor { .shared }
 }
