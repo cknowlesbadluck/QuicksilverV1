@@ -54,7 +54,7 @@ Steps that need an unmerged PR are tagged, for example *(needs #337)*. Mark them
 | 4.2 | Siri: "What aspect is active in Quicksilver" | An aspect name is spoken; the app doesn't open |
 | 4.3 | Siri: "Find in my notes in Quicksilver", then say "spare key" *(needs #337)* | While locked it asks you to unlock; once unlocked it reads one matching note |
 | 4.4 | Shortcuts app → Forget a Note → pick the spare-key note *(needs #343)* | It asks for confirmation first; after confirming, the note is gone from the Memory screen |
-| 4.5 | Settings → Quicksilver → Spotlight toggle on, then search "spare" in Spotlight *(needs #330)* | The note appears. Turn the toggle off and the note disappears from Spotlight |
+| 4.5 | Codex → "Show notes in Spotlight" on, then search "spare" in Spotlight *(needs #330)* | The note appears. Turn the toggle off and the note disappears from Spotlight |
 
 ## 5. Dynamic Type and VoiceOver
 
