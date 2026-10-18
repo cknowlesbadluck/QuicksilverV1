@@ -1,5 +1,4 @@
 import Foundation
-import Synchronization
 import Core
 
 /// Mercury Gateway SSE client (M3-T3).
@@ -175,8 +174,12 @@ private enum GatewayAIStreamEngine {
                 try await clock.watch()
             }
             // First finished child wins: success from consume, or a timeout/error from either.
+            // The watchdog never finishes normally, so a clean finish always means the consumer
+            // saw a terminal event.
             try await group.next()
         }
+        // A cancelled turn must never be reported as a completed stream.
+        try Task.checkCancellation()
     }
 
     private static func consumeLines(
@@ -297,81 +300,6 @@ private enum GatewayAIStreamEngine {
             return .timedOut
         case .badRequest:
             return .aiRequestFailed("Gateway request failed")
-        }
-    }
-}
-
-// MARK: - Timeout watchdog
-
-/// Shared first-event / idle / total deadline checks for the stream + watchdog tasks.
-/// State lives in a `Mutex`, so the type is checked `Sendable` (issue #252).
-private final class StreamTimeoutClock: Sendable {
-    private struct State {
-        var responseStartedAt: ContinuousClock.Instant?
-        var gotFirstEvent = false
-        var lastEventAt: ContinuousClock.Instant
-    }
-
-    private let timeouts: GatewayTimeouts
-    private let startedAt: ContinuousClock.Instant
-    private let state: Mutex<State>
-
-    init(timeouts: GatewayTimeouts) {
-        self.timeouts = timeouts
-        let now = ContinuousClock.now
-        self.startedAt = now
-        self.state = Mutex(State(lastEventAt: now))
-    }
-
-    /// Call after response headers / stream open so first-event excludes connect time.
-    func markResponseStarted() {
-        state.withLock { state in
-            let now = ContinuousClock.now
-            state.responseStartedAt = now
-            state.lastEventAt = now
-        }
-    }
-
-    func markEvent() {
-        state.withLock { state in
-            state.gotFirstEvent = true
-            state.lastEventAt = ContinuousClock.now
-        }
-    }
-
-    func check() throws {
-        let snapshot = state.withLock { $0 }
-        let gotFirst = snapshot.gotFirstEvent
-        let lastEvent = snapshot.lastEventAt
-        let start = startedAt
-        let responseStart = snapshot.responseStartedAt
-        let timeouts = self.timeouts
-
-        let now = ContinuousClock.now
-        if now - start > .seconds(timeouts.total) {
-            throw AppError.timedOut
-        }
-        // Before headers: enforce connect. After headers: firstEvent / idle.
-        if responseStart == nil, now - start > .seconds(timeouts.connect) {
-            throw AppError.timedOut
-        }
-        if !gotFirst, let responseStart,
-           now - responseStart > .seconds(timeouts.firstEvent) {
-            throw AppError.timedOut
-        }
-        if gotFirst, now - lastEvent > .seconds(timeouts.idle) {
-            throw AppError.timedOut
-        }
-    }
-
-    func watch() async throws {
-        do {
-            while !Task.isCancelled {
-                try check()
-                try await Task.sleep(for: .milliseconds(50))
-            }
-        } catch is CancellationError {
-            // Expected when the byte consumer finishes first.
         }
     }
 }
