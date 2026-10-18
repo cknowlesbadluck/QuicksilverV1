@@ -1,3 +1,5 @@
+> **2026-10-18 update:** See [AUDIT-2026-10-18.md](AUDIT-2026-10-18.md) for latest portfolio delta, hygiene pass, and confirmed 10-phase with exit criteria. Main green. Highest leverage remains CHR-55 device evidence.
+
 > **Living document.** This is the production roadmap to Quicksilver 1.0. Update it in the same PR as the change that affects it: tick tasks, record owner decisions, and adjust milestones as evidence changes. Task IDs are stable; retired IDs are noted, not reused.
 
 **2026-10-17 update:** See [AUDIT-2026-10-17.md](AUDIT-2026-10-17.md) for full portfolio audit (QS + Conduit + Resonance), hygiene assessment, and aggressive 10-phase roadmap. Main is green; many open PRs are tests/features. Highest leverage remains CHR-55 device IPA evidence.
