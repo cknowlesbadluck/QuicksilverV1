@@ -1,6 +1,6 @@
 > **Living document.** This is the production roadmap to Quicksilver 1.0. Update it in the same PR as the change that affects it: tick tasks, record owner decisions, and adjust milestones as evidence changes. Task IDs are stable; retired IDs are noted, not reused.
 
-**2026-10-18 evening update:** Portfolio probes confirm both Conduit /ready and Resonance /api/ready returned 503 (free-tier cold start / owner gate on SUPABASE_SERVICE_ROLE_KEY). Earlier Conduit was 200 stamped. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase. Main is green; #350 memory resilience merged. Open PR entropy remains high (~25). Highest leverage remains CHR-55 device IPA evidence. Hygiene: superseded docs PRs should be closed; #351 gateway watchdog pending re-CI.
+**2026-10-18 evening update:** Portfolio probes confirm both Conduit /ready and Resonance /api/ready returned 503 (free-tier cold start / owner gate on SUPABASE_SERVICE_ROLE_KEY). Earlier Conduit was 200 stamped. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase. Main is green; #350 memory resilience merged. Open PR entropy remains high (23 open as of 2026-10-18 evening probe). Highest leverage remains CHR-55 device IPA evidence. Hygiene: superseded docs PRs should be closed; #351 gateway watchdog merged.
 
 # Quicksilver (Mercury) — Roadmap to Production-Ready
 
