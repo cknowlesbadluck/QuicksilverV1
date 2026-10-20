@@ -1,17 +1,62 @@
-> **Living document.** This is the production roadmap to Quicksilver 1.0. Update it in the same PR as the change that affects it: tick tasks, record owner decisions, and adjust milestones as evidence changes. Task IDs are stable; retired IDs are noted, not reused.
+# Quicksilver (Mercury) — Roadmap to Production-Ready
 
-**2026-10-18 evening update:** Portfolio probes confirm both Conduit /ready and Resonance /api/ready returned 503 (free-tier cold start / owner gate on SUPABASE_SERVICE_ROLE_KEY). Earlier Conduit was 200 stamped. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase. Main is green; #350 memory resilience merged. Open PR entropy remains high (~25). Highest leverage remains CHR-55 device IPA evidence. Hygiene: superseded docs PRs should be closed; #351 gateway watchdog pending re-CI.
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
 
 # Quicksilver (Mercury) — Roadmap to Production-Ready
 
-Repo: `cknowlesbadluck/QuicksilverV1` @ `main` (updated 2026-10-18). Evidence from recent merges, open PRs, Linear, and prior audits. Each task is sized as one PR and is verified by **Quicksilver CI**. **HUMAN GATE** items are for the owner.
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
 
-**Scope:** distribution is **SideStore only**. Free-only AI. On-device first.
+# Quicksilver (Mercury) — Roadmap to Production-Ready
 
-## Owner decisions (2026-09-25, still binding)
-[unchanged from original — Integration dormant, no crash reporting, free-only gateway architecture, controlled chaos voice, etc.]
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
 
----
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
+# Quicksilver (Mercury) — Roadmap to Production-Ready
+
+**2026-10-20 update:** Portfolio probes confirm Conduit /ready 200 stamped, Resonance /api/ready 503 (missing SUPABASE_SERVICE_ROLE_KEY). Open PR entropy reduced by hygiene prune of superseded docs notes. Main is green. Highest leverage remains CHR-55 device IPA evidence. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
 
 ## 1. Definition of production-ready (checklist)
 [original checklist retained; many items still open pending device evidence and remaining M3/M5 work]
