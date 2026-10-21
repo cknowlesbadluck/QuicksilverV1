@@ -1,5 +1,7 @@
 > **Living document.** This is the production roadmap to Quicksilver 1.0. Update it in the same PR as the change that affects it: tick tasks, record owner decisions, and adjust milestones as evidence changes. Task IDs are stable; retired IDs are noted, not reused.
 
+**2026-10-21 04:00 EDT hygiene audit note:** Full portfolio audit, hardening, stabilization, hygiene prune requested. Open PR entropy remains the dominant operational risk (~24 open PRs). Prioritize closing superseded docs-only PRs and merging CI-green non-overlapping hardens. Device IPA evidence (CHR-55) and Resonance SUPABASE key remain external owner gates. Stabilization holds; main green. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase.
+
 **2026-10-18 evening update:** Portfolio probes confirm both Conduit /ready and Resonance /api/ready returned 503 (free-tier cold start / owner gate on SUPABASE_SERVICE_ROLE_KEY). Earlier Conduit was 200 stamped. See Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md for canonical 10-phase. Main is green; #350 memory resilience merged. Open PR entropy remains high (~25). Highest leverage remains CHR-55 device IPA evidence. Hygiene: superseded docs PRs should be closed; #351 gateway watchdog pending re-CI.
 
 # Quicksilver (Mercury) — Roadmap to Production-Ready
