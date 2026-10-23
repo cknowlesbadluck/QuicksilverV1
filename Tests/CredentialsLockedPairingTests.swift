@@ -19,3 +19,26 @@ final class CredentialsLockedPairingTests: XCTestCase {
         XCTAssertFalse(AIService.isLocked(gatewayHalves: [.missing, .missing], standaloneKeys: [.missing, .unreadable(-1)]))
     }
 }
+
+/// Codex P1: providers built while the Keychain was locked are rebuilt after first unlock.
+final class ProviderRehydrationTests: XCTestCase {
+    func testRehydratesWhenUnboundAndACredentialIsNowReadable() {
+        XCTAssertTrue(AIService.shouldRehydrate(primaryBound: false, states: [.missing, .missing, .present, .missing]))
+    }
+
+    func testDoesNotRehydrateWhenAlreadyBound() {
+        XCTAssertFalse(AIService.shouldRehydrate(primaryBound: true, states: [.present, .present, .present, .present]))
+    }
+
+    func testDoesNotRehydrateWhileStillLockedOrEmpty() {
+        XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.locked, .locked, .locked, .missing]))
+        XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.missing, .missing, .missing, .missing]))
+        XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.unreadable(-1), .missing]))
+    }
+
+    func testGatewayLockedRequiresBothHalves() {
+        XCTAssertTrue(AIService.isGatewayLocked([.present, .locked]))
+        XCTAssertFalse(AIService.isGatewayLocked([.locked, .missing]))
+        XCTAssertFalse(AIService.isGatewayLocked([.present, .present]))
+    }
+}
