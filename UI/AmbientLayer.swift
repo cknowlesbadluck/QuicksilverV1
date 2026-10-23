@@ -5,6 +5,7 @@ import Core
 /// Controlled chaos is persistent but bounded: particles, traces and a slow
 /// atmospheric field orbit the same invisible center as the mercury core.
 struct AmbientLayer: View {
+    @Environment(\.ambientEnergy) private var energy
     let personaID: String
     var visualState: VisualState = .idle
 
@@ -25,7 +26,10 @@ struct AmbientLayer: View {
             if freezeMotion {
                 ambientCanvas(at: 0)
             } else {
-                TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
+                TimelineView(.animation(
+                    minimumInterval: MotionTokens.ambientInterval(MotionTokens.ambientFrameInterval, energy: energy),
+                    paused: MotionTokens.ambientPaused(energy)
+                )) { timeline in
                     ambientCanvas(at: timeline.date.timeIntervalSinceReferenceDate)
                 }
             }

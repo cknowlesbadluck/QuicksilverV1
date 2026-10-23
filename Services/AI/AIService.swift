@@ -33,7 +33,7 @@ public final class AIService {
     /// Injectable `GET /v1/health` for Codex test-connection (AppTests stub this).
     public typealias GatewayHealthFetcher = @Sendable (URLRequest) async throws -> (Data, URLResponse)
     public var gatewayHealthFetcher: GatewayHealthFetcher = { request in
-        try await URLSession.shared.data(for: request)
+        try await GatewayStreamTransport.secureSession.data(for: request)
     }
 
     public static let grokAPIKeyKeychainAccount = "xai.apiKey"

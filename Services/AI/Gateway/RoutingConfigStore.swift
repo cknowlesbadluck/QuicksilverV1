@@ -32,7 +32,8 @@ public final class RoutingConfigStore: Sendable {
         fileManager: FileManager = .default, // used for launch-time cache reads only
         cacheDirectoryURL: URL? = nil,
         fetch: @escaping DataFetcher = { request in
-            try await URLSession.shared.data(for: request)
+            // Bearer-token request: ephemeral, never follows redirects (see GatewayStreamTransport).
+            try await GatewayStreamTransport.secureSession.data(for: request)
         }
     ) {
         self.bundledLoader = bundledLoader
