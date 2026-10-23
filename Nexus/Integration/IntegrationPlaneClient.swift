@@ -1,4 +1,5 @@
 import Foundation
+import Core
 
 /// MCP JSON-RPC transport for the Integration Fabric.
 /// Provider credentials remain in the external gateway and are never stored by this client.
@@ -27,9 +28,18 @@ public actor IntegrationPlaneClient {
     private var requestID = 0
     private var sessionID: String?
 
-    public init(endpoint: URL, session: URLSession = .shared) {
+    private let clientName: String
+    private let clientVersion: String
+
+    public init(
+        endpoint: URL,
+        session: URLSession = .shared,
+        configuration: AppConfiguration = .shared
+    ) {
         self.endpoint = endpoint
         self.session = session
+        self.clientName = configuration.appName
+        self.clientVersion = configuration.version
     }
 
     public func initialize() async throws {
@@ -39,8 +49,8 @@ public actor IntegrationPlaneClient {
                 "protocolVersion": .string("2025-06-18"),
                 "capabilities": .object([:]),
                 "clientInfo": .object([
-                    "name": .string("Quicksilver"),
-                    "version": .string("0.2.0")
+                    "name": .string(clientName),
+                    "version": .string(clientVersion)
                 ])
             ]
         )

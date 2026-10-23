@@ -51,11 +51,15 @@ struct MercurySanctumBackdrop: View {
 /// TimelineView keeps the pulse independent from the view's local state and
 /// avoids manually scheduling timers in the UI layer.
 struct MercuryPresenceOrb: View {
+    @Environment(\.ambientEnergy) private var energy
     let accent: Color
     var size: CGFloat = 132
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: false)) { timeline in
+        TimelineView(.animation(
+            minimumInterval: MotionTokens.ambientInterval(MotionTokens.ambientFrameInterval, energy: energy),
+            paused: MotionTokens.ambientPaused(energy)
+        )) { timeline in
             let phase = timeline.date.timeIntervalSinceReferenceDate / MotionTokens.corePulseDuration
             let pulse = 0.5 + 0.5 * sin(phase * .pi * 2.0)
             let scale = 0.96 + (0.045 * pulse)
