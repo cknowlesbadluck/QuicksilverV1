@@ -213,13 +213,14 @@ public final class AIService {
             let raw: AIResponse
             let provenance: AnswerProvenance
             var trains = false
-            if let local = try await answerOnDeviceFirst(request) {
+            let outcome = try await answerOnDeviceFirst(request)
+            if case .answered(let local) = outcome {
                 raw = local
                 provenance = .onDevice
             } else if request.metadata[Self.offlineKey] == "1" {
                 throw AppError.networkUnavailable
-            } else if let provider = primaryProvider {
-                let answered = try await performProviderRequest(request, primary: provider)
+            } else if let provider = primaryProvider, case .cloud(let outbound) = outcome {
+                let answered = try await performProviderRequest(outbound, primary: provider)
                 raw = answered.response
                 provenance = AnswerProvenance(origin: .cloud, providerName: answered.provider.displayName)
                 trains = answered.provider.trainsOnPrompts

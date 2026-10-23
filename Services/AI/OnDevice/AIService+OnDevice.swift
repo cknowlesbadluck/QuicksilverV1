@@ -61,14 +61,22 @@ extension AIService {
         )
     }
 
-    /// Tries on-device first. Returns nil when the caller should use the cloud
-    /// route (on-device unavailable, or failed with a cloud route bound).
-    func answerOnDeviceFirst(_ request: AIRequest) async throws -> AIResponse? {
-        guard let onDevice = onDeviceProvider, onDevice.isAvailable else { return nil }
+    /// Outcome of the on-device-first attempt.
+    enum OnDeviceFirst {
+        case answered(AIResponse)
+        /// Use the cloud route with this request (the original, or after an on-device failure,
+        /// the privacy-gated fallback with personal history pruned).
+        case cloud(AIRequest)
+    }
+
+    /// Tries on-device first. `.cloud` when the caller should use the cloud route
+    /// (on-device unavailable, or failed with a cloud route bound and the gate allowing it).
+    func answerOnDeviceFirst(_ request: AIRequest) async throws -> OnDeviceFirst {
+        guard let onDevice = onDeviceProvider, onDevice.isAvailable else { return .cloud(request) }
         do {
             let response = try await collectOnDevice(request, provider: onDevice)
             logger.info("AI answered on device", category: logger.ai)
-            return response
+            return .answered(response)
         } catch {
             if AIClientClassifier.isCancellation(error) { throw CancellationError() }
             // A safety refusal is a decision, not an outage: never re-send it to the cloud.
@@ -83,7 +91,8 @@ extension AIService {
                 throw AppError.aiRequestFailed("on-device: \(error.localizedDescription)")
             }
             // Privacy gate (CloudContextPolicy): personal turns never fall back to the cloud.
-            guard CloudContextPolicy.allowsCloudFallback(request) else {
+            // Personal history alone no longer blocks a knowledge question: it is pruned instead.
+            guard let outbound = CloudContextPolicy.cloudFallbackRequest(request) else {
                 logger.info("On-device failed; personal turn kept on device", category: logger.ai)
                 throw AppError.keptOnDevice
             }
@@ -92,8 +101,12 @@ extension AIService {
                 logger.info("On-device failed; cloud budget spent today", category: logger.ai)
                 throw AppError.budgetExhausted
             }
+            let dropped = request.history.count - outbound.history.count
+            if dropped > 0 {
+                logger.info("Cloud fallback without \(dropped) personal history turns", category: logger.ai)
+            }
             logger.info("On-device failed; falling back to \(currentProviderName)", category: logger.ai)
-            return nil
+            return .cloud(outbound)
         }
     }
 }
