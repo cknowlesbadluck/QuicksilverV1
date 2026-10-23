@@ -262,13 +262,19 @@ struct ForgeView: View {
 }
 
 private struct MercuryDroplet: View {
+    @Environment(\.ambientEnergy) private var energy
     let accent: Color
     let size: CGFloat
     let active: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
+        TimelineView(.animation(
+            minimumInterval: MotionTokens.ambientInterval(
+                reduceMotion ? MotionTokens.reducedFrameInterval : MotionTokens.ambientFrameInterval, energy: energy
+            ),
+            paused: MotionTokens.ambientPaused(energy)
+        )) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             let wobble = reduceMotion ? 0 : sin(t * (active ? 1.7 : 0.5)) * 2.5
             ZStack {
@@ -284,12 +290,18 @@ private struct MercuryDroplet: View {
 }
 
 private struct MercuryRealmBackdrop: View {
+    @Environment(\.ambientEnergy) private var energy
     let personaID: String
     let intensity: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: reduceMotion ? 1 / 8 : 1 / 30)) { timeline in
+        TimelineView(.animation(
+            minimumInterval: MotionTokens.ambientInterval(
+                reduceMotion ? MotionTokens.reducedFrameInterval : MotionTokens.ambientFrameInterval, energy: energy
+            ),
+            paused: MotionTokens.ambientPaused(energy)
+        )) { timeline in
             Canvas { context, size in
                 let t = timeline.date.timeIntervalSinceReferenceDate
                 let accent = PersonaTheme.accent(for: personaID)
