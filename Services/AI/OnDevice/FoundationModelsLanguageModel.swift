@@ -29,7 +29,8 @@ public struct UnsupportedOnDeviceModel: OnDeviceLanguageModel {
 #if canImport(FoundationModels)
 @available(iOS 26.0, macOS 26.0, *)
 struct FoundationModelsLanguageModel: OnDeviceLanguageModel {
-    /// One warmed, unused session for the next request (single-use; see PrewarmedSessionCache).
+    /// Warmed, unused sessions keyed by instructions: the chat turn and one side task such as a
+    /// note summary (single-use; see PrewarmedSessionCache).
     private let warm = PrewarmedSessionCache<LanguageModelSession>()
 
     var availability: OnDeviceModelAvailability {
