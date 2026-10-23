@@ -183,9 +183,9 @@ private final class RequestGate: Sendable {
 
     func waitUntilEntered() async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let resumeNow = state.withLock { s -> Bool in
-                if s.didEnter { return true }
-                s.entered = continuation
+            let resumeNow = state.withLock { gate -> Bool in
+                if gate.didEnter { return true }
+                gate.entered = continuation
                 return false
             }
             if resumeNow { continuation.resume() }
@@ -193,19 +193,19 @@ private final class RequestGate: Sendable {
     }
 
     func markEntered() {
-        let continuation = state.withLock { s -> CheckedContinuation<Void, Never>? in
-            s.didEnter = true
-            defer { s.entered = nil }
-            return s.entered
+        let continuation = state.withLock { gate -> CheckedContinuation<Void, Never>? in
+            gate.didEnter = true
+            defer { gate.entered = nil }
+            return gate.entered
         }
         continuation?.resume()
     }
 
     func waitToProceed() async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            let resumeNow = state.withLock { s -> Bool in
-                if s.shouldProceed { return true }
-                s.proceedWaiter = continuation
+            let resumeNow = state.withLock { gate -> Bool in
+                if gate.shouldProceed { return true }
+                gate.proceedWaiter = continuation
                 return false
             }
             if resumeNow { continuation.resume() }
@@ -213,10 +213,10 @@ private final class RequestGate: Sendable {
     }
 
     func proceed() {
-        let continuation = state.withLock { s -> CheckedContinuation<Void, Never>? in
-            s.shouldProceed = true
-            defer { s.proceedWaiter = nil }
-            return s.proceedWaiter
+        let continuation = state.withLock { gate -> CheckedContinuation<Void, Never>? in
+            gate.shouldProceed = true
+            defer { gate.proceedWaiter = nil }
+            return gate.proceedWaiter
         }
         continuation?.resume()
     }

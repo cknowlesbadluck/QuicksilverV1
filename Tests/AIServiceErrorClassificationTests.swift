@@ -382,9 +382,9 @@ private final class AttemptCounter: Sendable {
         value.withLock { $0 }
     }
     func increment() -> Int {
-        value.withLock { v in
-            v += 1
-            return v
+        value.withLock { current in
+            current += 1
+            return current
         }
     }
 }
