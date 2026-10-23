@@ -9,8 +9,11 @@ final class UncheckedSendableRatchetTests: XCTestCase {
     private static let allowlist: Set<String> = ["Core/LoggerService.swift"]
 
     private static let sourceDirectories = [
-        "App", "Core", "Memory", "Models", "Nexus", "Personas", "Services", "UI", "Intents"
+        "App", "Core", "Memory", "Models", "Nexus", "Personas", "Services", "UI", "Intents",
+        "Tests", "AppTests", "UITests"
     ]
+    /// This file names the pattern in string literals, so it never counts as a conformance.
+    private static let selfFile = "UncheckedSendableRatchetTests.swift"
 
     func testNoNewUncheckedSendableConformances() throws {
         let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
@@ -18,7 +21,7 @@ final class UncheckedSendableRatchetTests: XCTestCase {
         for directory in Self.sourceDirectories {
             let base = root.appendingPathComponent(directory)
             guard let walker = FileManager.default.enumerator(at: base, includingPropertiesForKeys: nil) else { continue }
-            for case let url as URL in walker where url.pathExtension == "swift" {
+            for case let url as URL in walker where url.pathExtension == "swift" && url.lastPathComponent != Self.selfFile {
                 let text = try String(contentsOf: url, encoding: .utf8)
                 // Only conformances (": @unchecked Sendable" or ", @unchecked Sendable"), not comments.
                 let declares = text.split(separator: "\n").contains { line in

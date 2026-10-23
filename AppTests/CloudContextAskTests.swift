@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Quicksilver
 import Core
@@ -81,10 +82,9 @@ private struct CloudAskHarness {
     let store: InMemoryMemoryStore
 }
 
-private final class CloudAskRecorder: AIProvider, @unchecked Sendable {
-    private let lock = NSLock()
-    private var _requests: [AIRequest] = []
-    var requests: [AIRequest] { lock.withLock { _requests } }
+private final class CloudAskRecorder: AIProvider, Sendable {
+    private let state = Mutex<[AIRequest]>([])
+    var requests: [AIRequest] { state.withLock { $0 } }
 
     let reply: String
     let trainsOnPrompts: Bool
@@ -98,7 +98,7 @@ private final class CloudAskRecorder: AIProvider, @unchecked Sendable {
     }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
-        lock.withLock { _requests.append(request) }
+        state.withLock { $0.append(request) }
         return AIResponse(requestID: request.id, content: reply)
     }
 }
