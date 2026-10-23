@@ -34,14 +34,18 @@ public struct GatewayStreamTransport: Sendable {
     }
 
     /// Ephemeral session that refuses HTTP redirects (keeps prompt body on the validated endpoint).
-    public static func makeSecureSession() -> URLSession {
-        let config = URLSessionConfiguration.ephemeral
-        return URLSession(
-            configuration: config,
+    public static func makeSecureSession(configuration: URLSessionConfiguration = .ephemeral) -> URLSession {
+        URLSession(
+            configuration: configuration,
             delegate: GatewayRedirectRejector.shared,
             delegateQueue: nil
         )
     }
+
+    /// Shared ephemeral, redirect-refusing session for every other gateway call (`/v1/config`
+    /// carries the device token; `/v1/health` must not follow redirects either). `URLSession.shared`
+    /// follows redirects and writes responses to the shared disk cache.
+    public static let secureSession = makeSecureSession()
 
     public static func urlSession(_ session: URLSession) -> GatewayStreamTransport {
         GatewayStreamTransport { request in
@@ -86,7 +90,7 @@ public struct GatewayStreamTransport: Sendable {
 
 /// Rejects every HTTP redirect so POSTed prompts never leave the validated gateway URL.
 /// Stateless `final` NSObject subclass, so it is checked `Sendable` (issue #252).
-private final class GatewayRedirectRejector: NSObject, URLSessionTaskDelegate, Sendable {
+final class GatewayRedirectRejector: NSObject, URLSessionTaskDelegate, Sendable {
     static let shared = GatewayRedirectRejector()
 
     func urlSession(

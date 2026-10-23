@@ -19,9 +19,12 @@ final class SanctumViewModel {
 
     private let container: DependencyContainer
     private var refreshTask: Task<Void, Never>?
+    /// VoiceOver announcements of Brain state changes (rate-limited; silent under -uitest).
+    @ObservationIgnored private let announcer: StateAnnouncer
 
     init(container: DependencyContainer) {
         self.container = container
+        self.announcer = StateAnnouncer(read: { container.brain.visualState })
         refresh()
     }
 
@@ -56,6 +59,7 @@ final class SanctumViewModel {
         // `interval` retained for API compatibility; ignored.
         _ = interval
         stopLiveRefresh()
+        announcer.start()
         let eventBus = container.eventBus
         refreshTask = Task { [weak self] in
             let stream = await eventBus.events(bufferingNewest: 1) { event in
@@ -72,6 +76,7 @@ final class SanctumViewModel {
     }
 
     func stopLiveRefresh() {
+        announcer.stop()
         refreshTask?.cancel()
         refreshTask = nil
     }
