@@ -1,4 +1,5 @@
 import XCTest
+import Security
 @testable import Core
 
 /// Covers the update-in-place semantics of `KeychainStore.set`.

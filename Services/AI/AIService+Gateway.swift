@@ -205,10 +205,20 @@ extension AIService {
     /// after a reboot). The Codex then says "locked" instead of "unbound".
     public var credentialsLocked: Bool {
         guard primaryProvider == nil else { return false }
-        let accounts = [
-            Self.gatewayBaseURLKeychainAccount, GatewayAIProvider.deviceTokenKeychainAccount,
-            Self.grokAPIKeyKeychainAccount, Self.geminiAPIKeyKeychainAccount
-        ]
-        return accounts.contains { KeychainStore.credentialState(forKey: $0) == .locked }
+        let state = { (key: String) in KeychainStore.credentialState(forKey: key) }
+        let gateway = [state(Self.gatewayBaseURLKeychainAccount), state(GatewayAIProvider.deviceTokenKeychainAccount)]
+        let standalone = [state(Self.grokAPIKeyKeychainAccount), state(Self.geminiAPIKeyKeychainAccount)]
+        return Self.isLocked(gatewayHalves: gateway, standaloneKeys: standalone)
+    }
+
+    /// The gateway URL and token are one binding: it is only "locked" when both halves still
+    /// exist (present or locked) and at least one is locked. A lone half left by an interrupted
+    /// `configureGateway` stays unbound after unlock, so it must not report "locked".
+    /// Standalone provider keys count individually.
+    static func isLocked(gatewayHalves: [KeychainStore.CredentialState],
+                         standaloneKeys: [KeychainStore.CredentialState]) -> Bool {
+        let gatewayLocked = gatewayHalves.allSatisfy { $0 == .present || $0 == .locked }
+            && gatewayHalves.contains(.locked)
+        return gatewayLocked || standaloneKeys.contains(.locked)
     }
 }
