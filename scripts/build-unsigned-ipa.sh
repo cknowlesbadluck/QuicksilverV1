@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build an UNSIGNED Quicksilver IPA locally on a Mac, for SideStore to re-sign on install.
-# No signing, no secrets, no CI. See docs/SIDESTORE.md.
+# No signing, no secrets, no CI. Diagnostic/local path only: CHR-55 acceptance uses the
+# Actions → Archive IPA artifact (Documentation/SIDESTORE.md). See docs/SIDESTORE.md.
 #
 #   scripts/build-unsigned-ipa.sh                       # xcodegen + archive from source (Release)
 #   scripts/build-unsigned-ipa.sh --archive X.xcarchive # package an existing archive
@@ -24,7 +25,13 @@ done
 [[ -z "$ARCHIVE" || -z "$APP" ]] || die "pass --archive or --app, not both"
 mkdir -p "$OUT"
 
+COMMIT="unverified (packaged an existing artifact; its source commit is unknown)"
 if [[ -z "$ARCHIVE" && -z "$APP" ]]; then
+  if [[ -z "$(git status --porcelain 2>/dev/null)" ]] && HEAD_SHA=$(git rev-parse --short HEAD 2>/dev/null); then
+    COMMIT="$HEAD_SHA (clean source build)"
+  else
+    COMMIT="unverified (working tree dirty or not a git checkout)"
+  fi
   command -v xcodegen >/dev/null || die "install XcodeGen (brew install xcodegen)"
   xcodegen generate
   ARCHIVE="$OUT/Quicksilver.xcarchive"
@@ -56,9 +63,10 @@ rm -rf "$STAGE/Payload/$NAME/_CodeSignature" "$STAGE/Payload/$NAME/embedded.mobi
 IPA="$(cd "$OUT" && pwd)/Quicksilver-${VERSION}-${BUILD}-unsigned.ipa"
 rm -f "$IPA"
 (cd "$STAGE" && /usr/bin/zip -qry "$IPA" Payload)
-unzip -l "$IPA" | grep -q "Payload/$NAME/Info.plist" || die "IPA layout check failed"
+# Ask unzip for the member directly (no early-closing pipe under pipefail).
+unzip -l "$IPA" "Payload/$NAME/Info.plist" >/dev/null 2>&1 || die "IPA layout check failed"
 
 echo "IPA:     $IPA"
-echo "Version: $VERSION ($BUILD), commit $(git rev-parse --short HEAD 2>/dev/null || echo n/a)"
+echo "Version: $VERSION ($BUILD), commit $COMMIT"
 echo "SHA-256: $(shasum -a 256 "$IPA" | cut -d' ' -f1)"
 echo "Unsigned. Install with SideStore (docs/SIDESTORE.md)."
