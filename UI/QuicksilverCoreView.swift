@@ -176,6 +176,7 @@ struct QuicksilverCoreView: View {
 /// A procedural liquid-metal surface. It is not a static gradient: the
 /// boundary itself changes, so the core reads as matter rather than an icon.
 private struct MercuryFluidSurface: View {
+    @Environment(\.ambientEnergy) private var energy
     let accent: Color
     let secondary: Color
     let size: CGFloat
@@ -184,7 +185,10 @@ private struct MercuryFluidSurface: View {
     let reducedMotion: Bool
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: reducedMotion)) { timeline in
+        TimelineView(.animation(
+            minimumInterval: MotionTokens.ambientInterval(MotionTokens.ambientFrameInterval, energy: energy),
+            paused: reducedMotion || MotionTokens.ambientPaused(energy)
+        )) { timeline in
             let time = timeline.date.timeIntervalSinceReferenceDate
             let phase = time * 0.72
             let motion = reducedMotion ? 0.0 : 1.0
@@ -263,13 +267,17 @@ private struct MercuryFluidSurface: View {
 /// Sparse environmental motion surrounding the core. The field uses stable
 /// seeds, so it feels like a persistent place instead of random particle spam.
 private struct MercuryChaosField: View {
+    @Environment(\.ambientEnergy) private var energy
     let accent: Color
     let secondary: Color
     let size: CGFloat
     let intensity: Double
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: false)) { timeline in
+        TimelineView(.animation(
+            minimumInterval: MotionTokens.ambientInterval(MotionTokens.ambientSlowFrameInterval, energy: energy),
+            paused: MotionTokens.ambientPaused(energy)
+        )) { timeline in
             let time = timeline.date.timeIntervalSinceReferenceDate
 
             Canvas { context, canvasSize in
