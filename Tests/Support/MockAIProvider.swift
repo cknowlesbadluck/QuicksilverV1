@@ -1,10 +1,11 @@
 import Foundation
 import Core
+@testable import ServicesAI
 
 // AIProvider protocol now lives in Core/Protocols/AIProvider.swift.
 // This file only provides the Mock implementation.
 //
-// MockAIProvider is for unit tests and SwiftUI previews only. AIService never selects it:
+// MockAIProvider lives in the test target only (moved out of the app 2026-10-16). AIService never selects it:
 // with no bound key, requests throw `AppError.apiKeyMissing` (the "Intelligence unbound" state, M1-T3).
 // Production code must not inject it. Streaming uses the AIProvider default (complete → meta/delta/done).
 
