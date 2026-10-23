@@ -4,12 +4,18 @@ import SwiftUI
 // Moved from EternalView.swift; internal (was file-private) so EternalView can use them across files.
 
 struct ObservatoryLens: View {
+    @Environment(\.ambientEnergy) private var energy
     let accent: Color
     let active: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 8.0 : 1.0 / 30.0)) { timeline in
+        TimelineView(.animation(
+            minimumInterval: MotionTokens.ambientInterval(
+                reduceMotion ? MotionTokens.reducedFrameInterval : MotionTokens.ambientFrameInterval, energy: energy
+            ),
+            paused: MotionTokens.ambientPaused(energy)
+        )) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             let angle = reduceMotion ? 0.0 : t * (active ? 0.32 : 0.08)
             ZStack {
@@ -42,11 +48,17 @@ struct ObservatoryLens: View {
 }
 
 struct ObservatoryField: View {
+    @Environment(\.ambientEnergy) private var energy
     let intensity: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: reduceMotion ? 1.0 / 8.0 : 1.0 / 30.0)) { timeline in
+        TimelineView(.animation(
+            minimumInterval: MotionTokens.ambientInterval(
+                reduceMotion ? MotionTokens.reducedFrameInterval : MotionTokens.ambientFrameInterval, energy: energy
+            ),
+            paused: MotionTokens.ambientPaused(energy)
+        )) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             Canvas { context, size in
                 drawRings(context: context, size: size, time: t)

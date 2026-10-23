@@ -16,12 +16,54 @@ final class PrewarmedSessionCacheTests: XCTestCase {
         XCTAssertTrue(cache.take(for: "aspect A") === warm)
     }
 
-    func testInstructionChangeDropsTheStaleSession() {
+    func testInstructionChangeNeverReusesAnotherKeysSession() {
         let cache = PrewarmedSessionCache<FakeSession>()
-        cache.store(FakeSession(), for: "aspect A")
+        let warm = FakeSession()
+        cache.store(warm, for: "aspect A")
         XCTAssertNil(cache.take(for: "aspect B"), "Aspect/system-prompt change must not reuse")
-        XCTAssertFalse(cache.isWarm, "The mismatched session is discarded, not kept around")
-        XCTAssertNil(cache.take(for: "aspect A"))
+        XCTAssertTrue(cache.isWarm(for: "aspect A"), "A mismatch leaves the other warmed session alone")
+        XCTAssertTrue(cache.take(for: "aspect A") === warm)
+        XCTAssertFalse(cache.isWarm)
+    }
+
+    /// The #345 risk: a note summary must not evict the warmed chat session.
+    func testSideTaskDoesNotEvictTheChatSession() {
+        let cache = PrewarmedSessionCache<FakeSession>()
+        let chat = FakeSession()
+        cache.store(chat, for: "chat")
+        XCTAssertNil(cache.take(for: "summary"))
+        cache.store(FakeSession(), for: "summary") // the summary turn re-warms its own key
+        XCTAssertEqual(cache.count, 2)
+        XCTAssertTrue(cache.take(for: "chat") === chat)
+    }
+
+    func testCapacityEvictsTheLeastRecentlyStored() {
+        let cache = PrewarmedSessionCache<FakeSession>(capacity: 2)
+        cache.store(FakeSession(), for: "a")
+        cache.store(FakeSession(), for: "b")
+        cache.store(FakeSession(), for: "c")
+        XCTAssertEqual(cache.count, 2)
+        XCTAssertFalse(cache.isWarm(for: "a"))
+        XCTAssertTrue(cache.isWarm(for: "b"))
+        XCTAssertTrue(cache.isWarm(for: "c"))
+    }
+
+    func testStoringTheSameKeyReplacesAndRefreshesIt() {
+        let cache = PrewarmedSessionCache<FakeSession>(capacity: 2)
+        cache.store(FakeSession(), for: "a")
+        cache.store(FakeSession(), for: "b")
+        let fresh = FakeSession()
+        cache.store(fresh, for: "a") // "a" is now the most recent
+        cache.store(FakeSession(), for: "c") // evicts "b"
+        XCTAssertFalse(cache.isWarm(for: "b"))
+        XCTAssertTrue(cache.take(for: "a") === fresh)
+    }
+
+    func testCapacityIsAtLeastOne() {
+        let cache = PrewarmedSessionCache<FakeSession>(capacity: 0)
+        cache.store(FakeSession(), for: "a")
+        XCTAssertEqual(cache.capacity, 1)
+        XCTAssertEqual(cache.count, 1)
     }
 
     func testSessionIsSingleUseSoTranscriptsCannotLeakAcrossTurns() {
@@ -34,8 +76,10 @@ final class PrewarmedSessionCacheTests: XCTestCase {
     func testDiscardOnMemoryPressure() {
         let cache = PrewarmedSessionCache<FakeSession>()
         cache.store(FakeSession(), for: nil)
+        cache.store(FakeSession(), for: "summary")
         cache.discard()
         XCTAssertNil(cache.take(for: nil))
+        XCTAssertFalse(cache.isWarm, "memory pressure drops every warmed session")
     }
 
     func testNilAndEmptyInstructionsShareAKey() {
