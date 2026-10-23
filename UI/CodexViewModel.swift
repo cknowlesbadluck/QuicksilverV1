@@ -76,7 +76,8 @@ final class CodexViewModel {
             appVersion: info["CFBundleShortVersionString"] as? String ?? "",
             build: info["CFBundleVersion"] as? String ?? "",
             routes: container.aiService.routeLog.recent(),
-            budget: container.aiService.cloudBudget.current(),
+            // A cleared/unbound gateway must not export the former binding's quota.
+            budget: container.aiService.hasGatewayBinding ? container.aiService.cloudBudget.current() : nil,
             credentials: container.aiService.credentialStates(),
             memoryTotal: memory.items.count,
             memoryNotes: memory.items.filter { $0.key.hasPrefix("note.") }.count,
