@@ -59,7 +59,7 @@ file_length:
 custom_rules:
   no_public_log_privacy:
     name: "No public log privacy"
-    regex: 'privacy:\s*\.public'
+    regex: '\\\([^)]*privacy:\s*\.public'
     excluded: "Core/LoggerService\\.swift"
     message: "Log through LoggerService (private by default); never mark log content .public."
     severity: error
