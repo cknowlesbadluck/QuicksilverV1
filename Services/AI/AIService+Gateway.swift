@@ -215,8 +215,10 @@ extension AIService {
     /// exist (present or locked) and at least one is locked. A lone half left by an interrupted
     /// `configureGateway` stays unbound after unlock, so it must not report "locked".
     /// Standalone provider keys count individually.
-    nonisolated static func isLocked(gatewayHalves: [KeychainStore.CredentialState],
-                         standaloneKeys: [KeychainStore.CredentialState]) -> Bool {
+    nonisolated static func isLocked(
+        gatewayHalves: [KeychainStore.CredentialState],
+        standaloneKeys: [KeychainStore.CredentialState]
+    ) -> Bool {
         let gatewayLocked = gatewayHalves.allSatisfy { $0 == .present || $0 == .locked }
             && gatewayHalves.contains(.locked)
         return gatewayLocked || standaloneKeys.contains(.locked)
