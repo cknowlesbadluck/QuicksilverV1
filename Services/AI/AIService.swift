@@ -137,12 +137,6 @@ public final class AIService {
         )
     }
 
-    public func setProvider(_ newProvider: AIProvider) {
-        primaryProvider = newProvider
-        secondaryProvider = nil
-        logger.info("AI provider switched to \(newProvider.displayName)", category: logger.ai)
-    }
-
     public static let unboundProviderID = "unbound"
     public static let unboundProviderName = "Unbound"
 
@@ -154,11 +148,6 @@ public final class AIService {
     }
     public var hasGeminiKey: Bool {
         !(KeychainStore.string(forKey: Self.geminiAPIKeyKeychainAccount)?.isEmpty ?? true)
-    }
-
-    @discardableResult
-    public func configureAPIKey(_ key: String?) -> Bool {
-        configureGrokAPIKey(key)
     }
 
     /// Fail-closed: unbound / unknown providers are treated as training-on-prompts.
