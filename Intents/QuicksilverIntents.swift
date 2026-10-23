@@ -198,6 +198,28 @@ public struct QuicksilverShortcuts: AppShortcutsProvider {
             shortTitle: "Remember",
             systemImageName: "brain.head.profile"
         )
+        // 8
+        AppShortcut(
+            // No pre-filled value: Siri/Shortcuts prompts for the search text.
+            intent: FindNotesIntent(),
+            phrases: [
+                "Find in my notes in \(.applicationName)",
+                "Search my notes in \(.applicationName)"
+            ],
+            shortTitle: "Find Notes",
+            systemImageName: "magnifyingglass"
+        )
+        // 9
+        AppShortcut(
+            // Siri asks which note, then asks for confirmation before deleting.
+            intent: ForgetNoteIntent(),
+            phrases: [
+                "Forget a note in \(.applicationName)",
+                "Delete a note in \(.applicationName)"
+            ],
+            shortTitle: "Forget Note",
+            systemImageName: "trash"
+        )
         // 7
         AppShortcut(
             // No pre-filled value: Siri/Shortcuts prompts for the query.
