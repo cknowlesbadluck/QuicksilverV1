@@ -3,6 +3,7 @@ import Observation
 import Core
 import Memory
 import Personas
+import ServicesAI
 
 @MainActor
 @Observable
@@ -82,5 +83,25 @@ final class MemoryViewModel {
             lastExportJSON = nil
             statusMessage = "Export failed"
         }
+    }
+
+    // MARK: - On-device note summaries (#345)
+
+    /// One-line summaries made on this device, keyed by note id. Never sent anywhere.
+    private(set) var summaries: [UUID: String] = [:]
+
+    /// Offered only for saved notes long enough to need it, when the on-device model is ready.
+    func canSummarize(_ item: MemoryItem) -> Bool {
+        item.key.hasPrefix("note.") && item.category != .conversation
+            && item.value.count >= OnDeviceNoteSummarizer.minimumCharacters
+            && container.aiService.onDeviceProvider?.isAvailable == true
+    }
+
+    func summarize(id: UUID, using summarizer: (any NoteSummarizing)? = nil) async {
+        guard let summary = await container.brain.noteSummary(id: id, using: summarizer) else {
+            statusMessage = "Summary unavailable on this device"
+            return
+        }
+        summaries[id] = summary
     }
 }
