@@ -116,7 +116,7 @@ final class SanctumSmokeTests: XCTestCase {
     }
 
     /// Polls an element's frame until it is unchanged for three consecutive 0.25s samples (max ~6s).
-    private func waitForStableFrame(_ element: XCUIElement) {
+    private func waitForStableFrame(_ element: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
         var last = element.frame
         var stableSamples = 0
         for _ in 0..<24 where stableSamples < 3 {
@@ -125,6 +125,7 @@ final class SanctumSmokeTests: XCTestCase {
             stableSamples = current == last ? stableSamples + 1 : 0
             last = current
         }
+        XCTAssertGreaterThanOrEqual(stableSamples, 3, "Frame never settled before audit: \(element)", file: file, line: line)
     }
 
     /// Retries only the audit's own "failed to complete in time" error.
@@ -213,7 +214,7 @@ final class SanctumSmokeTests: XCTestCase {
         guard bar.exists else { return }
         let close = app.buttons["ask.close"]
         if close.waitForExistence(timeout: 3) { close.tap() } else { bar.swipeDown(velocity: .fast) }
-        _ = bar.waitForNonExistence(timeout: 5)
+        XCTAssertTrue(bar.waitForNonExistence(timeout: 5), "Ask sheet did not dismiss")
     }
 
     private func returnToSanctumIfNeeded() {
