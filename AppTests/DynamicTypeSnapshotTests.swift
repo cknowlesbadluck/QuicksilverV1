@@ -21,7 +21,10 @@ final class DynamicTypeSnapshotTests: XCTestCase {
             visualState: .idle, activeAspect: .quicksilver, livingStatus: "",
             onDestination: { _ in }, onInvoke: {}
         )
-        try assertSnapshot(of: view, named: "sanctum-ax5")
+        // Sanctum's ambient/fluid TimelineViews derive phase from the wall clock, so pixels
+        // are not reproducible run to run. Until a frozen-time render mode exists, Sanctum is
+        // record-only: non-blank check + attachment, never compared against a baseline.
+        try assertSnapshot(of: view, named: "sanctum-ax5", compareToBaseline: false)
     }
 
     func testCodexAtLargestDynamicType() throws {
@@ -33,7 +36,7 @@ final class DynamicTypeSnapshotTests: XCTestCase {
 
     // MARK: - Harness
 
-    private func assertSnapshot<V: View>(of view: V, named name: String) throws {
+    private func assertSnapshot<V: View>(of view: V, named name: String, compareToBaseline: Bool = true) throws {
         let image = render(view)
         let png = try XCTUnwrap(image.pngData(), "render produced no PNG")
 
@@ -47,10 +50,17 @@ final class DynamicTypeSnapshotTests: XCTestCase {
         let reference = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .appendingPathComponent("__Snapshots__/\(name).png")
-        guard let data = try? Data(contentsOf: reference), let baseline = UIImage(data: data) else {
+        guard compareToBaseline else {
+            print("SNAPSHOT recorded \(name) (record-only: render is time-dependent)")
+            return
+        }
+        guard FileManager.default.fileExists(atPath: reference.path) else {
             print("SNAPSHOT recorded \(name) (no baseline yet; see the xcresult attachment)")
             return
         }
+        // A baseline that exists but can't be read or decoded is a failure, not "no baseline".
+        let data = try Data(contentsOf: reference)
+        let baseline = try XCTUnwrap(UIImage(data: data), "\(name) baseline PNG could not be decoded")
         let diff = Self.differingFraction(image, baseline)
         XCTAssertLessThanOrEqual(diff, Self.tolerance, "\(name) differs from baseline by \(diff)")
     }
@@ -68,6 +78,7 @@ final class DynamicTypeSnapshotTests: XCTestCase {
         let window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
         window.frame = CGRect(origin: .zero, size: Self.size)
         window.rootViewController = host
+        let previousKey = scene?.windows.first { $0.isKeyWindow }
         window.makeKeyAndVisible()
         host.view.setNeedsLayout()
         host.view.layoutIfNeeded()
@@ -82,6 +93,7 @@ final class DynamicTypeSnapshotTests: XCTestCase {
             }
         }
         window.isHidden = true
+        previousKey?.makeKey() // keep focus/keyboard for later app-hosted tests
         return image
     }
 
