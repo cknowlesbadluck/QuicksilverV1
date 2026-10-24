@@ -131,14 +131,6 @@ public final class MemoryManager {
         return true
     }
 
-    @discardableResult
-    public func pruneBelow(importance threshold: Double) async -> Int {
-        let victims = items.filter { $0.importance < threshold }
-        for item in victims { await delete(id: item.id) }
-        if !victims.isEmpty { logger.info("Pruned \(victims.count) memory items below importance \(threshold)", category: logger.memory) }
-        return victims.count
-    }
-
     /// Removes only what `retention` allows (conversation turns, by age and count).
     @discardableResult
     public func applyRetention(now: Date = Date()) async -> Int {

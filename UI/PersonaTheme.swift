@@ -116,13 +116,6 @@ enum PersonaTheme {
 
     static let thinkingPulse = Animation.easeInOut(duration: 1.35).repeatForever(autoreverses: true)
 
-    // MARK: - Materials & Borders
-
-    static func radioactiveStroke(for personaID: String, intensity: Double = 1.0) -> Color {
-        let base = personaID.lowercased() == "forge" ? toxicGreen : glowPurple
-        return base.opacity(0.35 * intensity)
-    }
-
     // MARK: - Policy Summary
 
     static func policySummary(for personaID: String) -> String {

@@ -49,10 +49,4 @@ public final class FeatureFlags {
         defaults.set(flags, forKey: storageKey)
         defaults.set(Self.currentSchema, forKey: schemaKey)
     }
-
-    public func resetToDefaults() {
-        flags = Self.defaultFlags
-        defaults.set(flags, forKey: storageKey)
-        defaults.set(Self.currentSchema, forKey: schemaKey)
-    }
 }
