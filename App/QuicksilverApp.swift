@@ -17,6 +17,10 @@ struct QuicksilverApp: App {
                 // Decorative motion slows in Low Power Mode / thermal pressure (AmbientEnergy).
                 .environment(\.ambientEnergy, energy)
                 .onReceive(energyChanges) { _ in energy = .current }
+                // First unlock after boot: Keychain becomes readable, so rebuild cloud routes.
+                .onReceive(NotificationCenter.default.publisher(
+                    for: UIApplication.protectedDataDidBecomeAvailableNotification
+                )) { _ in container.aiService.rehydrateProvidersIfNeeded() }
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
                     case .active:
