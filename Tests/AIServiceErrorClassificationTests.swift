@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Core
 @testable import ServicesAI
@@ -363,31 +364,28 @@ final class AIServiceErrorClassificationTests: XCTestCase {
 }
 
 
-private final class LockedIntervals: @unchecked Sendable {
-    private let lock = NSLock()
-    private var values: [TimeInterval] = []
+private final class LockedIntervals: Sendable {
+    private let values = Mutex<[TimeInterval]>([])
     func append(_ value: TimeInterval) {
-        lock.lock(); values.append(value); lock.unlock()
+        values.withLock { $0.append(value) }
     }
     func snapshot() -> [TimeInterval] {
-        lock.lock(); defer { lock.unlock() }
-        return values
+        values.withLock { $0 }
     }
 }
 
 // MARK: - Scripted attempt provider
 
-private final class AttemptCounter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value = 0
+private final class AttemptCounter: Sendable {
+    private let value = Mutex(0)
     var count: Int {
-        lock.lock(); defer { lock.unlock() }
-        return value
+        value.withLock { $0 }
     }
     func increment() -> Int {
-        lock.lock(); defer { lock.unlock() }
-        value += 1
-        return value
+        value.withLock { current in
+            current += 1
+            return current
+        }
     }
 }
 
@@ -461,15 +459,13 @@ private struct AttemptScriptProvider: AIProvider {
     }
 }
 
-private final class CapturedRequestBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value: AIRequest?
+private final class CapturedRequestBox: Sendable {
+    private let value = Mutex<AIRequest?>(nil)
     var request: AIRequest? {
-        lock.lock(); defer { lock.unlock() }
-        return value
+        value.withLock { $0 }
     }
     func store(_ request: AIRequest) {
-        lock.lock(); value = request; lock.unlock()
+        value.withLock { $0 = request }
     }
 }
 
