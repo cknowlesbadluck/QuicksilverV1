@@ -363,10 +363,6 @@ extension MercuryBrain {
         }
     }
 
-    private func retrieveRelevantMemory(matching text: String? = nil) -> [MemoryItem] {
-        retrieveSnapshot(limit: 4, text: text)
-    }
-
     private func recordTurn(user: String, assistant: String) {
         conversation.append(Message(role: .user, content: user))
         conversation.append(Message(role: .assistant, content: assistant))
