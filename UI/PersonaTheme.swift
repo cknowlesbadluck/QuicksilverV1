@@ -46,6 +46,8 @@ enum PersonaTheme {
     // MARK: - Surface Geometry (absorbed from MercuryVisualTokens)
 
     static let glassCornerRadius: CGFloat = 18
+    /// Vertical rhythm of the single-column Sanctum at accessibility text sizes (#335).
+    static let sanctumAccessibilityStackSpacing: CGFloat = 24
 
     // MARK: - Persona Accents
 
