@@ -4,17 +4,27 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 
 **State as of 2026-10-24, 5 PM ET:** `main` is at `ba0ecd6` and green. CHR-55 is still `not_recorded`. Merged this cycle: the opaque readable colours (#381), the Keychain policy guard (#385) and the public-API guard (#386). Closed as stale or superseded, with branches kept: #319, #337, #340, #343, #345 and #348.
 
+## 1.0 exit criteria, in order (CHR-55 first)
+
+1. **CHR-55 is `recorded` by the owner.** Every item on the device checklist below passes on one build, with a content-free device-run stamp attached. Nothing else counts toward 1.0 until this holds.
+2. Quicksilver CI is green on `main` on all 6 jobs for 20 consecutive runs, with no reruns.
+3. The privacy floor guards are on `main`: logging (#370), Keychain policy (#385) and public API (#386). The diagnostics export is verified by the privacy gate (#374).
+4. The memory budget, retention and load-time ceiling tests are on `main` (#382, #388).
+5. The accessibility audit passes at xxLarge, xxxLarge and AX5 (#373).
+6. Open PRs number fewer than 10, with no PR older than 7 days unless it is owner-held.
+
 ## Phase 1: CHR-55 device fence
 - **Goal:** prove on real hardware what CI can only simulate.
-- **Implementations:**
-  - An owner-run checklist in `docs/` with fixed steps:
-    - cold launch to Sanctum;
-    - Ask on-device;
-    - locked before first unlock → unlock → routing rebuild;
-    - adding and deleting a note survives a relaunch;
-    - Spotlight opt-in and opt-out.
-  - The app adds a content-free "device run" stamp to the diagnostics export (build, OS, model availability, timings) for the owner to attach.
-- **Exit:** CHR-55 is set to `recorded` by the owner, with the stamp attached. Until then, every later phase that depends on device behaviour stays provisional.
+- **Owner device checklist.** The owner runs it on an iPhone 16e with iOS 27, all on the same build:
+  1. Build the unsigned IPA locally (`scripts/` and `docs/SIDESTORE.md` from #375), then sign and install it through SideStore. Agents never run the archive or signing steps.
+  2. **Cold launch:** force-quit, launch, and the Sanctum appears with no crash.
+  3. **On-device answer:** with Apple Intelligence on and airplane mode on, Ask answers on-device.
+  4. **Keychain after a reboot:** reboot, then open the app before the first unlock and confirm the Codex shows the locked state. Unlock and confirm routing rebuilds, with stored keys present and nothing re-entered.
+  5. **Spotlight tap:** opt in to Spotlight, save a note, search for it in Spotlight, and tap it. The Archive opens on that note. Then opt out and confirm the note is gone from Spotlight.
+  6. **VoiceOver:** VoiceOver can reach Sanctum, Ask, Archive and Codex, and every control has a label.
+  7. **Memory at the cap:** with about 1,000 turns plus 500 notes, launch to a usable Sanctum within a few seconds. Notes survive a relaunch, and the oldest note is still findable.
+- **Implementations:** the app adds a content-free "device run" stamp to the diagnostics export (build, OS, model availability, timings) for the owner to attach.
+- **Exit:** every checklist item passes, and the owner sets CHR-55 to `recorded` with the stamp attached. Until then, every later phase that depends on device behaviour stays provisional.
 
 ## Phase 2: memory budget
 - **Goal:** memory stays bounded and fast at the cap.
