@@ -174,14 +174,6 @@ extension MercuryBrain {
         }
     }
 
-    func beginListening() {
-        visualState = .listening
-    }
-
-    func endListening() {
-        visualState = environmentalBaseline()
-    }
-
     private func applyAspect(_ aspect: Aspect, reason: String, force: Bool = false) async {
         if aspect == activeAspect {
             if visualState == .thinking || visualState == .idle {

@@ -93,7 +93,7 @@ final class EventDrivenRefreshTests: XCTestCase {
     func testRefreshTaskDoesNotRetainOwner() async {
         let bus = EventBus()
         var owner: RefreshProbe? = RefreshProbe()
-        weak var weakOwner = owner
+        weak let weakOwner = owner
         let firstRefresh = XCTestExpectation(description: "first refresh")
 
         let task = EventDrivenRefresh.start(
