@@ -129,8 +129,6 @@ public final class NoteSpotlightSync {
 struct CoreSpotlightNoteIndex: NoteSearchIndexing {
     static let domain = "com.quicksilver.notes"
 
-    init() {}
-
     func replaceAll(with notes: [MemoryEntity]) async throws {
         let index = CSSearchableIndex.default()
         try await index.deleteSearchableItems(withDomainIdentifiers: [Self.domain])
