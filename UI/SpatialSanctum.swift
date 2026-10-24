@@ -101,7 +101,7 @@ struct SpatialSanctum: View {
                 // accessibility5 the greeting covered the portal grid and the stack overflowed (#335).
                 if dynamicTypeSize.isAccessibilitySize {
                     ScrollView {
-                        VStack(spacing: 24) {
+                        VStack(spacing: PersonaTheme.sanctumAccessibilityStackSpacing) {
                             topPresence
                             presence
                             navigationPrompt
