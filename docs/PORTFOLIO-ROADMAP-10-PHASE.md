@@ -56,3 +56,16 @@ Binding constraints: CHR-55 device archive remains. High open-PR entropy and ali
 10. On-device diagnostics post CHR-55 only. Fresh probe confirms dual ready. No regression.
 
 Highest-value next: aggressively reduce open PR entropy (close docs-only superseded first, merge green non-overlapping hardens), clean Vercel alias drift, then CHR-55 device IPA evidence. Stabilization holds. Innovate continues under constraints. Dual-plane ready is the new baseline.
+
+## Update 2026-10-24 18:00 ET (QuicksilverV1 pass)
+
+- **QuicksilverV1 open PRs:** 12 before the late-audit docs PR, down from 14. Six stale or superseded PRs were closed with their branches kept: #319, #337, #340, #343, #345 and #348. QS `main` is at `ba0ecd6` and green. See `docs/AUDIT-2026-10-24-LATE.md`.
+- **External planes:** both are ready (owner-reported 2026-10-24). This pass did not verify it, and no probe data is added here.
+- **Device:** CHR-55 is still `not_recorded`. No device claim is made.
+
+### Innovation notes (proposals only, nothing implemented here)
+
+1. **Entropy reporter (proposed).** A read-only job that reports the open-PR count, how stale each PR is, and file overlap between PRs, per repo per week. A starting point for QS is `scripts/pr-queue-status.sh`, which already reports CI state, mergeability and merge order without editing anything.
+2. **Stale-branch script (proposed).** QS has no stale-branch script. The existing `Prune Merged Branches` workflow (`.github/workflows/prune-branches.yml`, Mondays 09:00 UTC) covers merged branches only. A proposed dry-run script would list branches whose PRs are closed and whose patches are all on `main`.
+3. **Cross-plane probe (proposed).** A single read-only probe that records both planes' ready state next to the CHR-55 state, which stays manual. It would complement Phase 10, would not count as acceptance, and is not implemented.
+
