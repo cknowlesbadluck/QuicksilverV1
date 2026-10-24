@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Core
 @testable import QuicksilverIntents
@@ -66,17 +67,35 @@ final class NoteSpotlightTests: XCTestCase {
     }
 }
 
-private final class FakeIndex: NoteSearchIndexing, @unchecked Sendable {
-    enum Call: Equatable { case replaceAll([String]), removeAll }
-    var calls: [Call] = []
-    var failNext = false
+/// Checked Sendable via `Mutex` (issue #252 ratchet).
+private final class FakeIndex: NoteSearchIndexing {
+    enum Call: Equatable, Sendable { case replaceAll([String]), removeAll }
+    private struct State {
+        var calls: [Call] = []
+        var failNext = false
+    }
+    private let state = Mutex(State())
 
-    func replaceAll(with notes: [MemoryEntity]) async throws {
-        if failNext { failNext = false; throw CocoaError(.fileWriteUnknown) }
-        calls.append(.replaceAll(notes.map(\.text)))
+    var calls: [Call] { state.withLock { $0.calls } }
+    var failNext: Bool {
+        get { state.withLock { $0.failNext } }
+        set { state.withLock { $0.failNext = newValue } }
     }
 
-    func removeAll() async throws { calls.append(.removeAll) }
+    func replaceAll(with notes: [MemoryEntity]) async throws {
+        let texts = notes.map(\.text)
+        let shouldFail = state.withLock { current -> Bool in
+            if current.failNext {
+                current.failNext = false
+                return true
+            }
+            current.calls.append(.replaceAll(texts))
+            return false
+        }
+        if shouldFail { throw CocoaError(.fileWriteUnknown) }
+    }
+
+    func removeAll() async throws { state.withLock { $0.calls.append(.removeAll) } }
 }
 
 private final class NotesSurface: IntelligenceSurface {
