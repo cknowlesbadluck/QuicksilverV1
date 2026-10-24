@@ -9,6 +9,8 @@ struct MemoryView: View {
     @State private var draft = ""
     @State private var showClearConfirm = false
     @State private var sharePayload: SharePayload?
+    /// A note opened from Spotlight: scrolled to and highlighted once the list has it.
+    var focusedNoteID: UUID?
 
     var body: some View {
         Group {
@@ -56,67 +58,76 @@ struct MemoryView: View {
     private func content(_ vm: MemoryViewModel) -> some View {
         let accent = PersonaTheme.accent(for: container.activeConfiguration.id)
 
-        List {
-            Section {
-                HStack {
-                    TextField("Quick note…", text: $draft)
-                    Button("Save") {
-                        Task {
-                            await vm.addQuickNote(draft)
-                            draft = ""
-                        }
-                    }
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .foregroundStyle(accent)
-                }
-            } header: {
-                if !vm.activePolicyLabel.isEmpty {
-                    Text("Policy: \(vm.activePolicyLabel)")
-                        .foregroundStyle(accent)
-                }
-            }
-
-            Section("Stored (by importance)") {
-                if vm.isLoading {
-                    ProgressView()
-                } else if vm.items.isEmpty {
-                    Text("No memories match current policy")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(vm.items) { item in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(item.key)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                importanceBadge(item.importance)
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    HStack {
+                        TextField("Quick note…", text: $draft)
+                        Button("Save") {
+                            Task {
+                                await vm.addQuickNote(draft)
+                                draft = ""
                             }
-                            Text(item.value).font(.body)
-                            HStack {
-                                Text(item.updatedAt, style: .relative)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                if let scope = item.personaScope {
-                                    Text("· \(scope)")
+                        }
+                        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .foregroundStyle(accent)
+                    }
+                } header: {
+                    if !vm.activePolicyLabel.isEmpty {
+                        Text("Policy: \(vm.activePolicyLabel)")
+                            .foregroundStyle(accent)
+                    }
+                }
+
+                Section("Stored (by importance)") {
+                    if vm.isLoading {
+                        ProgressView()
+                    } else if vm.items.isEmpty {
+                        Text("No memories match current policy")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(vm.items) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(item.key)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    importanceBadge(item.importance)
+                                }
+                                Text(item.value).font(.body)
+                                HStack {
+                                    Text(item.updatedAt, style: .relative)
                                         .font(.caption2)
                                         .foregroundStyle(.tertiary)
+                                    if let scope = item.personaScope {
+                                        Text("· \(scope)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 2)
+                            .id(item.id)
+                            .listRowBackground(item.id == focusedNoteID ? accent.opacity(0.18) : nil)
+                            .accessibilityAddTraits(item.id == focusedNoteID ? .isSelected : [])
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    Task { await vm.delete(id: item.id) }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
                         }
-                        .padding(.vertical, 2)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                Task { await vm.delete(id: item.id) }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
                     }
                 }
             }
+            .task { await vm.load() }
+            .onChange(of: vm.items.contains { $0.id == focusedNoteID }) { _, found in
+                guard found, let id = focusedNoteID else { return }
+                withAnimation { proxy.scrollTo(id, anchor: .center) }
+            }
         }
-        .task { await vm.load() }
     }
 
     private func importanceBadge(_ value: Double) -> some View {

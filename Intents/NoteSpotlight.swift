@@ -149,3 +149,15 @@ struct CoreSpotlightNoteIndex: NoteSearchIndexing {
         try await CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: [Self.domain])
     }
 }
+
+/// Routes a Spotlight result tap back to its note. Only `CSSearchableItemActionType` activities
+/// carrying a UUID identifier are accepted, because the index only ever holds note IDs (see
+/// `CoreSpotlightNoteIndex`), so anything else is ignored.
+public enum NoteSpotlightRoute {
+    public static func noteID(from activity: NSUserActivity) -> UUID? {
+        guard activity.activityType == CSSearchableItemActionType,
+              let raw = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String
+        else { return nil }
+        return UUID(uuidString: raw)
+    }
+}
