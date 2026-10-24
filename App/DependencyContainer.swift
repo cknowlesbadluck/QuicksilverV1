@@ -108,13 +108,16 @@ final class DependencyContainer {
     }
 
     /// Loads memory, then starts the brain index and Spotlight. Spotlight reconciles only after
-    /// the load (so an empty snapshot never replaces the index), then follows every note change.
+    /// a successful load (so an empty snapshot never replaces the index), then follows every note change.
     private func startMemoryLoad() {
         Task { [weak self] in
             guard let self else { return }
             await self.memoryManager.load()
             self.brain.startMemoryIndexSync()
             self.noteSpotlight.follow(self.eventBus)
+            // A failed load leaves memory empty; never let that replace the index.
+            // Opt-out removal is not gated and still runs on the next sync.
+            guard self.memoryManager.lastFailure != .load else { return }
             await self.noteSpotlight.memoryDidLoad()
         }
     }
