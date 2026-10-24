@@ -47,8 +47,6 @@ type_name:
 
 force_cast: error
 force_try: error
-force_unwrapping: warning
-
 vertical_whitespace:
   max_empty_lines: 2
 
