@@ -2,6 +2,8 @@
 
 QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A phase is done when its exit criteria hold on `main` with Quicksilver CI green on all 6 jobs. Device evidence counts only if the owner records it. Agents never record or claim it.
 
+**State as of 2026-10-24, 5 PM ET:** `main` is at `ba0ecd6` and green. CHR-55 is still `not_recorded`. Merged this cycle: the opaque readable colours (#381), the Keychain policy guard (#385) and the public-API guard (#386). Closed as stale or superseded, with branches kept: #319, #337, #340, #343, #345 and #348.
+
 ## Phase 1: CHR-55 device fence
 - **Goal:** prove on real hardware what CI can only simulate.
 - **Implementations:**
@@ -18,7 +20,7 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 - **Goal:** memory stays bounded and fast at the cap.
 - **Implementations:**
   - Retention is already tested (`MemoryBudgetTests`).
-  - Add a load-time benchmark test at 1,000 turns plus 500 notes, with a regression ceiling.
+  - Load-time test at 1,000 turns plus 500 notes, with 15 s load and 5 s query ceilings (#388, green). On CI, load took about 2–5 ms with the in-memory store and 0.09–0.22 s with SwiftData.
   - Every note query filters before it caps (done for `memoryNotes` in #377).
   - Retention runs incrementally on save rather than as a full sweep.
 - **Exit:** budget, retention and benchmark tests pass on CI. A device load time at the cap is recorded after CHR-55.
@@ -26,7 +28,7 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 ## Phase 3: privacy floor
 - **Goal:** personal data never leaves the device unless the gate allows it, and every privacy control fails visibly.
 - **Implementations:**
-  - Land the privacy-gate stack (#319 → #340 → #342), with held-out classifier metrics.
+  - Land the cloud-fallback history prune (#342, green; it now contains #340's classifier corpus). The NaturalLanguage gate from the closed #319 can be recovered from commit `4b40a2a`; the steps are noted on #342.
   - Rebase and land the content-free diagnostics export (#374).
   - Keychain items stay `ThisDeviceOnly`, with a test.
   - Logs stay private by default (`LoggerPrivacyGuardTests`).
@@ -52,15 +54,15 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 ## Phase 6: Spotlight, Shortcuts and App Intents
 - **Goal:** system surfaces show notes only, with user consent.
 - **Implementations:**
-  - Land Find in My Notes (#337) and Forget a Note (#343, confirm plus unlock).
-  - Tapping a Spotlight result opens the note through `NSUserActivity`/`CSSearchableItemActionType`.
+  - Find in My Notes and Forget a Note (confirm plus unlock). Their old PRs #337 and #343 were closed as stale and overlapping #377; rebuild them on top of #377 once it lands.
+  - Tapping a Spotlight result opens the note through `CSSearchableItemActionType`: `NoteSpotlightRoute` sends the tap to the Archive, which scrolls to and highlights the note, with unit tests (#377).
   - App Shortcuts phrases.
 - **Exit:** intent and Spotlight tests prove that chat turns are never exposed, a result tap reaches the note in a UI test, and Forget requires unlock.
 
 ## Phase 7: accessibility
 - **Goal:** usable at every Dynamic Type size and with VoiceOver.
 - **Implementations:**
-  - Run the UI audit at large non-accessibility sizes (xxLarge, xxxLarge) as well as AX5.
+  - Run the UI audit at large non-accessibility sizes (xxLarge, xxxLarge) as well as AX5. The Sanctum scrolls from xxLarge up (#373, rebased; it also contains #387).
   - Use opaque readable colours only (#381).
   - Make snapshots deterministic (pinned model state and a frozen-time Sanctum render).
 - **Exit:** the audit passes at three sizes on CI, and snapshots compare against baselines, with no record-only cases left.
@@ -69,7 +71,8 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 - **Goal:** no flaky CI, and no silent failures.
 - **Implementations:**
   - Retire the remaining `@unchecked Sendable` sites (#252) through the ratchet.
-  - The memory failure banner (#314).
+  - The memory failure banner (#314, green).
+  - Main-actor UI smoke tests with no concurrency warnings (#387, green), and a settled-Sanctum wait for the Workshop contrast flake (#373).
   - Thread Sanitizer stays required.
   - Quarantine and fix any test that fails twice in 20 runs.
 - **Exit:** 20 consecutive green `main` runs, and the ratchet is at zero.
