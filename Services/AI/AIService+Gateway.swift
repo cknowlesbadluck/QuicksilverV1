@@ -141,6 +141,7 @@ extension AIService {
         }
         primaryProvider = nil
         secondaryProvider = nil
+        builtWhileLocked = false
         logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
         return failed == 0
     }
@@ -230,10 +231,12 @@ extension AIService {
     }
 
     /// After first unlock the Keychain becomes readable, but providers were built while it was
-    /// locked. Rebuild once when nothing is bound and a credential is now readable.
+    /// locked. Rebuild once when routing was left unbound by a locked Keychain (not by an
+    /// explicit clear) and a complete credential is now readable.
     /// Returns true when a rebuild ran.
     @discardableResult
     public func rehydrateProvidersIfNeeded() -> Bool {
+        guard builtWhileLocked else { return false }
         let keys = [
             Self.gatewayBaseURLKeychainAccount, GatewayAIProvider.deviceTokenKeychainAccount,
             Self.grokAPIKeyKeychainAccount, Self.geminiAPIKeyKeychainAccount
@@ -245,7 +248,12 @@ extension AIService {
     }
 
     nonisolated static func shouldRehydrate(primaryBound: Bool, states: [KeychainStore.CredentialState]) -> Bool {
-        !primaryBound && states.contains(.present)
+        // states: [gateway URL, gateway token, standalone keys...]. A lone gateway half
+        // cannot build a provider, so it must not trigger a rebuild on every refresh.
+        guard !primaryBound, states.count >= 2 else { return false }
+        let gatewayReadable = states[0] == .present && states[1] == .present
+        let standaloneReadable = states.dropFirst(2).contains(.present)
+        return gatewayReadable || standaloneReadable
     }
 
     nonisolated static func isGatewayLocked(_ halves: [KeychainStore.CredentialState]) -> Bool {

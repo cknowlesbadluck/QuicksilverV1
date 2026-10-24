@@ -34,6 +34,22 @@ final class ProviderRehydrationTests: XCTestCase {
         XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.locked, .locked, .locked, .missing]))
         XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.missing, .missing, .missing, .missing]))
         XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.unreadable(-1), .missing]))
+        // CodeRabbit: a lone gateway half can't build a provider, so it must not rehydrate.
+        XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.present, .missing, .missing, .missing]))
+        XCTAssertFalse(AIService.shouldRehydrate(primaryBound: false, states: [.missing, .present, .missing, .missing]))
+        XCTAssertTrue(AIService.shouldRehydrate(primaryBound: false, states: [.present, .present, .missing, .missing]))
+    }
+
+    /// Codex P2: an explicit "Remove all provider keys" must stay unbound for the session,
+    /// even if a Keychain delete failed and left a readable credential behind.
+    @MainActor
+    func testExplicitClearDisablesRehydration() {
+        let flags = FeatureFlags(defaults: UserDefaults(suiteName: "Rehydrate.\(UUID().uuidString)") ?? .standard)
+        let service = AIService(primary: nil, secondary: nil, eventBus: EventBus(), logger: LoggerService(), featureFlags: flags)
+        service.builtWhileLocked = true
+        service.clearAllAPIKeys()
+        XCTAssertFalse(service.builtWhileLocked)
+        XCTAssertFalse(service.rehydrateProvidersIfNeeded())
     }
 
     func testGatewayLockedRequiresBothHalves() {

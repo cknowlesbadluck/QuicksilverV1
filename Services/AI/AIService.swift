@@ -14,6 +14,9 @@ public final class AIService {
     /// `AppError.apiKeyMissing`; no mock text is ever substituted (M1-T3).
     var primaryProvider: AIProvider?
     var secondaryProvider: AIProvider?
+    /// True only when the last rebuild left routing unbound because the Keychain was locked.
+    /// An explicit clear resets it, so `rehydrateProvidersIfNeeded()` never undoes a user's removal.
+    var builtWhileLocked = false
     /// M3.5-T3: tried before any cloud route when available. `nil` in tests that inject a provider.
     public var onDeviceProvider: OnDeviceAIProvider?
     private let eventBus: EventBus
@@ -130,6 +133,7 @@ public final class AIService {
         let configured = makeConfiguredProviders()
         primaryProvider = configured.primary
         secondaryProvider = configured.secondary
+        builtWhileLocked = primaryProvider == nil && credentialsLocked
         logger.info(
             "AI routing rebuilt: primary=\(currentProviderName), "
             + "fallback=\(secondaryProvider?.displayName ?? "none")",
