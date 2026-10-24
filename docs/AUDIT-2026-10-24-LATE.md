@@ -34,3 +34,14 @@ None of these is device evidence.
 - **Merge order.** #373 and #387 both touch `UITests/SanctumSmokeTests.swift`, so merge #387 first or close it as contained in #373.
 - **The Workshop contrast flake on main.** It persists until #373 lands.
 - **Unit-only Spotlight routing.** The tap routing in #377 has unit tests only, with no UI or device check.
+
+## Addendum (7 PM ET re-check)
+
+These findings are new since the earlier audits. Everything was checked live.
+
+- **AGENTS.md "Current focus" is stale.** It was last changed on 2026-10-15 (#281) and still names M3.5-T19 as the focus. This needs an owner decision, so it is not edited here.
+- **The README points at a stub.** README links `docs/ROADMAP.md`, which is the stub on `main`. The 10-phase roadmap is `docs/QUICKSILVER-ROADMAP-1.0.md` in #384. The owner decides whether to repoint the link, and the stub stays as it is. Relative markdown links in the repo all resolve.
+- **Build warnings outside SanctumSmokeTests.** The iOS Simulator Build on the latest `main` run warns that the AppIcon set has no iPad icons (76@2x, 83.5@2x), even though `TARGETED_DEVICE_FAMILY` is `"1"`. These are asset-catalog warnings near the release path, so they are noted but not changed. There are no Swift compiler warnings apart from the SanctumSmokeTests ones that #387 and #373 fix.
+- **Branches.** Prune Merged Branches ran green 3 times on 2026-10-24. `scripts/stale-branches.sh` (#391) finds 16 branches with no open PR: 2 already in `main` (harden/keychain-policy-guard and test/public-api-guard), 3 on the keep list, and 11 with unmerged work that are kept so the closes can be reversed. No branches were deleted.
+- **Issues.** #252 (retire `@unchecked Sendable`, tied to #284) and #250 (SHA-pin Actions, off-limits) are still open.
+- **Open PRs:** 14, including #391. CHR-55 is still `not_recorded`.
