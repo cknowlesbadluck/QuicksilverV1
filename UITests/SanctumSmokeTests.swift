@@ -15,6 +15,8 @@ private let simulatorLaunchFlakeMarkers = [
 private let accessibilityAuditErrorDomain = "com.apple.xcode.xctest.accessibilityAudit"
 private let accessibilityAuditTimedOutCode = -56
 
+/// Main-actor isolated: XCUIApplication / XCUIElement APIs are main-actor (57 warnings otherwise).
+@MainActor
 final class SanctumSmokeTests: XCTestCase {
     private static let launchTimeout: TimeInterval = 30
     private static let auditAttempts = 3
@@ -22,7 +24,8 @@ final class SanctumSmokeTests: XCTestCase {
 
     private var app: XCUIApplication!
 
-    override func setUpWithError() throws {
+    override func setUp() async throws {
+        try await super.setUp()
         continueAfterFailure = false
         app = XCUIApplication()
         // `-uitest` freezes Sanctum decorative TimelineViews in-app;
