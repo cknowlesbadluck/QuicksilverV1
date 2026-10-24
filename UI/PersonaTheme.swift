@@ -27,12 +27,10 @@ enum PersonaTheme {
     static let sanctumPurple = Color(red: 0.220, green: 0.105, blue: 0.360)
     static let quicksilver = Color(red: 0.350, green: 0.950, blue: 0.720)
     static let quicksilverDeep = Color(red: 0.090, green: 0.280, blue: 0.220)
-    static let panel = Color(red: 0.055, green: 0.045, blue: 0.090)
     static let warningEmber = Color(red: 0.95, green: 0.35, blue: 0.2)
 
     // Legacy aliases so existing call-sites compile while migrating.
     static let cosmicBlack = voidBlack
-    static let subtleGold = hazardGreen
 
     // MARK: - Controlled Chaos Geometry
 
@@ -112,15 +110,6 @@ enum PersonaTheme {
         case "eternal": return .spring(response: 0.55, dampingFraction: 0.78)
         default: return .spring(response: 0.40, dampingFraction: 0.76)
         }
-    }
-
-    static let thinkingPulse = Animation.easeInOut(duration: 1.35).repeatForever(autoreverses: true)
-
-    // MARK: - Materials & Borders
-
-    static func radioactiveStroke(for personaID: String, intensity: Double = 1.0) -> Color {
-        let base = personaID.lowercased() == "forge" ? toxicGreen : glowPurple
-        return base.opacity(0.35 * intensity)
     }
 
     // MARK: - Policy Summary

@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Core
 @testable import ServicesAI
@@ -393,27 +394,23 @@ final class GatewayAIProviderTests: XCTestCase {
     }
 }
 
-private final class LockedFlag: @unchecked Sendable {
-    private let lock = NSLock()
-    private var stored = false
+private final class LockedFlag: Sendable {
+    private let stored = Mutex(false)
     var value: Bool {
-        lock.lock(); defer { lock.unlock() }
-        return stored
+        stored.withLock { $0 }
     }
     func set(_ newValue: Bool) {
-        lock.lock(); stored = newValue; lock.unlock()
+        stored.withLock { $0 = newValue }
     }
 }
 
 
-private final class LockedArray<Element>: @unchecked Sendable {
-    private let lock = NSLock()
-    private var values: [Element] = []
+private final class LockedArray<Element: Sendable>: Sendable {
+    private let values = Mutex<[Element]>([])
     func append(_ value: Element) {
-        lock.lock(); values.append(value); lock.unlock()
+        values.withLock { $0.append(value) }
     }
     func snapshot() -> [Element] {
-        lock.lock(); defer { lock.unlock() }
-        return values
+        values.withLock { $0 }
     }
 }

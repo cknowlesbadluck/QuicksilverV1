@@ -141,6 +141,7 @@ extension AIService {
         }
         primaryProvider = nil
         secondaryProvider = nil
+        builtWhileLocked = false
         logger.info("AI routing cleared: intelligence unbound", category: logger.ai)
         return failed == 0
     }
@@ -200,4 +201,69 @@ public enum GatewayBindError: Error, Equatable, Sendable {
 extension AIService {
     /// Latest gateway budget reading (free-budget awareness). Shared because there is one gateway binding per app.
     public var cloudBudget: CloudBudgetMonitor { .shared }
+
+    /// True when no route is bound only because the Keychain is locked (before first unlock
+    /// after a reboot). The Codex then says "locked" instead of "unbound".
+    public var credentialsLocked: Bool {
+        guard primaryProvider == nil else { return false }
+        let state = { (key: String) in KeychainStore.credentialState(forKey: key) }
+        let gateway = [state(Self.gatewayBaseURLKeychainAccount), state(GatewayAIProvider.deviceTokenKeychainAccount)]
+        let standalone = [state(Self.grokAPIKeyKeychainAccount), state(Self.geminiAPIKeyKeychainAccount)]
+        return Self.isLocked(gatewayHalves: gateway, standaloneKeys: standalone)
+    }
+
+    /// The gateway URL and token are one binding: it is only "locked" when both halves still
+    /// exist (present or locked) and at least one is locked. A lone half left by an interrupted
+    /// `configureGateway` stays unbound after unlock, so it must not report "locked".
+    /// Standalone provider keys count individually.
+    /// Per-binding locked flags so each Codex row agrees with the aggregate summary.
+    public var gatewayBindingLocked: Bool {
+        let state = { (key: String) in KeychainStore.credentialState(forKey: key) }
+        return Self.isGatewayLocked(
+            [state(Self.gatewayBaseURLKeychainAccount), state(GatewayAIProvider.deviceTokenKeychainAccount)]
+        )
+    }
+    public var geminiKeyLocked: Bool {
+        KeychainStore.credentialState(forKey: Self.geminiAPIKeyKeychainAccount) == .locked
+    }
+    public var grokKeyLocked: Bool {
+        KeychainStore.credentialState(forKey: Self.grokAPIKeyKeychainAccount) == .locked
+    }
+
+    /// After first unlock the Keychain becomes readable, but providers were built while it was
+    /// locked. Rebuild once when routing was left unbound by a locked Keychain (not by an
+    /// explicit clear) and a complete credential is now readable.
+    /// Returns true when a rebuild ran.
+    @discardableResult
+    public func rehydrateProvidersIfNeeded() -> Bool {
+        guard builtWhileLocked else { return false }
+        let keys = [
+            Self.gatewayBaseURLKeychainAccount, GatewayAIProvider.deviceTokenKeychainAccount,
+            Self.grokAPIKeyKeychainAccount, Self.geminiAPIKeyKeychainAccount
+        ]
+        let states = keys.map { KeychainStore.credentialState(forKey: $0) }
+        guard Self.shouldRehydrate(primaryBound: primaryProvider != nil, states: states) else { return false }
+        rebuildProviders()
+        return true
+    }
+
+    nonisolated static func shouldRehydrate(primaryBound: Bool, states: [KeychainStore.CredentialState]) -> Bool {
+        // states: [gateway URL, gateway token, standalone keys...]. A lone gateway half
+        // cannot build a provider, so it must not trigger a rebuild on every refresh.
+        guard !primaryBound, states.count >= 2 else { return false }
+        let gatewayReadable = states[0] == .present && states[1] == .present
+        let standaloneReadable = states.dropFirst(2).contains(.present)
+        return gatewayReadable || standaloneReadable
+    }
+
+    nonisolated static func isGatewayLocked(_ halves: [KeychainStore.CredentialState]) -> Bool {
+        halves.allSatisfy { $0 == .present || $0 == .locked } && halves.contains(.locked)
+    }
+
+    nonisolated static func isLocked(
+        gatewayHalves: [KeychainStore.CredentialState],
+        standaloneKeys: [KeychainStore.CredentialState]
+    ) -> Bool {
+        isGatewayLocked(gatewayHalves) || standaloneKeys.contains(.locked)
+    }
 }
