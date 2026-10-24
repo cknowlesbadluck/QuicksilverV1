@@ -96,10 +96,11 @@ struct SpatialSanctum: View {
 
                 spatialArchitecture(in: proxy.size)
 
-                // Accessibility text sizes: everything scrolls in one column and the floating
-                // greeting is dropped (the presence line already carries its prompt). At
-                // accessibility5 the greeting covered the portal grid and the stack overflowed (#335).
-                if dynamicTypeSize.isAccessibilitySize {
+                // From xxLarge up, everything scrolls and the floating greeting is dropped (the
+                // presence line already carries its prompt). At accessibility5 the greeting covered
+                // the portal grid and the stack overflowed (#335). At xxLarge/xxxLarge the two-column
+                // grid takes three rows and clipped on compact-height iPhones without scrolling.
+                if needsScrolling {
                     ScrollView {
                         VStack(spacing: PersonaTheme.sanctumAccessibilityStackSpacing) {
                             topPresence
@@ -122,7 +123,7 @@ struct SpatialSanctum: View {
                     .padding(.bottom, 18)
                 }
 
-                if showGreeting && !dynamicTypeSize.isAccessibilitySize {
+                if showGreeting && !needsScrolling {
                     greeting
                         .frame(maxWidth: proxy.size.width - 36)
                         // No fade when motion is frozen (Reduce Motion / -uitest): a half-faded
@@ -260,6 +261,9 @@ struct SpatialSanctum: View {
 
     /// Fewer, wider columns as text grows, so single long words ("Governance", "Planetarium")
     /// fit instead of truncating (audit: "Text clipped" at larger Dynamic Type sizes).
+    /// Sizes whose content can exceed a compact-height viewport, so the stack must scroll.
+    private var needsScrolling: Bool { dynamicTypeSize >= .xxLarge }
+
     private var portalColumns: Int {
         if dynamicTypeSize >= .accessibility2 { return 1 }
         if dynamicTypeSize >= .xLarge { return 2 }
@@ -359,11 +363,11 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    // Semibold: at regular caption weight the audit's contrast sampling of the thin,
-                    // anti-aliased glyphs failed "Workshop" even though the rendered crop is ~15:1
-                    // (xcresult attachment, run 38988415167). Heavier strokes give it solid pixels.
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PersonaTheme.readableSecondary)
+                    .font(.caption)
+                    // Opaque readable token, not mercurySilver at 0.78: the translucent label
+                    // blended with the portal halo and failed the a11y contrast audit
+                    // intermittently ("Workshop").
+                    .foregroundStyle(PersonaTheme.readableText)
                     .multilineTextAlignment(.center)
                     // Grow vertically instead of truncating or scaling: the audit still reported
                     // "Planetarium" as clipped with lineLimit(1) + minimumScaleFactor.
