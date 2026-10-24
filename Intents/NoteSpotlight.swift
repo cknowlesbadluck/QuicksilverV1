@@ -2,8 +2,9 @@ import CoreSpotlight
 import Foundation
 import Core
 
-/// Where saved notes are indexed for system search. Faked in tests.
-public protocol NoteSearchIndexing: Sendable {
+/// Where saved notes are indexed for system search. Internal: only the app's own CoreSpotlight
+/// index and test fakes conform, so no other module can receive note text through it.
+protocol NoteSearchIndexing: Sendable {
     func replaceAll(with notes: [MemoryEntity]) async throws
     func removeAll() async throws
 }
@@ -31,7 +32,7 @@ public final class NoteSpotlightSync {
     /// say so; the next sync (app activation, memory change or toggle) retries the removal.
     public private(set) var removalFailed = false
 
-    public init(
+    init(
         flags: FeatureFlags,
         index: NoteSearchIndexing,
         waitForMemoryLoad: Bool = false,
@@ -43,10 +44,18 @@ public final class NoteSpotlightSync {
         self.notes = notes
     }
 
-    /// Production wiring: notes come only from `IntelligenceSurface.memoryNotes`, never chat turns.
+    /// Production wiring: CoreSpotlight, with notes only from `IntelligenceSurface.memoryNotes`.
     public convenience init(
         flags: FeatureFlags,
-        index: NoteSearchIndexing = CoreSpotlightNoteIndex(),
+        surface: IntelligenceSurface,
+        waitForMemoryLoad: Bool = false
+    ) {
+        self.init(flags: flags, index: CoreSpotlightNoteIndex(), surface: surface, waitForMemoryLoad: waitForMemoryLoad)
+    }
+
+    convenience init(
+        flags: FeatureFlags,
+        index: NoteSearchIndexing,
         surface: IntelligenceSurface,
         waitForMemoryLoad: Bool = false
     ) {
@@ -117,12 +126,12 @@ public final class NoteSpotlightSync {
 
 /// CoreSpotlight-backed index. Items live in one domain so opt-out can remove them all at once.
 @available(iOS 17.0, macOS 14.0, *)
-public struct CoreSpotlightNoteIndex: NoteSearchIndexing {
-    public static let domain = "com.quicksilver.notes"
+struct CoreSpotlightNoteIndex: NoteSearchIndexing {
+    static let domain = "com.quicksilver.notes"
 
-    public init() {}
+    init() {}
 
-    public func replaceAll(with notes: [MemoryEntity]) async throws {
+    func replaceAll(with notes: [MemoryEntity]) async throws {
         let index = CSSearchableIndex.default()
         try await index.deleteSearchableItems(withDomainIdentifiers: [Self.domain])
         let items = notes.map { note in
@@ -138,7 +147,7 @@ public struct CoreSpotlightNoteIndex: NoteSearchIndexing {
         try await index.indexSearchableItems(items)
     }
 
-    public func removeAll() async throws {
+    func removeAll() async throws {
         try await CSSearchableIndex.default().deleteSearchableItems(withDomainIdentifiers: [Self.domain])
     }
 }

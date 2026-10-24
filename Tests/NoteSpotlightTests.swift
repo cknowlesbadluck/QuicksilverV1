@@ -25,6 +25,15 @@ final class NoteSpotlightTests: XCTestCase {
         return NoteSpotlightSync(flags: flags, index: index, surface: surface, waitForMemoryLoad: waitForMemoryLoad)
     }
 
+    func testNotesBehindManyTurnsAreStillFound() {
+        let surface = NotesSurface()
+        surface.items = (0..<600).map {
+            MemoryItem(key: "turn.\($0)", category: .conversation, value: "turn \($0)")
+        } + [MemoryItem(key: "note.late", category: .preference, value: "Buried note")]
+        XCTAssertEqual(surface.memoryNotes().map(\.value), ["Buried note"], "cap must apply after filtering")
+        XCTAssertEqual(surface.memoryNotes(matching: "buried").count, 1)
+    }
+
     func testOptOutRemovalFailureIsFlaggedThenRetried() async {
         let sync = makeSync()
         await sync.setEnabled(true)
