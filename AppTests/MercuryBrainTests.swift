@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Quicksilver
 import Core
@@ -170,63 +171,61 @@ private struct Harness {
     let store: InMemoryMemoryStore
 }
 
-private final class RequestGate: @unchecked Sendable {
-    private let lock = NSLock()
-    private var entered: CheckedContinuation<Void, Never>?
-    private var proceedWaiter: CheckedContinuation<Void, Never>?
-    private var didEnter = false
-    private var shouldProceed = false
+private final class RequestGate: Sendable {
+    private struct State {
+        var entered: CheckedContinuation<Void, Never>?
+        var proceedWaiter: CheckedContinuation<Void, Never>?
+        var didEnter = false
+        var shouldProceed = false
+    }
+
+    private let state = Mutex(State())
 
     func waitUntilEntered() async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            lock.lock()
-            if didEnter {
-                lock.unlock()
-                continuation.resume()
-            } else {
-                entered = continuation
-                lock.unlock()
+            let resumeNow = state.withLock { gate -> Bool in
+                if gate.didEnter { return true }
+                gate.entered = continuation
+                return false
             }
+            if resumeNow { continuation.resume() }
         }
     }
 
     func markEntered() {
-        lock.lock()
-        didEnter = true
-        let continuation = entered
-        entered = nil
-        lock.unlock()
+        let continuation = state.withLock { gate -> CheckedContinuation<Void, Never>? in
+            gate.didEnter = true
+            defer { gate.entered = nil }
+            return gate.entered
+        }
         continuation?.resume()
     }
 
     func waitToProceed() async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-            lock.lock()
-            if shouldProceed {
-                lock.unlock()
-                continuation.resume()
-            } else {
-                proceedWaiter = continuation
-                lock.unlock()
+            let resumeNow = state.withLock { gate -> Bool in
+                if gate.shouldProceed { return true }
+                gate.proceedWaiter = continuation
+                return false
             }
+            if resumeNow { continuation.resume() }
         }
     }
 
     func proceed() {
-        lock.lock()
-        shouldProceed = true
-        let continuation = proceedWaiter
-        proceedWaiter = nil
-        lock.unlock()
+        let continuation = state.withLock { gate -> CheckedContinuation<Void, Never>? in
+            gate.shouldProceed = true
+            defer { gate.proceedWaiter = nil }
+            return gate.proceedWaiter
+        }
         continuation?.resume()
     }
 }
 
-private final class CountingProvider: AIProvider, @unchecked Sendable {
-    private let lock = NSLock()
-    private var _callCount = 0
+private final class CountingProvider: AIProvider, Sendable {
+    private let calls = Mutex(0)
     var callCount: Int {
-        lock.withLock { _callCount }
+        calls.withLock { $0 }
     }
 
     let id = "counting"
@@ -234,7 +233,7 @@ private final class CountingProvider: AIProvider, @unchecked Sendable {
     let isAvailable = true
 
     private func recordCall() {
-        lock.withLock { _callCount += 1 }
+        calls.withLock { $0 += 1 }
     }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
@@ -243,18 +242,21 @@ private final class CountingProvider: AIProvider, @unchecked Sendable {
     }
 }
 
-private final class RecordingProvider: AIProvider, @unchecked Sendable {
-    private let lock = NSLock()
-    private var _histories: [[Message]] = []
-    private var _requests: [AIRequest] = []
-    var fail: Bool
+private final class RecordingProvider: AIProvider, Sendable {
+    private struct Log {
+        var histories: [[Message]] = []
+        var requests: [AIRequest] = []
+    }
+
+    private let log = Mutex(Log())
+    let fail: Bool
 
     var histories: [[Message]] {
-        lock.withLock { _histories }
+        log.withLock { $0.histories }
     }
 
     var requests: [AIRequest] {
-        lock.withLock { _requests }
+        log.withLock { $0.requests }
     }
 
     let reply: String
@@ -270,12 +272,11 @@ private final class RecordingProvider: AIProvider, @unchecked Sendable {
     }
 
     func complete(_ request: AIRequest) async throws -> AIResponse {
-        let shouldFail = lock.withLock { () -> Bool in
-            _histories.append(request.history)
-            _requests.append(request)
-            return fail
+        log.withLock {
+            $0.histories.append(request.history)
+            $0.requests.append(request)
         }
-        if shouldFail {
+        if fail {
             throw AppError.aiRequestFailed("recording-fail")
         }
         return AIResponse(requestID: request.id, content: reply)
