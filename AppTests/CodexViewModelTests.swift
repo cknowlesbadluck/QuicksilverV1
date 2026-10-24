@@ -156,3 +156,22 @@ final class CodexViewModelTests: XCTestCase {
         }
     }
 }
+
+/// Codex P2: every binding row uses the same Locked / Bound / Unbound rule as the summary.
+@MainActor
+final class CodexBindingLabelTests: XCTestCase {
+    func testBoundWins() {
+        XCTAssertEqual(CodexViewModel.bindingLabel(bound: true, locked: true, boundDetail: "Keychain"), "Bound — Keychain")
+    }
+
+    func testLockedRowMatchesSummary() {
+        XCTAssertEqual(
+            CodexViewModel.bindingLabel(bound: false, locked: true, boundDetail: "Keychain"),
+            CodexViewModel.lockedRowLabel
+        )
+    }
+
+    func testUnbound() {
+        XCTAssertEqual(CodexViewModel.bindingLabel(bound: false, locked: false, boundDetail: "x"), "Unbound")
+    }
+}

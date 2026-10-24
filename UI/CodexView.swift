@@ -168,9 +168,9 @@ struct CodexView: View {
 
             LabeledContent(
                 "Gateway",
-                value: vm.hasGatewayBinding
-                    ? "Bound — \(vm.gatewayURLDisplay)"
-                    : "Unbound"
+                value: CodexViewModel.bindingLabel(
+                    bound: vm.hasGatewayBinding, locked: vm.gatewayLocked, boundDetail: vm.gatewayURLDisplay
+                )
             )
             if vm.hasGatewayBinding {
                 Button("Unbind Gateway", role: .destructive) {
@@ -201,7 +201,10 @@ struct CodexView: View {
             }
             .disabled(vm.geminiKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-            LabeledContent("Gemini", value: vm.hasGeminiKey ? "Bound — Keychain" : "Unbound")
+            LabeledContent(
+                "Gemini",
+                value: CodexViewModel.bindingLabel(bound: vm.hasGeminiKey, locked: vm.geminiLocked, boundDetail: "Keychain")
+            )
             if vm.hasGeminiKey {
                 Button("Unbind Gemini", role: .destructive) {
                     vm.clearGeminiKey()
@@ -222,7 +225,10 @@ struct CodexView: View {
             }
             .disabled(vm.grokKeyDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
-            LabeledContent("Grok", value: vm.hasGrokKey ? "Bound — Keychain" : "Unbound")
+            LabeledContent(
+                "Grok",
+                value: CodexViewModel.bindingLabel(bound: vm.hasGrokKey, locked: vm.grokLocked, boundDetail: "Keychain")
+            )
             if vm.hasGrokKey {
                 Button("Unbind Grok", role: .destructive) {
                     vm.clearGrokKey()
@@ -248,6 +254,7 @@ struct CodexView: View {
     private func boundSummary(_ vm: CodexViewModel) -> String {
         if vm.hasGatewayBinding { return "Yes — Gateway" }
         if vm.hasGrokKey || vm.hasGeminiKey { return "Yes — Keychain" }
+        if vm.credentialsLocked { return CodexViewModel.lockedRowLabel }
         return "Unbound"
     }
 }

@@ -14,6 +14,11 @@ final class CodexViewModel {
     private(set) var hasGrokKey: Bool = false
     private(set) var hasGeminiKey: Bool = false
     private(set) var hasGatewayBinding: Bool = false
+    /// Saved keys exist but can't be read until the device is unlocked once after boot.
+    private(set) var credentialsLocked: Bool = false
+    private(set) var gatewayLocked: Bool = false
+    private(set) var geminiLocked: Bool = false
+    private(set) var grokLocked: Bool = false
     private(set) var gatewayURLDisplay: String = ""
     private(set) var providerName: String = ""
     private(set) var fallbackProviderName: String?
@@ -53,9 +58,15 @@ final class CodexViewModel {
     }
 
     func refresh() {
+        // Protected data may have become available since launch (first unlock after boot).
+        container.aiService.rehydrateProvidersIfNeeded()
         hasGrokKey = container.aiService.hasGrokKey
         hasGeminiKey = container.aiService.hasGeminiKey
         hasGatewayBinding = container.aiService.hasGatewayBinding
+        credentialsLocked = container.aiService.credentialsLocked
+        gatewayLocked = !hasGatewayBinding && container.aiService.gatewayBindingLocked
+        geminiLocked = !hasGeminiKey && container.aiService.geminiKeyLocked
+        grokLocked = !hasGrokKey && container.aiService.grokKeyLocked
         gatewayURLDisplay = container.aiService.gatewayBaseURLDisplay ?? ""
         providerName = container.aiService.currentProviderName
         fallbackProviderName = container.aiService.fallbackProviderName
@@ -236,5 +247,13 @@ final class CodexViewModel {
                 self.refresh()
             }
         }
+    }
+
+    static let lockedRowLabel = "Locked — unlock this device once"
+
+    /// One label rule for every binding row, so rows match the aggregate "Locked" summary.
+    static func bindingLabel(bound: Bool, locked: Bool, boundDetail: String) -> String {
+        if bound { return "Bound — \(boundDetail)" }
+        return locked ? lockedRowLabel : "Unbound"
     }
 }

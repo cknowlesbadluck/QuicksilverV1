@@ -33,10 +33,6 @@ public final class PersonaManager: PersonaEngine {
         state.configuration
     }
 
-    public var availableConfigurations: [PersonaConfiguration] {
-        available
-    }
-
     public var activeMemoryPolicy: MemoryPolicy {
         MemoryPolicy.policy(for: activePersonaID)
     }
