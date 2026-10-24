@@ -14,6 +14,9 @@ public final class AIService {
     /// `AppError.apiKeyMissing`; no mock text is ever substituted (M1-T3).
     var primaryProvider: AIProvider?
     var secondaryProvider: AIProvider?
+    /// True only when the last rebuild left routing unbound because the Keychain was locked.
+    /// An explicit clear resets it, so `rehydrateProvidersIfNeeded()` never undoes a user's removal.
+    var builtWhileLocked = false
     /// M3.5-T3: tried before any cloud route when available. `nil` in tests that inject a provider.
     public var onDeviceProvider: OnDeviceAIProvider?
     private let eventBus: EventBus
@@ -130,17 +133,12 @@ public final class AIService {
         let configured = makeConfiguredProviders()
         primaryProvider = configured.primary
         secondaryProvider = configured.secondary
+        builtWhileLocked = primaryProvider == nil && credentialsLocked
         logger.info(
             "AI routing rebuilt: primary=\(currentProviderName), "
             + "fallback=\(secondaryProvider?.displayName ?? "none")",
             category: logger.ai
         )
-    }
-
-    public func setProvider(_ newProvider: AIProvider) {
-        primaryProvider = newProvider
-        secondaryProvider = nil
-        logger.info("AI provider switched to \(newProvider.displayName)", category: logger.ai)
     }
 
     public static let unboundProviderID = "unbound"
@@ -156,25 +154,9 @@ public final class AIService {
         !(KeychainStore.string(forKey: Self.geminiAPIKeyKeychainAccount)?.isEmpty ?? true)
     }
 
-    @discardableResult
-    public func configureAPIKey(_ key: String?) -> Bool {
-        configureGrokAPIKey(key)
-    }
-
     /// Fail-closed: unbound / unknown providers are treated as training-on-prompts.
     public var primaryTrainsOnPrompts: Bool {
         primaryProvider?.trainsOnPrompts ?? true
-    }
-
-    /// Requested cloud context level for the `answer` task (before trainsOnPrompts force).
-    public var requestedCloudContextLevel: CloudContextLevel {
-        let config = routingConfigStore?.loadValidated() ?? AIRoutingConfig.bundledDefault
-        guard let routing = config.tasks["answer"], routing.route == .cloud,
-              let tierID = routing.tier?.rawValue,
-              let tier = config.tiers[tierID] else {
-            return .standard
-        }
-        return CloudContextLevel(aiLevel: tier.contextLevel)
     }
 
     @discardableResult

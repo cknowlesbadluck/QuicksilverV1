@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Core
 @testable import ServicesAI
@@ -212,22 +213,17 @@ final class ProviderHTTPTests: XCTestCase {
 }
 
 private final class URLProtocolStub: URLProtocol {
-    final class HandlerBox: @unchecked Sendable {
+    final class HandlerBox: Sendable {
         typealias Handler = @Sendable (URLRequest) throws -> (HTTPURLResponse, Data)
 
-        private let lock = NSLock()
-        private var handler: Handler?
+        private let handler = Mutex<Handler?>(nil)
 
         func set(_ newHandler: Handler?) {
-            lock.lock()
-            handler = newHandler
-            lock.unlock()
+            handler.withLock { $0 = newHandler }
         }
 
         func get() -> Handler? {
-            lock.lock()
-            defer { lock.unlock() }
-            return handler
+            handler.withLock { $0 }
         }
     }
 

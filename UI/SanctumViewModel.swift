@@ -81,11 +81,6 @@ final class SanctumViewModel {
         refreshTask = nil
     }
 
-    /// Accent source for the living place — prefer aspect over legacy persona ID.
-    var presenceAccentID: String {
-        activeAspect.rawValue
-    }
-
     /// Events that affect displayed Sanctum state.
     /// `nonisolated` so the EventBus actor can evaluate it as a stream filter.
     nonisolated private static func isRelevant(_ event: EventBus.Event) -> Bool {

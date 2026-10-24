@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Quicksilver
 import Core
@@ -31,15 +32,14 @@ final class MemoryRecallBrainTests: XCTestCase {
     }
 }
 
-private final class CallCounter: AIProvider, @unchecked Sendable {
-    private let lock = NSLock()
-    private var count = 0
-    var calls: Int { lock.withLock { count } }
+private final class CallCounter: AIProvider, Sendable {
+    private let count = Mutex(0)
+    var calls: Int { count.withLock { $0 } }
     let id = "counter"
     let displayName = "Counter"
     let isAvailable = true
     func complete(_ request: AIRequest) async throws -> AIResponse {
-        lock.withLock { count += 1 }
+        count.withLock { $0 += 1 }
         return AIResponse(requestID: request.id, content: "model answer")
     }
 }
