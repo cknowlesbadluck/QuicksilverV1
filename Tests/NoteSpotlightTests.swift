@@ -146,7 +146,17 @@ private final class FakeIndex: NoteSearchIndexing {
         if shouldFail { throw CocoaError(.fileWriteUnknown) }
     }
 
-    func removeAll() async throws { state.withLock { $0.calls.append(.removeAll) } }
+    func removeAll() async throws {
+        let shouldFail = state.withLock { current -> Bool in
+            if current.failNext {
+                current.failNext = false
+                return true
+            }
+            current.calls.append(.removeAll)
+            return false
+        }
+        if shouldFail { throw CocoaError(.fileWriteUnknown) }
+    }
 }
 
 private final class NotesSurface: IntelligenceSurface {

@@ -95,14 +95,7 @@ final class DependencyContainer {
         // SideStore first-run: warm memory so Ask / Intents / Home don't wait
         // for MemoryView to open. Failures are logged inside MemoryManager.
         // Rebuild the embedding sidecar after load, then keep it on memoryDidUpdate.
-        // Spotlight reconciles only after the load, then follows every note change.
-        Task { [weak self] in
-            await memoryManager.load()
-            brain.startMemoryIndexSync()
-            guard let self else { return }
-            self.noteSpotlight.follow(self.eventBus)
-            await self.noteSpotlight.memoryDidLoad()
-        }
+        startMemoryLoad()
 
         logger.info(
             "DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)",
@@ -112,5 +105,17 @@ final class DependencyContainer {
 
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
+    }
+
+    /// Loads memory, then starts the brain index and Spotlight. Spotlight reconciles only after
+    /// the load (so an empty snapshot never replaces the index), then follows every note change.
+    private func startMemoryLoad() {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.memoryManager.load()
+            self.brain.startMemoryIndexSync()
+            self.noteSpotlight.follow(self.eventBus)
+            await self.noteSpotlight.memoryDidLoad()
+        }
     }
 }
