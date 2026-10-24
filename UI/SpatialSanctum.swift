@@ -363,10 +363,10 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption)
-                    // Opaque readable token, not mercurySilver at 0.78: the translucent label
-                    // blended with the portal halo and failed the a11y contrast audit
-                    // intermittently ("Workshop").
+                    // Semibold plus the opaque readable token (#381). At regular weight the audit's
+                    // contrast sampling of thin anti-aliased glyphs failed "Workshop" (run 38988415167),
+                    // and the translucent mercurySilver label blended with the portal halo.
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(PersonaTheme.readableText)
                     .multilineTextAlignment(.center)
                     // Grow vertically instead of truncating or scaling: the audit still reported
