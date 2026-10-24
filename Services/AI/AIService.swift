@@ -159,17 +159,6 @@ public final class AIService {
         primaryProvider?.trainsOnPrompts ?? true
     }
 
-    /// Requested cloud context level for the `answer` task (before trainsOnPrompts force).
-    public var requestedCloudContextLevel: CloudContextLevel {
-        let config = routingConfigStore?.loadValidated() ?? AIRoutingConfig.bundledDefault
-        guard let routing = config.tasks["answer"], routing.route == .cloud,
-              let tierID = routing.tier?.rawValue,
-              let tier = config.tiers[tierID] else {
-            return .standard
-        }
-        return CloudContextLevel(aiLevel: tier.contextLevel)
-    }
-
     @discardableResult
     public func complete(
         prompt: String,
