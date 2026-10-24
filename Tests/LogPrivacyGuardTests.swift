@@ -69,8 +69,8 @@ final class LogPrivacyGuardTests: XCTestCase {
         let marketing = try XCTUnwrap(capture(#"MARKETING_VERSION:\s*"([^"]+)""#, in: yml))
         let build = try XCTUnwrap(capture(#"CURRENT_PROJECT_VERSION:\s*"([^"]+)""#, in: yml))
         let config = try String(contentsOf: Self.root.appendingPathComponent("Core/AppConfiguration.swift"), encoding: .utf8)
-        XCTAssertEqual(capture(#"version: String = "([^"]+)""#, in: config), marketing, "AppConfiguration.version drifted")
-        XCTAssertEqual(capture(#"build: String = "([^"]+)""#, in: config), build, "AppConfiguration.build drifted")
+        XCTAssertEqual(capture(#"fallbackVersion = "([^"]+)""#, in: config), marketing, "AppConfiguration.version drifted")
+        XCTAssertEqual(capture(#"fallbackBuild = "([^"]+)""#, in: config), build, "AppConfiguration.build drifted")
         for doc in ["README.md", "Documentation/SIDESTORE.md", "Documentation/HARDENING.md"] {
             let text = try String(contentsOf: Self.root.appendingPathComponent(doc), encoding: .utf8)
             XCTAssertTrue(text.contains("\(marketing) (**build \(build)**)") || text.contains("\(marketing) (build \(build))")

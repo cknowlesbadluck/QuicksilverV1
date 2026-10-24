@@ -14,6 +14,4 @@ public enum AppEnvironment: String, Sendable, CaseIterable {
         return .production
         #endif
     }
-
-    public var isDebug: Bool { self == .development }
 }
