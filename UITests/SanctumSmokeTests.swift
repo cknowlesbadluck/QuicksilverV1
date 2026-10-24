@@ -46,9 +46,10 @@ final class SanctumSmokeTests: XCTestCase {
         }
     }
 
-    override func tearDownWithError() throws {
+    override func tearDown() async throws {
         // Do not terminate here. That is the race the next launch loses.
         app = nil
+        try await super.tearDown()
     }
 
     func testPrimarySanctumDestinationsOpenAndDismiss() throws {
