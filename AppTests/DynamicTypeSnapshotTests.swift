@@ -3,6 +3,7 @@ import UIKit
 import XCTest
 @testable import Quicksilver
 import Core
+import ServicesAI
 
 /// Snapshot tests at the largest Dynamic Type size (accessibility5), no third-party dependencies.
 ///
@@ -30,6 +31,10 @@ final class DynamicTypeSnapshotTests: XCTestCase {
     func testCodexAtLargestDynamicType() throws {
         ViewModelTestSupport.isolateProviderKeychain(testCase: self)
         let container = try ViewModelTestSupport.makeContainer(provider: nil, testCase: self)
+        // Pin on-device availability: the real model's state depends on the runner's simulator
+        // (Preparing / Not eligible / Available), which would change Codex row text and pixels.
+        // The committed baseline shows "Preparing model".
+        container.aiService.onDeviceProvider = OnDeviceAIProvider(model: PinnedOnDeviceModel())
         let view = NavigationStack { CodexView() }.environment(container)
         try assertSnapshot(of: view, named: "codex-ax5")
     }
@@ -127,5 +132,13 @@ final class DynamicTypeSnapshotTests: XCTestCase {
             if delta > 16 { differing += 1 }
         }
         return Double(differing) / Double(left.count / 4)
+    }
+}
+
+/// Deterministic on-device model for snapshots: always "Preparing model", never answers.
+private struct PinnedOnDeviceModel: OnDeviceLanguageModel {
+    var availability: OnDeviceModelAvailability { .modelNotReady }
+    func respond(instructions: String?, prompt: String) async throws -> String {
+        throw CancellationError()
     }
 }

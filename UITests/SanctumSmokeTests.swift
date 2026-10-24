@@ -96,11 +96,12 @@ final class SanctumSmokeTests: XCTestCase {
         // Workshop). Wait until both are fully gone.
         waitUntilGone(app.navigationBars["Ask"])
         waitUntilGone(app.buttons["Done"])
-        let presence = app.staticTexts.matching(
-            NSPredicate(format: "label IN %@", ["The core is awake", "The core rests"])
-        ).firstMatch
-        XCTAssertTrue(presence.waitForExistence(timeout: 8), "Presence title never appeared before audit")
-        XCTAssertTrue(app.staticTexts["Eternal"].waitForExistence(timeout: 8), "Eternal subtitle never appeared before audit")
+        // Sanctum collapses the presence view into one "Speak with Quicksilver" element and
+        // exposes each portal subtitle only as its button's accessibility value, so wait on those.
+        let presence = app.descendants(matching: .any)["Speak with Quicksilver"].firstMatch
+        XCTAssertTrue(presence.waitForExistence(timeout: 8), "Presence never appeared before audit")
+        let eternal = app.buttons.matching(NSPredicate(format: "value == %@", "Eternal")).firstMatch
+        XCTAssertTrue(eternal.waitForExistence(timeout: 8), "Eternal portal never appeared before audit")
         waitForStableFrame(presence)
         waitForStableFrame(app.buttons["The Workshop"])
     }
