@@ -38,6 +38,13 @@ struct CodexView: View {
                     set: { vm.setSpotlightNotes($0) }
                 ))
                 .accessibilityIdentifier("codex.spotlightNotes")
+                if let notice = vm.spotlightNotice {
+                    Text(notice)
+                        .font(.footnote)
+                        .foregroundStyle(PersonaTheme.readableSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("codex.spotlightNotice")
+                }
             } footer: {
                 Text("Off by default. Only saved notes, never conversations. Turning it off removes them from search.")
             }

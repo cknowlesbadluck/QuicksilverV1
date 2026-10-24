@@ -32,6 +32,10 @@ final class CodexViewModel {
     private(set) var answerRoute: String = ""
     /// Spotlight opt-in for saved notes. Off by default.
     private(set) var spotlightNotesEnabled = false
+    /// Shown under the toggle when opting out could not remove notes from Spotlight.
+    private(set) var spotlightNotice: String?
+    static let spotlightRemovalFailedNotice =
+        "Couldn't remove your notes from Spotlight yet. Quicksilver will retry the next time it opens."
     /// Content-free log of recent routing decisions (newest first, at most 10).
     private(set) var recentRoutes: [RouteRecord] = []
     /// Cloud requests left today, from the gateway budget headers. nil until a gateway reply is seen.
@@ -66,11 +70,15 @@ final class CodexViewModel {
         recentRoutes = container.aiService.routeLog.recent(limit: 10)
         cloudBudgetLabel = hasGatewayBinding ? container.aiService.cloudBudget.current()?.label : nil
         spotlightNotesEnabled = container.featureFlags.isEnabled(NoteSpotlightSync.flagKey)
+        spotlightNotice = container.noteSpotlight.removalFailed ? Self.spotlightRemovalFailedNotice : nil
     }
 
     func setSpotlightNotes(_ enabled: Bool) {
         spotlightNotesEnabled = enabled
-        Task { await container.noteSpotlight.setEnabled(enabled) }
+        Task {
+            await container.noteSpotlight.setEnabled(enabled)
+            spotlightNotice = container.noteSpotlight.removalFailed ? Self.spotlightRemovalFailedNotice : nil
+        }
     }
 
     func saveGrokKey() {

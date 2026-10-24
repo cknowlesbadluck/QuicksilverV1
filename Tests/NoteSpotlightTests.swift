@@ -19,10 +19,61 @@ final class NoteSpotlightTests: XCTestCase {
         ]
     }
 
-    private func makeSync() -> NoteSpotlightSync {
+    private func makeSync(waitForMemoryLoad: Bool = false) -> NoteSpotlightSync {
         let surface = NotesSurface()
         surface.items = items
-        return NoteSpotlightSync(flags: flags, index: index, surface: surface)
+        return NoteSpotlightSync(flags: flags, index: index, surface: surface, waitForMemoryLoad: waitForMemoryLoad)
+    }
+
+    func testOptOutRemovalFailureIsFlaggedThenRetried() async {
+        let sync = makeSync()
+        await sync.setEnabled(true)
+        index.failNext = true
+        await sync.setEnabled(false)
+        XCTAssertTrue(sync.removalFailed, "a failed opt-out must be visible, not silent")
+        await sync.sync()
+        XCTAssertFalse(sync.removalFailed)
+        XCTAssertEqual(index.calls.last, .removeAll)
+    }
+
+    func testRapidToggleEndsConsistentWithFlag() async {
+        let sync = makeSync()
+        for _ in 0..<5 {
+            async let on: Void = sync.setEnabled(true)
+            async let off: Void = sync.setEnabled(false)
+            _ = await (on, off)
+            let expectRemoved = !sync.isEnabled
+            XCTAssertEqual(index.calls.last == .removeAll, expectRemoved)
+        }
+        await sync.setEnabled(false)
+        XCTAssertEqual(index.calls.last, .removeAll)
+    }
+
+    func testColdLaunchWaitsForMemoryLoadBeforeIndexing() async {
+        flags.set(NoteSpotlightSync.flagKey, enabled: true)
+        let sync = makeSync(waitForMemoryLoad: true)
+        await sync.sync()
+        XCTAssertEqual(index.calls, [], "an unloaded snapshot must not replace the index")
+        await sync.memoryDidLoad()
+        XCTAssertEqual(index.calls, [.replaceAll(["Buy oat milk", "Call the plumber"])])
+    }
+
+    func testColdLaunchOptedOutStillRemovesBeforeLoad() async {
+        let sync = makeSync(waitForMemoryLoad: true)
+        await sync.sync()
+        XCTAssertEqual(index.calls, [.removeAll])
+    }
+
+    func testMemoryUpdateResyncsWhileOptedIn() async throws {
+        let sync = makeSync()
+        await sync.setEnabled(true)
+        let bus = EventBus()
+        sync.follow(bus)
+        for _ in 0..<200 where index.calls.count < 2 {
+            await bus.publish(.memoryDidUpdate(itemID: "note.1"))
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertGreaterThanOrEqual(index.calls.count, 2, "a note change must re-sync Spotlight")
     }
 
     func testOffByDefaultAndSyncRemovesEverything() async {

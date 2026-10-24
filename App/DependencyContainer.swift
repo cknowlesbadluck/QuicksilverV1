@@ -23,7 +23,9 @@ final class DependencyContainer {
     let nexus: NexusCoordinator
 
     /// Spotlight opt-in for saved notes (off by default; M3.5-T9).
-    @ObservationIgnored lazy var noteSpotlight = NoteSpotlightSync(flags: featureFlags, surface: brain)
+    @ObservationIgnored lazy var noteSpotlight = NoteSpotlightSync(
+        flags: featureFlags, surface: brain, waitForMemoryLoad: true
+    )
 
     /// Central intelligence coordinator. UI and Intents should prefer the Brain
     /// for complex reasoning instead of reaching into individual services.
@@ -93,9 +95,13 @@ final class DependencyContainer {
         // SideStore first-run: warm memory so Ask / Intents / Home don't wait
         // for MemoryView to open. Failures are logged inside MemoryManager.
         // Rebuild the embedding sidecar after load, then keep it on memoryDidUpdate.
-        Task {
+        // Spotlight reconciles only after the load, then follows every note change.
+        Task { [weak self] in
             await memoryManager.load()
             brain.startMemoryIndexSync()
+            guard let self else { return }
+            self.noteSpotlight.follow(self.eventBus)
+            await self.noteSpotlight.memoryDidLoad()
         }
 
         logger.info(
