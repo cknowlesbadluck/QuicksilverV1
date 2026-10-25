@@ -24,10 +24,9 @@ final class NetworkSurfaceGuardTests: XCTestCase {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
     }
 
-    /// Drops `//` line comments and `/* */` block comments so prose mentioning URLSession doesn't count.
+    /// Code without comments or string-literal text (interpolations are kept); see `SwiftCodeScanner`.
     static func codeOnly(_ text: String) -> String {
-        let noBlocks = text.replacingOccurrences(of: #"/\*[\s\S]*?\*/"#, with: "", options: .regularExpression)
-        return noBlocks.components(separatedBy: "\n").map { $0.components(separatedBy: "//").first ?? "" }.joined(separator: "\n")
+        SwiftCodeScanner.codeOnly(text)
     }
 
     static func usesNetwork(_ text: String) throws -> Bool {
@@ -67,5 +66,117 @@ final class NetworkSurfaceGuardTests: XCTestCase {
         XCTAssertFalse(try Self.usesNetwork("// URLSession is not used here"))
         XCTAssertFalse(try Self.usesNetwork("/* URLRequest\n NWConnection */ let x = 1"))
         XCTAssertFalse(try Self.usesNetwork("let urlSessionCount = 1"))
+        XCTAssertTrue(try Self.usesNetwork("let url = \"https://x\"; let s = URLSession.shared"))
+        XCTAssertTrue(try Self.usesNetwork("let u = \"a\\(URLSession.shared.description)\""))
+        XCTAssertTrue(try Self.usesNetwork("let a = \"/*\"; let r = URLRequest(url: u); let c = \"*/\""))
+        XCTAssertFalse(try Self.usesNetwork("let label = \"URLSession\""))
+    }
+}
+
+/// Removes comments and string-literal text from Swift source but keeps code inside string
+/// interpolations, so `"https://…"` can't hide the rest of a line and an API named only in a
+/// string isn't counted. Handles `//`, nested `/* */`, `"…"`, `"""…"""`, raw `#"…"#` and `\(…)`.
+private struct SwiftCodeScanner {
+    private let chars: [Character]
+    private var index = 0
+    private var output = ""
+
+    static func codeOnly(_ text: String) -> String {
+        var scanner = SwiftCodeScanner(chars: Array(text))
+        scanner.code(stopAtParen: false)
+        return scanner.output
+    }
+
+    private init(chars: [Character]) { self.chars = chars }
+
+    private func at(_ offset: Int) -> Character? {
+        index + offset < chars.count ? chars[index + offset] : nil
+    }
+
+    private mutating func code(stopAtParen: Bool) {
+        var depth = 0
+        while index < chars.count {
+            let char = chars[index]
+            if char == "/", at(1) == "/" {
+                while index < chars.count, chars[index] != "\n" { index += 1 }
+            } else if char == "/", at(1) == "*" {
+                blockComment()
+            } else if char == "\"" || (char == "#" && startsRawString()) {
+                string()
+            } else if char == "(" {
+                depth += 1; output.append(char); index += 1
+            } else if char == ")" {
+                index += 1
+                if stopAtParen && depth == 0 { return }
+                depth -= 1; output.append(char)
+            } else {
+                output.append(char); index += 1
+            }
+        }
+    }
+
+    private func startsRawString() -> Bool {
+        var offset = 0
+        while let char = at(offset), char == "#" { offset += 1 }
+        return at(offset) == "\""
+    }
+
+    private mutating func blockComment() {
+        var depth = 0
+        while index < chars.count {
+            if chars[index] == "/", at(1) == "*" { depth += 1; index += 2; continue }
+            if chars[index] == "*", at(1) == "/" {
+                depth -= 1; index += 2
+                if depth == 0 { return }
+                continue
+            }
+            if chars[index] == "\n" { output.append("\n") }
+            index += 1
+        }
+    }
+
+    private mutating func string() {
+        var hashes = 0
+        while at(0) == "#" { hashes += 1; index += 1 }
+        let multiline = at(0) == "\"" && at(1) == "\"" && at(2) == "\""
+        index += multiline ? 3 : 1
+        output.append("\"")
+        while index < chars.count {
+            let char = chars[index]
+            if char == "\\" {
+                var offset = 1
+                while offset <= hashes, at(offset) == "#" { offset += 1 }
+                if offset == hashes + 1 {
+                    if at(offset) == "(" {
+                        index += offset + 1
+                        output.append(" ")
+                        code(stopAtParen: true)
+                        output.append(" ")
+                    } else {
+                        index += offset + 1 // escaped character
+                    }
+                    continue
+                }
+                index += 1
+                continue
+            }
+            if closesString(multiline: multiline, hashes: hashes) {
+                index += (multiline ? 3 : 1) + hashes
+                output.append("\"")
+                return
+            }
+            if char == "\n" {
+                if !multiline { return } // unterminated single-line string
+                output.append("\n")
+            }
+            index += 1
+        }
+    }
+
+    private func closesString(multiline: Bool, hashes: Int) -> Bool {
+        let quotes = multiline ? 3 : 1
+        for offset in 0..<quotes where at(offset) != "\"" { return false }
+        for offset in 0..<hashes where at(quotes + offset) != "#" { return false }
+        return true
     }
 }
