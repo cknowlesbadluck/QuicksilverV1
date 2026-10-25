@@ -108,18 +108,45 @@ final class DeviceRunStampSummaryTests: XCTestCase {
     }
 
     func testFreeFormFieldsAreRedacted() {
-        let summary = stamp(hardware: "Chris's iPhone 🙂 <script>buy oat milk at 5pm on Elm Street</script>").redactedSummary()
-        XCTAssertFalse(summary.contains("'"))
-        XCTAssertFalse(summary.contains("<"))
-        XCTAssertFalse(summary.contains("🙂"))
-        XCTAssertFalse(summary.contains("Elm Street"), "capped at 32 characters")
-        XCTAssertEqual(DeviceRunStamp.redacted("iPhone17,5"), "iPhone17,5")
-        XCTAssertEqual(DeviceRunStamp.redacted("🙂"), "-")
+        let summary = stamp(hardware: "buy oat milk at 5pm").redactedSummary()
+        XCTAssertTrue(summary.contains("hardware: redacted"))
+        XCTAssertFalse(summary.contains("oat milk"))
+        XCTAssertEqual(DeviceRunStamp.validated("iPhone17,5", as: .hardware), "iPhone17,5")
+        XCTAssertEqual(DeviceRunStamp.validated("arm64", as: .hardware), "arm64")
+        XCTAssertEqual(DeviceRunStamp.validated("Chris's iPhone", as: .hardware), "redacted")
+        XCTAssertEqual(DeviceRunStamp.validated("27.0.1", as: .version), "27.0.1")
+        XCTAssertEqual(DeviceRunStamp.validated("27 call mom", as: .version), "redacted")
+        XCTAssertEqual(DeviceRunStamp.validated("Available", as: .onDeviceModel), "Available")
+        XCTAssertEqual(DeviceRunStamp.validated("my secret note", as: .onDeviceModel), "redacted")
+    }
+
+    func testDecodedFreeTextNeverReachesSummary() throws {
+        var json = try XCTUnwrap(String(data: stamp().jsonData(), encoding: .utf8))
+        json = json.replacingOccurrences(of: "\"27.0.0\"", with: "\"remember the pharmacy\"")
+        let decoded = try JSONDecoder.stampDecoder.decode(DeviceRunStamp.self, from: Data(json.utf8))
+        XCTAssertFalse(decoded.redactedSummary().contains("pharmacy"))
+        XCTAssertTrue(decoded.redactedSummary().hasSuffix("deviceAcceptance: not_recorded"))
+    }
+
+    func testUnknownCheckWithUnknownResultStillDecodes() throws {
+        var json = try XCTUnwrap(String(data: stamp().jsonData(), encoding: .utf8))
+        json = json.replacingOccurrences(of: "\"results\" : {", with: "\"results\" : {\n    \"futureCheck\" : \"skippedByOwner\",")
+        let decoded = try JSONDecoder.stampDecoder.decode(DeviceRunStamp.self, from: Data(json.utf8))
+        XCTAssertEqual(decoded.results[.coldLaunch], .notRun)
+        XCTAssertEqual(decoded.deviceAcceptance, DeviceRunStamp.notRecorded)
     }
 
     func testSummaryUsesOnlyTheFixedVocabulary() {
         let summary = stamp().redactedSummary()
         let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " .,()_-:[]\n"))
         XCTAssertTrue(summary.unicodeScalars.allSatisfy { allowed.contains($0) }, summary)
+    }
+}
+
+private extension JSONDecoder {
+    static var stampDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
     }
 }

@@ -122,10 +122,12 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         onDeviceModel = try container.decode(String.self, forKey: .onDeviceModel)
         startedAt = try container.decode(Date.self, forKey: .startedAt)
         finishedAt = try container.decodeIfPresent(Date.self, forKey: .finishedAt)
-        let raw = try container.decode([String: Result].self, forKey: .results)
+        // Values are decoded as strings so an unknown check, or a result value from a newer build,
+        // is skipped instead of making the whole stamp unreadable.
+        let raw = try container.decode([String: String].self, forKey: .results)
         var decoded = Dictionary(uniqueKeysWithValues: Check.allCases.map { ($0, Result.notRun) })
         for (key, value) in raw {
-            if let check = Check(rawValue: key) { decoded[check] = value }
+            if let check = Check(rawValue: key), let result = Result(rawValue: value) { decoded[check] = result }
         }
         results = decoded
         // acceptanceGate and deviceAcceptance are ignored on decode: they are constants.
@@ -147,19 +149,20 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         try container.encode(Self.notRecorded, forKey: .deviceAcceptance)
     }
 
-    /// A plain-text summary for pasting into the CHR-55 issue. It is built only from the stamp's
-    /// fixed fields, with every free-form field passed through `redacted(_:)`, so it can't carry
-    /// user content. The last line always reads `deviceAcceptance: not_recorded`.
+    /// A plain-text summary for pasting into the CHR-55 issue. Each field is checked against its
+    /// real format (a version number, a `utsname` machine identifier, a known on-device model
+    /// label). Anything else prints as `redacted`, so hand-edited or decoded text can't reach the
+    /// summary. The last line always reads `deviceAcceptance: not_recorded`.
     public func redactedSummary() -> String {
         func date(_ value: Date?) -> String {
             value.map { ISO8601DateFormatter().string(from: $0) } ?? "-"
         }
         var lines = [
             "Quicksilver device run (\(Self.acceptanceGate) evidence, not acceptance)",
-            "app: \(Self.redacted(appVersion)) (\(Self.redacted(build)))",
-            "os: \(Self.redacted(osVersion))",
-            "hardware: \(Self.redacted(hardwareModel))\(isSimulator ? " [simulator]" : "")",
-            "onDeviceModel: \(Self.redacted(onDeviceModel))",
+            "app: \(Self.validated(appVersion, as: .version)) (\(Self.validated(build, as: .version)))",
+            "os: \(Self.validated(osVersion, as: .version))",
+            "hardware: \(Self.validated(hardwareModel, as: .hardware))\(isSimulator ? " [simulator]" : "")",
+            "onDeviceModel: \(Self.validated(onDeviceModel, as: .onDeviceModel))",
             "started: \(date(startedAt))",
             "finished: \(date(finishedAt))"
         ]
@@ -169,12 +172,28 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         return lines.joined(separator: "\n")
     }
 
-    /// Keeps only `[A-Za-z0-9 .,()_-]`, at most 32 characters, so a decoded or hand-edited field
-    /// can't smuggle free text into the summary.
-    static func redacted(_ value: String) -> String {
-        let allowed = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,()_-")
-        let kept = String(value.filter { allowed.contains($0) }.prefix(32))
-        return kept.isEmpty ? "-" : kept
+    static let redactedValue = "redacted"
+
+    enum FieldFormat {
+        case version, hardware, onDeviceModel
+    }
+
+    /// The on-device model labels a real stamp can contain (`OnDeviceModelAvailability.shortLabel`).
+    static let knownOnDeviceModelLabels: Set<String> = Set(
+        [OnDeviceModelAvailability.available, .deviceNotEligible, .appleIntelligenceNotEnabled,
+         .modelNotReady, .unsupportedOS, .unknown].map(\.shortLabel)
+    )
+
+    /// Returns `value` only when it matches `format` exactly, otherwise `redacted`.
+    static func validated(_ value: String, as format: FieldFormat) -> String {
+        let pattern: String
+        switch format {
+        case .version: pattern = "^[0-9]{1,6}(\\.[0-9]{1,6}){0,3}$"
+        case .hardware: pattern = "^((iPhone|iPad|iPod|Watch|RealityDevice)[0-9]{1,3},[0-9]{1,3}|arm64|x86_64|unknown)$"
+        case .onDeviceModel:
+            return knownOnDeviceModelLabels.contains(value) ? value : redactedValue
+        }
+        return value.range(of: pattern, options: .regularExpression) != nil ? value : redactedValue
     }
 
     /// `utsname.machine`, e.g. "iPhone17,5". On the simulator this is the host architecture.
