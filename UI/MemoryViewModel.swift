@@ -19,7 +19,9 @@ final class MemoryViewModel {
         self.container = container
     }
 
-    func load() async {
+    /// Loads the Archive. `focusing` is a note opened from Spotlight: it's always included,
+    /// even when the active aspect's scoped view or retention threshold would hide it.
+    func load(focusing focusedID: UUID? = nil) async {
         isLoading = true
         await container.memoryManager.load()
         if container.memoryManager.lastFailure != .load {
@@ -44,6 +46,11 @@ final class MemoryViewModel {
                 if $0.importance != $1.importance { return $0.importance > $1.importance }
                 return $0.updatedAt > $1.updatedAt
             }
+        if let focusedID, !items.contains(where: { $0.id == focusedID }),
+           var focused = container.memoryManager.items(matching: MemoryQuery()).first(where: { $0.id == focusedID }) {
+            focused.importance = MemoryScorer.decayedImportance(for: focused)
+            items.insert(focused, at: 0)
+        }
         isLoading = false
     }
 
