@@ -320,9 +320,10 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption.weight(.semibold))
-                    // mercuryBright, semibold: with the Ask sheet truly dismissed the audit failed
-                    // contrast on "Workshop" every run in readableText regular (PR #403).
+                    .font(.caption)
+                    // mercuryBright (not readableText): with the Ask sheet truly dismissed the audit failed
+                    // contrast on "Workshop" every run (PR #403).
+                    // Regular weight: semibold tripped "Text clipped" under lineLimit(1).
                     .foregroundStyle(PersonaTheme.mercuryBright)
                     .multilineTextAlignment(.center)
                     // A single long word ("Planetarium") can't wrap in the narrow column; scale
