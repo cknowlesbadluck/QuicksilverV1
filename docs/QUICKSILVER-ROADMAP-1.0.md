@@ -16,10 +16,10 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 ## Phase 1: CHR-55 device fence
 - **Goal:** prove on real hardware what CI can only simulate.
 - **Owner device checklist.** The owner runs it on an iPhone 16e with iOS 27, all on the same build:
-  1. Build the unsigned IPA locally (`scripts/` and `docs/SIDESTORE.md` from #375), then sign and install it through SideStore. Agents never run the archive or signing steps.
+  1. Get the unsigned IPA, then sign and install it through SideStore. Until #375 lands, the IPA comes from the existing `Archive IPA` workflow, which the owner triggers. After #375, the owner can build it locally with that PR's `scripts/` and `docs/SIDESTORE.md`. Agents never run the archive or signing steps.
   2. **Cold launch:** force-quit, launch, and the Sanctum appears with no crash.
   3. **On-device answer:** with Apple Intelligence on and airplane mode on, Ask answers on-device.
-  4. **Keychain after a reboot:** reboot, then open the app before the first unlock and confirm the Codex shows the locked state. Unlock and confirm routing rebuilds, with stored keys present and nothing re-entered.
+  4. **Keychain after a reboot:** reboot, unlock, and open the app. Stored keys are present, routing rebuilds, and nothing has to be re-entered. (A passcode-protected iPhone can't open the app before its first unlock. The locked state itself is covered on CI by the injected Keychain failure in `CredentialsLockedPairingTests`, not by this step.)
   5. **Spotlight tap:** opt in to Spotlight, save a note, search for it in Spotlight, and tap it. The Archive opens on that note. Then opt out and confirm the note is gone from Spotlight.
   6. **VoiceOver:** VoiceOver can reach Sanctum, Ask, Archive and Codex, and every control has a label.
   7. **Memory at the cap:** with about 1,000 turns plus 500 notes, launch to a usable Sanctum within a few seconds. Notes survive a relaunch, and the oldest note is still findable.
