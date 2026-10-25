@@ -2,7 +2,7 @@
 
 QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A phase is done when its exit criteria hold on `main` with Quicksilver CI green on all 6 jobs. Device evidence counts only if the owner records it. Agents never record or claim it.
 
-**State as of 2026-10-24, 5 PM ET:** `main` is at `ba0ecd6` and green. CHR-55 is still `not_recorded`. Merged this cycle: the opaque readable colours (#381), the Keychain policy guard (#385) and the public-API guard (#386). Closed as stale or superseded, with branches kept: #319, #337, #340, #343, #345 and #348.
+**State as of 2026-10-24, 8 PM ET:** score about 7.6. `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 13 PRs are open. Merged this cycle: #381, #385 and #386. Closed with branches kept: #319, #337, #340, #343, #345, #348 and #389 (folded into #390).
 
 ## 1.0 exit criteria, in order (CHR-55 first)
 
