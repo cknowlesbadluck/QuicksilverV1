@@ -28,6 +28,8 @@ enum PersonaTheme {
     static let quicksilver = Color(red: 0.350, green: 0.950, blue: 0.720)
     static let quicksilverDeep = Color(red: 0.090, green: 0.280, blue: 0.220)
     static let warningEmber = Color(red: 0.95, green: 0.35, blue: 0.2)
+    /// Accent opacity behind the Archive row opened from a Spotlight result.
+    static let spotlightSelectionOpacity: Double = 0.18
 
     // Legacy aliases so existing call-sites compile while migrating.
     static let cosmicBlack = voidBlack
@@ -46,8 +48,6 @@ enum PersonaTheme {
     // MARK: - Surface Geometry (absorbed from MercuryVisualTokens)
 
     static let glassCornerRadius: CGFloat = 18
-    /// Accent opacity behind the Archive row opened from a Spotlight result.
-    static let spotlightSelectionOpacity: Double = 0.18
 
     // MARK: - Persona Accents
 
