@@ -96,6 +96,22 @@ final class NoteSpotlightTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(index.calls.count, 2, "a note change must re-sync Spotlight")
     }
 
+    func testMemoryUpdateRetriesFailedOptOutRemoval() async throws {
+        let sync = makeSync()
+        await sync.setEnabled(true)
+        index.failNext = true
+        await sync.setEnabled(false)
+        XCTAssertTrue(sync.removalFailed)
+        let bus = EventBus()
+        sync.follow(bus)
+        for _ in 0..<200 where sync.removalFailed {
+            await bus.publish(.memoryDidUpdate(itemID: "note.1"))
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertFalse(sync.removalFailed, "a memory change must retry the failed removal")
+        XCTAssertEqual(index.calls.last, .removeAll)
+    }
+
     func testOffByDefaultAndSyncRemovesEverything() async {
         let sync = makeSync()
         XCTAssertFalse(sync.isEnabled, "Spotlight indexing must be opt-in")

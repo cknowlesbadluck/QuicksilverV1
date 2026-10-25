@@ -5,6 +5,7 @@ import Memory
 
 struct MemoryView: View {
     @Environment(DependencyContainer.self) private var container
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var viewModel: MemoryViewModel?
     @State private var draft = ""
     @State private var showClearConfirm = false
@@ -127,7 +128,9 @@ struct MemoryView: View {
             // Keyed on the id too, so a second Spotlight tap scrolls even when both notes are loaded.
             .onChange(of: FocusTarget(id: focusedNoteID, loaded: vm.items.contains { $0.id == focusedNoteID })) { _, target in
                 guard target.loaded, let id = target.id else { return }
-                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                withAnimation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion)) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
             }
         }
     }

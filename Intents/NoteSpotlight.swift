@@ -86,7 +86,8 @@ public final class NoteSpotlightSync {
     }
 
     /// Re-syncs after every note save, edit or delete while opted in, so a deleted note does
-    /// not linger in Spotlight until the next app activation.
+    /// not linger in Spotlight until the next app activation. After a failed opt-out it
+    /// retries the removal on the next memory change.
     public func follow(_ eventBus: EventBus) {
         followTask?.cancel()
         followTask = Task { [weak self] in
@@ -96,7 +97,8 @@ public final class NoteSpotlightSync {
             }
             for await _ in stream {
                 guard !Task.isCancelled, let self else { break }
-                if self.isEnabled { await self.sync() }
+                // Also retry a failed opt-out removal, as `removalFailed` documents.
+                if self.isEnabled || self.removalFailed { await self.sync() }
             }
         }
     }
