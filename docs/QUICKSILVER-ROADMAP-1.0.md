@@ -2,7 +2,7 @@
 
 QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A phase is done when its exit criteria hold on `main` with Quicksilver CI green on all 6 jobs. Device evidence counts only if the owner records it. Agents never record or claim it.
 
-**State as of 2026-10-24, 8 PM ET:** score about 7.6. `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 13 PRs are open. Merged this cycle: #381, #385 and #386. Closed with branches kept: #319, #337, #340, #343, #345, #348 and #389 (folded into #390).
+**State as of 2026-10-25, midnight ET:** score about 7.6. `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 14 PRs are open, including #392 (the device-run stamp). Merged this cycle: #381, #385 and #386. Closed with branches kept: #319, #337, #340, #343, #345, #348 and #389.
 
 ## 1.0 exit criteria, in order (CHR-55 first)
 
@@ -23,7 +23,7 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
   5. **Spotlight tap:** opt in to Spotlight, save a note, search for it in Spotlight, and tap it. The Archive opens on that note. Then opt out and confirm the note is gone from Spotlight.
   6. **VoiceOver:** VoiceOver can reach Sanctum, Ask, Archive and Codex, and every control has a label.
   7. **Memory at the cap:** with about 1,000 turns plus 500 notes, launch to a usable Sanctum within a few seconds. Notes survive a relaunch, and the oldest note is still findable.
-- **Implementations:** the app adds a content-free "device run" stamp to the diagnostics export (build, OS, model availability, timings) for the owner to attach.
+- **Implementations:** a content-free "device run" stamp (build, OS, hardware identifier, model availability, timings and a result for each step). The type is `DeviceRunStamp` in #392 and always reads `not_recorded`. Next, a Codex control lets the owner record step results and export the stamp next to the diagnostics export (#374).
 - **Exit:** every checklist item passes, and the owner sets CHR-55 to `recorded` with the stamp attached. Until then, every later phase that depends on device behaviour stays provisional.
 
 ## Phase 2: memory budget
