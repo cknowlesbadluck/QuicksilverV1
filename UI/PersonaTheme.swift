@@ -46,6 +46,8 @@ enum PersonaTheme {
     // MARK: - Surface Geometry (absorbed from MercuryVisualTokens)
 
     static let glassCornerRadius: CGFloat = 18
+    /// Accent opacity behind the Archive row opened from a Spotlight result.
+    static let spotlightSelectionOpacity: Double = 0.18
 
     // MARK: - Persona Accents
 

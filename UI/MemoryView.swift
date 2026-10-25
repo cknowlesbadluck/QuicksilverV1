@@ -109,7 +109,7 @@ struct MemoryView: View {
                             }
                             .padding(.vertical, 2)
                             .id(item.id)
-                            .listRowBackground(item.id == focusedNoteID ? accent.opacity(0.18) : nil)
+                            .listRowBackground(item.id == focusedNoteID ? accent.opacity(PersonaTheme.spotlightSelectionOpacity) : nil)
                             .accessibilityAddTraits(item.id == focusedNoteID ? .isSelected : [])
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
@@ -123,8 +123,9 @@ struct MemoryView: View {
                 }
             }
             .task { await vm.load() }
-            .onChange(of: vm.items.contains { $0.id == focusedNoteID }) { _, found in
-                guard found, let id = focusedNoteID else { return }
+            // Keyed on the id too, so a second Spotlight tap scrolls even when both notes are loaded.
+            .onChange(of: FocusTarget(id: focusedNoteID, loaded: vm.items.contains { $0.id == focusedNoteID })) { _, target in
+                guard target.loaded, let id = target.id else { return }
                 withAnimation { proxy.scrollTo(id, anchor: .center) }
             }
         }
@@ -155,4 +156,10 @@ private struct ActivityView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+/// What the Archive scrolls to: the focused note's id and whether that note is loaded yet.
+private struct FocusTarget: Equatable {
+    let id: UUID?
+    let loaded: Bool
 }

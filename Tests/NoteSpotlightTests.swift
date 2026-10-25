@@ -67,6 +67,17 @@ final class NoteSpotlightTests: XCTestCase {
         XCTAssertEqual(index.calls, [.replaceAll(["Buy oat milk", "Call the plumber"])])
     }
 
+    func testLaterSuccessfulLoadReleasesTheGateOnce() async {
+        flags.set(NoteSpotlightSync.flagKey, enabled: true)
+        let sync = makeSync(waitForMemoryLoad: true)
+        await sync.sync()
+        XCTAssertEqual(index.calls, [], "the failed cold-launch load never released the gate")
+        await sync.memoryLoadSucceeded()
+        XCTAssertEqual(index.calls, [.replaceAll(["Buy oat milk", "Call the plumber"])])
+        await sync.memoryLoadSucceeded()
+        XCTAssertEqual(index.calls.count, 1, "an already-ready gate does not reconcile again")
+    }
+
     func testColdLaunchOptedOutStillRemovesBeforeLoad() async {
         let sync = makeSync(waitForMemoryLoad: true)
         await sync.sync()

@@ -22,6 +22,9 @@ final class MemoryViewModel {
     func load() async {
         isLoading = true
         await container.memoryManager.load()
+        if container.memoryManager.lastFailure != .load {
+            await container.noteSpotlight.memoryLoadSucceeded()
+        }
 
         let personaID = container.personaManager.activePersonaID
         let policy = container.personaManager.activeMemoryPolicy

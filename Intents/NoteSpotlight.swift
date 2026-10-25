@@ -77,6 +77,14 @@ public final class NoteSpotlightSync {
         await sync()
     }
 
+    /// A later successful load (for example the Archive retrying after a failed cold-launch load)
+    /// releases the gate once. It does nothing when memory is already ready, so opening the Archive
+    /// doesn't trigger a reconcile every time.
+    public func memoryLoadSucceeded() async {
+        guard !memoryReady else { return }
+        await memoryDidLoad()
+    }
+
     /// Re-syncs after every note save, edit or delete while opted in, so a deleted note does
     /// not linger in Spotlight until the next app activation.
     public func follow(_ eventBus: EventBus) {
