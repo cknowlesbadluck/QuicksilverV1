@@ -6,8 +6,9 @@ import XCTest
 /// listed here, with a per-file use count. Adding one fails CI. Removing one means shrinking
 /// the count in the same PR.
 final class NonisolatedUnsafeRatchetTests: XCTestCase {
-    /// EventBusTests: each local is written by a handler and read after `fulfillment(of:)`,
-    /// which orders the write before the read. These are test-only captures, not shared app state.
+    /// EventBusTests: these are test-local counters written by bus handlers. They're read only after
+    /// `await bus.publish` or `fulfillment(of:)` returns, and each test has a single writer.
+    /// They're test-only captures, not shared app state.
     private static let allowlist: [String: Int] = ["Tests/EventBusTests.swift": 8]
 
     private static let sourceDirectories = [
