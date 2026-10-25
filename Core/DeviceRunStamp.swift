@@ -152,7 +152,7 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         var info = utsname()
         uname(&info)
         return withUnsafeBytes(of: &info.machine) { buffer in
-            String(decoding: buffer.prefix { $0 != 0 }, as: UTF8.self)
+            String(bytes: buffer.prefix { $0 != 0 }, encoding: .utf8) ?? "unknown"
         }
     }
 }
