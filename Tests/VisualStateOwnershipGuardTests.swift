@@ -118,6 +118,7 @@ private struct SwiftCodeScanner {
     }
 
     private mutating func blockComment() {
+        output.append(" ") // keep `return/* x */Name` as two tokens
         var depth = 0
         while index < chars.count {
             if chars[index] == "/", at(1) == "*" { depth += 1; index += 2; continue }
