@@ -71,7 +71,7 @@ final class DeviceRunStampTests: XCTestCase {
         let keys = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any]).keys
         XCTAssertEqual(Set(keys), [
             "appVersion", "build", "osVersion", "hardwareModel", "isSimulator", "onDeviceModel",
-            "startedAt", "results", "acceptanceGate", "deviceAcceptance"
+            "startedAt", "results", "acceptanceGate", "deviceAcceptance", "schemaVersion"
         ])
     }
 
@@ -148,5 +148,69 @@ private extension JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return decoder
+    }
+}
+
+final class DeviceRunStampValidationTests: XCTestCase {
+    private let start = Date(timeIntervalSince1970: 2_000_000_000)
+
+    private func stamp(startedAt: Date) -> DeviceRunStamp {
+        DeviceRunStamp(
+            configuration: AppConfiguration(version: "0.2.0", build: "7"),
+            osVersion: "27.0.0",
+            hardwareModel: "iPhone17,5",
+            isSimulator: false,
+            onDeviceModel: .available,
+            startedAt: startedAt
+        )
+    }
+
+    func testFreshStampIsValidAndStillNotRecorded() {
+        var stamp = stamp(startedAt: start)
+        for check in DeviceRunStamp.Check.allCases { stamp.record(check, .passed) }
+        stamp.finish(at: start.addingTimeInterval(600))
+        XCTAssertEqual(stamp.validationIssues(now: start.addingTimeInterval(700)), [])
+        XCTAssertEqual(stamp.schemaVersion, DeviceRunStamp.currentSchemaVersion)
+        XCTAssertEqual(stamp.deviceAcceptance, DeviceRunStamp.notRecorded)
+    }
+
+    func testFinishBeforeStartAndFutureTimesAreFlagged() {
+        var stamp = stamp(startedAt: start)
+        stamp.finish(at: start.addingTimeInterval(-60))
+        XCTAssertEqual(stamp.validationIssues(now: start), [.finishedBeforeStart])
+
+        let future = self.stamp(startedAt: start.addingTimeInterval(3_600))
+        XCTAssertEqual(future.validationIssues(now: start), [.startedInFuture])
+
+        var late = self.stamp(startedAt: start)
+        late.finish(at: start.addingTimeInterval(3_600))
+        XCTAssertEqual(late.validationIssues(now: start), [.finishedInFuture])
+        XCTAssertEqual(late.deviceAcceptance, DeviceRunStamp.notRecorded)
+    }
+
+    func testSmallClockSkewIsTolerated() {
+        let skewed = stamp(startedAt: start.addingTimeInterval(60))
+        XCTAssertEqual(skewed.validationIssues(now: start), [])
+    }
+
+    func testSchemaVersionDecodesAndMissingDefaultsToOne() throws {
+        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: stamp(startedAt: start).jsonData()) as? [String: Any])
+        object["schemaVersion"] = 2
+        let newer = try decoder.decode(DeviceRunStamp.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(newer.validationIssues(now: start), [.unsupportedSchema])
+        XCTAssertEqual(newer.deviceAcceptance, DeviceRunStamp.notRecorded)
+
+        object.removeValue(forKey: "schemaVersion")
+        let legacy = try decoder.decode(DeviceRunStamp.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(legacy.schemaVersion, 1)
+    }
+
+    func testSummaryReportsValidation() {
+        var stamp = stamp(startedAt: start)
+        stamp.finish(at: start.addingTimeInterval(-1))
+        let summary = stamp.redactedSummary()
+        XCTAssertTrue(summary.contains("validation: finishedBeforeStart"), summary)
+        XCTAssertTrue(summary.hasSuffix("deviceAcceptance: not_recorded"))
     }
 }

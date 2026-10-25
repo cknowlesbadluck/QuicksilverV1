@@ -38,6 +38,8 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
     /// `OnDeviceModelAvailability.shortLabel`, a fixed vocabulary.
     public let onDeviceModel: String
     public let startedAt: Date
+    /// Schema of the encoded stamp. Stamps written before this field existed decode as 1.
+    public let schemaVersion: Int
     public private(set) var finishedAt: Date?
     public private(set) var results: [Check: Result]
 
@@ -59,6 +61,7 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         self.isSimulator = isSimulator
         self.onDeviceModel = onDeviceModel.shortLabel
         self.startedAt = startedAt
+        self.schemaVersion = Self.currentSchemaVersion
         finishedAt = nil
         results = Dictionary(uniqueKeysWithValues: Check.allCases.map { ($0, .notRun) })
     }
@@ -95,6 +98,29 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
 
     /// True when every step passed on real hardware. This is evidence for the owner to review,
     /// not acceptance: `deviceAcceptance` stays `not_recorded`.
+    /// The schema this build writes and fully understands.
+    public static let currentSchemaVersion = 1
+    /// Clock skew allowed before a timestamp counts as "in the future".
+    static let futureTolerance: TimeInterval = 5 * 60
+
+    /// Problems that make a stamp unusable as CHR-55 evidence. An empty list does not mean
+    /// acceptance: `deviceAcceptance` stays `not_recorded` either way.
+    public enum ValidationIssue: String, CaseIterable, Sendable {
+        case unsupportedSchema, startedInFuture, finishedInFuture, finishedBeforeStart
+    }
+
+    public func validationIssues(now: Date = Date()) -> [ValidationIssue] {
+        let limit = now.addingTimeInterval(Self.futureTolerance)
+        var issues: [ValidationIssue] = []
+        if schemaVersion != Self.currentSchemaVersion { issues.append(.unsupportedSchema) }
+        if startedAt > limit { issues.append(.startedInFuture) }
+        if let finishedAt {
+            if finishedAt > limit { issues.append(.finishedInFuture) }
+            if finishedAt < startedAt { issues.append(.finishedBeforeStart) }
+        }
+        return issues
+    }
+
     public var allChecksPassed: Bool {
         !isSimulator && Check.allCases.allSatisfy { results[$0] == .passed }
     }
@@ -109,7 +135,7 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case appVersion, build, osVersion, hardwareModel, isSimulator, onDeviceModel
-        case startedAt, finishedAt, results, acceptanceGate, deviceAcceptance
+        case startedAt, finishedAt, results, acceptanceGate, deviceAcceptance, schemaVersion
     }
 
     public init(from decoder: Decoder) throws {
@@ -122,6 +148,7 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         onDeviceModel = try container.decode(String.self, forKey: .onDeviceModel)
         startedAt = try container.decode(Date.self, forKey: .startedAt)
         finishedAt = try container.decodeIfPresent(Date.self, forKey: .finishedAt)
+        schemaVersion = try container.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         // Values are decoded as strings so an unknown check, or a result value from a newer build,
         // is skipped instead of making the whole stamp unreadable.
         let raw = try container.decode([String: String].self, forKey: .results)
@@ -143,6 +170,7 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         try container.encode(onDeviceModel, forKey: .onDeviceModel)
         try container.encode(startedAt, forKey: .startedAt)
         try container.encodeIfPresent(finishedAt, forKey: .finishedAt)
+        try container.encode(schemaVersion, forKey: .schemaVersion)
         let raw = Dictionary(uniqueKeysWithValues: results.map { ($0.key.rawValue, $0.value) })
         try container.encode(raw, forKey: .results)
         try container.encode(Self.acceptanceGate, forKey: .acceptanceGate)
@@ -168,6 +196,8 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         ]
         lines += Check.allCases.map { "\($0.rawValue): \(results[$0, default: .notRun].rawValue)" }
         lines.append("allChecksPassed: \(allChecksPassed)")
+        let issues = validationIssues()
+        lines.append("validation: \(issues.isEmpty ? "ok" : issues.map(\.rawValue).joined(separator: ","))")
         lines.append("deviceAcceptance: \(Self.notRecorded)")
         return lines.joined(separator: "\n")
     }
