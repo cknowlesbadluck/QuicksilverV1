@@ -77,6 +77,7 @@ final class DefaultsSurfaceGuardTests: XCTestCase {
         XCTAssertTrue(try Self.matches(Self.iCloudPattern, "let u = \"https://e/\\(NSUbiquitousKeyValueStore.default.string(forKey: \"p\") ?? \"\")\""))
         XCTAssertTrue(try Self.matches(Self.defaultsPattern, "let a = \"/*\"; let b = UserDefaults.standard; let c = \"*/\""))
         XCTAssertFalse(try Self.matches(Self.defaultsPattern, "let key = \"UserDefaults\""))
+        XCTAssertTrue(try Self.matches(Self.defaultsPattern, "let d = { return/* settings */UserDefaults.standard }()"))
         XCTAssertFalse(try Self.matches(Self.defaultsPattern, "let m = \"\"\"\nUserDefaults\n\"\"\""))
     }
 }
@@ -130,6 +131,7 @@ private struct SwiftCodeScanner {
     }
 
     private mutating func blockComment() {
+        output.append(" ") // keep `return/* x */Name` as two tokens
         var depth = 0
         while index < chars.count {
             if chars[index] == "/", at(1) == "*" { depth += 1; index += 2; continue }
