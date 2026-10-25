@@ -207,8 +207,10 @@ final class DeviceRunStampValidationTests: XCTestCase {
     }
 
     func testSummaryReportsValidation() {
-        var stamp = stamp(startedAt: start)
-        stamp.finish(at: start.addingTimeInterval(-1))
+        // The summary validates against the real clock, so use "now" rather than the fixed 2033 start.
+        let now = Date()
+        var stamp = stamp(startedAt: now)
+        stamp.finish(at: now.addingTimeInterval(-1))
         let summary = stamp.redactedSummary()
         XCTAssertTrue(summary.contains("validation: finishedBeforeStart"), summary)
         XCTAssertTrue(summary.hasSuffix("deviceAcceptance: not_recorded"))
