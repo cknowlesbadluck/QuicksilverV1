@@ -2,7 +2,7 @@
 
 QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A phase is done when its exit criteria hold on `main` with Quicksilver CI green on all 6 jobs. Device evidence counts only if the owner records it. Agents never record or claim it.
 
-**State as of 2026-10-25, midnight ET:** score about 7.6. `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 14 PRs are open, including #392 (the device-run stamp). Merged this cycle: #381, #385 and #386. Closed with branches kept: #319, #337, #340, #343, #345, #348 and #389.
+**State as of 2026-10-25, 4 AM ET:** score about 7.7. `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 16 PRs are open, all of them mergeable except #374. New since midnight: #393 (removes the empty `SanctumChamber.swift` stub), #394 (a ratchet on `nonisolated(unsafe)`, which has 0 production uses), and `DeviceRunStamp.redactedSummary()` on #392. Production has one `@unchecked Sendable` (`LoggerService`, tracked by #284). Every action in `ci.yml` is SHA-pinned. Only `release.yml` (#250) is still tag-pinned. Merged this cycle: #381, #385 and #386. Closed with branches kept: #319, #337, #340, #343, #345, #348 and #389.
 
 ## 1.0 exit criteria, in order (CHR-55 first)
 
