@@ -74,6 +74,7 @@ struct SpatialSanctum: View {
     let onInvoke: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// Freeze decorative time under Reduce Motion or `-uitest` (CI a11y audit).
     private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
@@ -242,7 +243,13 @@ struct SpatialSanctum: View {
     }
 
     private var navigationPrompt: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 12) {
+        // One column at accessibility sizes: single-word captions ("Planetarium", "Governance")
+        // cannot wrap in a third-width column and the audit flagged "Text clipped" (PR #403).
+        let columnCount = dynamicTypeSize.isAccessibilitySize ? 1 : 3
+        return LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount),
+            spacing: 12
+        ) {
             ForEach(SpatialDestination.allCases) { destination in
                 SpatialPortalButton(destination: destination) {
                     onDestination(destination)
