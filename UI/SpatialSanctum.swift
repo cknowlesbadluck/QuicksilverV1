@@ -171,7 +171,12 @@ struct SpatialSanctum: View {
     /// middot and IDLE label still audited as StaticText (contrast on `\u{00B7}`,
     /// Dynamic Type on caption2). Same collapse SpatialPortalButton already uses.
     private var headerIdentity: some View {
-        HStack(spacing: 8) {
+        // Stack vertically at accessibility sizes so "SANCTUM" and the state label get the
+        // full row width; side by side they were flagged "Text clipped" (PR #403).
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
             Circle()
                 .fill(accent)
                 .frame(width: 7, height: 7)
