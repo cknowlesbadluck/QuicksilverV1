@@ -211,7 +211,7 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
     /// The on-device model labels a real stamp can contain (`OnDeviceModelAvailability.shortLabel`).
     static let knownOnDeviceModelLabels: Set<String> = Set(
         [OnDeviceModelAvailability.available, .deviceNotEligible, .appleIntelligenceNotEnabled,
-         .modelNotReady, .unsupportedOS, .unknown].map(\.shortLabel)
+         .modelNotReady, .unsupportedOS, .unknown("")].map(\.shortLabel)
     )
 
     /// Returns `value` only when it matches `format` exactly, otherwise `redacted`.
