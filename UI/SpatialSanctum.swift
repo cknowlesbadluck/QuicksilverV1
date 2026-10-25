@@ -304,7 +304,6 @@ struct SpatialSanctum: View {
 private struct SpatialPortalButton: View {
     let destination: SpatialDestination
     let action: () -> Void
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Button(action: action) {
@@ -331,18 +330,13 @@ private struct SpatialPortalButton: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
 
-                // Single-word subtitles ("Governance") can't wrap in the narrow column and the
-                // audit flagged them "Text clipped" (PR #403). At accessibility sizes show only
-                // the title; the subtitle is still spoken via accessibilityValue below.
-                if !dynamicTypeSize.isAccessibilitySize {
-                    Text(destination.subtitle)
-                        .font(.caption)
-                        // readableSecondary, not .secondary: the audit failed contrast on "Eternal".
-                        .foregroundStyle(PersonaTheme.readableSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityHidden(true)
-                }
+                Text(destination.subtitle)
+                    .font(.caption)
+                    // readableSecondary, not .secondary: the audit failed contrast on "Eternal".
+                    .foregroundStyle(PersonaTheme.readableSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity)
             .frame(minHeight: 44)
