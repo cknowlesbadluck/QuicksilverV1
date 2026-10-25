@@ -179,7 +179,7 @@ struct SpatialSanctum: View {
         // ("SANC-TUM" at accessibility5 in the #335 snapshot).
         let stacked = dynamicTypeSize.isAccessibilitySize
         let layout = stacked
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: PersonaTheme.sanctumHeaderStackSpacing))
             : AnyLayout(HStackLayout(spacing: 8))
         return layout {
             HStack(spacing: 8) {
