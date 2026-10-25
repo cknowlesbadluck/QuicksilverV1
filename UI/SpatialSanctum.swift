@@ -338,11 +338,6 @@ private struct SpatialPortalButton: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
             }
-            // Single-word labels ("Planetarium", "Governance") cannot wrap in a third-width
-            // column, so the audit flags "Text clipped" at large sizes (PR #403). Cap only
-            // these portal captions; the full title/subtitle stay in the accessibility
-            // label/value for VoiceOver and Large Content.
-            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             .frame(maxWidth: .infinity)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
