@@ -51,3 +51,10 @@ These findings are new since the earlier audits. Everything was checked live.
 - **Score: about 7.6.** CHR-55 (`not_recorded`) is still the only critical gate. No device evidence exists, and none is claimed.
 - **Main:** `ba0ecd6` is green on all 6 jobs ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)).
 - **Open PRs:** 13. The earlier full audit (#389) was folded into this PR as `docs/AUDIT-2026-10-24-FULL.md`, and #389 was closed.
+
+## 2026-10-25, midnight ET
+
+- **State:** no change since 8 PM. `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). Open issues are #250 (off-limits) and #252. All open PRs are mergeable except #374, which conflicts with main.
+- **Score: about 7.6.** CHR-55 is `not_recorded` and is still the only critical gate.
+- **New:** #392 adds `DeviceRunStamp`, a content-free evidence record for the owner's device checklist. It is hard-wired to `deviceAcceptance = not_recorded`, so it supports CHR-55 without claiming it.
+- **Open PRs:** 14, including #392.
