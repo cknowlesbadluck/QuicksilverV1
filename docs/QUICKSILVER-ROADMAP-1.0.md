@@ -2,27 +2,36 @@
 
 QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A phase is done when its exit criteria hold on `main` with Quicksilver CI green on all 6 jobs. Device evidence counts only if the owner records it. Agents never record or claim it.
 
-**State as of 2026-10-25, 6 AM ET:** score about 7.5–7.7 (the owner says 7.5 and the agent 7.7; see AUDIT-2026-10-25.md). `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 18 PRs are open. #374 is the only one that conflicts with `main`. New since 4 AM: #395 (stamp schema version and validation, stacked on #392) and #396 (a read-only PR-overlap report). #377's review fixes are pushed. The `@unchecked Sendable` and `nonisolated(unsafe)` ratchets are in #394. Every action in `ci.yml` is SHA-pinned, and `release.yml` (#250) is still tag-pinned. Merged this cycle: #381, #385 and #386.
-
-**State as of 2026-10-25, 9 AM ET:** `main` is still at `6b1912c` (no merges since `ba0ecd6` other than the owner's docs note, so no regressions). 20 PRs are open. #390 was closed by the owner. Compiler warnings on `main`: 57 unique, all in `UITests/SanctumSmokeTests.swift` (main-actor isolation), and #387 already fixes them. SwiftLint warnings: 0. This morning's UI Smoke "Text clipped" flake was the scaled "Planetarium" portal label. #373 removes that `minimumScaleFactor` label scaling and switches to wrapping with fewer columns, and its head is green. New: #399, which checks every ship-version stamp in the docs against project.yml.
+**State as of 2026-10-25, 1 PM ET:** `main` is at `3dd53ce` (an owner docs note) and green. 20 PRs are open, and all are green except #374, which conflicts with `main`. #395 is folded into #392, and #387 is closed because #373 carries the same change. New guards: #400 keeps network I/O in the reviewed clients, and #401 keeps UserDefaults in the reviewed settings stores and bans iCloud key-value sync. Branch report (#391's script): 18 branches have no open PR. 3 are on the keep-list. None are fully in `main`. 2 are fully carried by an open PR (`feat/device-run-stamp-validation` in #392, `test/ui-smoke-main-actor` in #373) and become delete candidates once those merge. The other 13 are unmerged work for the owner to decide. CHR-55 is `not_recorded`.
 
 Next slices, in order:
-1. Merge #387 (warnings) and #373 (clipping) to calm UI Smoke.
-2. After #384 merges, repoint the `docs/ROADMAP.md` links.
+1. Merge the green guard and test PRs (see the merge order in the latest audit).
+2. Merge #373 to calm UI Smoke.
 3. Bound `IntegrationEventStore`.
 4. Close #252 when #284 lands.
 5. Pin `release.yml` (#250, owner only).
 6. Record CHR-55 on device (owner only).
 
-**State as of 2026-10-25, 8 AM ET:** `main` is at `6b1912c`, the owner's mirrored audit note. CI run 40187158661 on it failed only on the known UI Smoke "Text clipped" flake (`testSanctumAccessibilityAudit`), and the failed job was rerun once. 20 PRs are open, with 8 overlapping pairs. New since 6 AM: #397 (a VisualState ownership guard test) and #398 (an AGENTS.md focus-line refresh). #390's conflict with `main` is resolved: the owner's note stays as it is, and the Quicksilver log is now `QS-AUDIT-2026-10-25.md`.
+Earlier state lines, newest first:
 
-Next slices, in order:
-1. Fix the Sanctum header clipping that flakes UI Smoke: Dynamic Type layout, building on #373's spacing token.
-2. After #384 merges, repoint the `docs/ROADMAP.md` links in README and `docs/mercury-*`.
-3. Bound `IntegrationEventStore` (owner-held; Phase 2).
-4. Close #252 when #284 lands with the LoggerService change.
-5. Pin `release.yml` (#250, owner only).
-6. Record CHR-55 on device (owner only).
+- 9 AM: `main` is still at `6b1912c` (no merges since `ba0ecd6` other than the owner's docs note, so no regressions). 20 PRs are open. #390 was closed by the owner. Compiler warnings on `main`: 57 unique, all in `UITests/SanctumSmokeTests.swift` (main-actor isolation), and #387 already fixes them. SwiftLint warnings: 0. This morning's UI Smoke "Text clipped" flake was the scaled "Planetarium" portal label. #373 removes that `minimumScaleFactor` label scaling and switches to wrapping with fewer columns, and its head is green. New: #399, which checks every ship-version stamp in the docs against project.yml.
+- 8 AM: `main` is at `6b1912c`, the owner's mirrored audit note. CI run 40187158661 on it failed only on the known UI Smoke "Text clipped" flake (`testSanctumAccessibilityAudit`), and the failed job was rerun once. 20 PRs are open, with 8 overlapping pairs. New since 6 AM: #397 (a VisualState ownership guard test) and #398 (an AGENTS.md focus-line refresh). #390's conflict with `main` is resolved: the owner's note stays as it is, and the Quicksilver log is now `QS-AUDIT-2026-10-25.md`.
+- 6 AM: score about 7.5–7.7 (the owner says 7.5 and the agent 7.7; see AUDIT-2026-10-25.md). `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 18 PRs are open. #374 is the only one that conflicts with `main`. New since 4 AM: #395 (stamp schema version and validation, stacked on #392) and #396 (a read-only PR-overlap report). #377's review fixes are pushed. The `@unchecked Sendable` and `nonisolated(unsafe)` ratchets are in #394. Every action in `ci.yml` is SHA-pinned, and `release.yml` (#250) is still tag-pinned. Merged this cycle: #381, #385 and #386.
+
+## Platform maturity view (2026-10-25, 1 PM ET)
+
+The same 10 phases, framed as how mature Quicksilver is as an iOS intelligence platform. Public Apple APIs only, free tooling only. Each exit criterion must hold on `main` with CI green. Device items count only when the owner records them.
+
+1. **Device truth (CHR-55).** Exit: the owner records an Archive IPA run on iPhone 16e / iOS 27 with every `DeviceRunStamp` check passed. Until then `deviceAcceptance` stays `not_recorded`, and no code or doc claims otherwise.
+2. **On-device Foundation Models routing.** Exit: on-device is tried first whenever the model is available. Every `OnDeviceModelAvailability` case has a tested fallback. The `needsCloud` planner keeps personal turns local, and the context budget is enforced by tests.
+3. **App Intents, Shortcuts and Spotlight reach.** Exit: note find and save intents ship. Spotlight indexing is opt-in and removable (#377), with index cleanup tested. Every intent runs without opening the app UI where Apple allows it.
+4. **Memory.** Exit: retention and load-time ceilings are enforced at the cap (#382, #388). Failures surface to the user (#314). Every store has a bound, including `IntegrationEventStore`.
+5. **Sensing.** Exit: every SENSE input (network path, environment, aspect continuity) feeds the brain through a tested seam. Nothing reads sensors from views.
+6. **Personas and aspects.** Exit: each aspect's default visual state and voice is covered by a test. Only MercuryBrain sets `VisualState` (#397), and the persona prompts have budget tests.
+7. **Privacy floor.** Exit: logging is private by default (guarded). Keychain items are device-only (guarded). Network I/O stays in the reviewed clients (#400), and UserDefaults stays in the reviewed settings stores with no iCloud sync (#401). Cloud fallback prunes personal history (#342).
+8. **Accessibility.** Exit: UI Smoke's accessibility audit passes 10 runs in a row without a rerun. Dynamic Type snapshots at accessibility5 are committed (#373), and motion always respects Reduce Motion through `MotionTokens`.
+9. **Reliability and observability.** Exit: CI flakes are below 1 in 20 runs, and each known flake is tracked to its cause. Diagnostics are content-free (#374, #392), and `@unchecked Sendable` / `nonisolated(unsafe)` only shrink (#394).
+10. **SideStore distribution.** Exit: an unsigned IPA builds from a script (#375), the docs match project.yml's version (#399), and `release.yml` actions are SHA-pinned (#250, owner only).
 
 ## 1.0 exit criteria, in order (CHR-55 first)
 
