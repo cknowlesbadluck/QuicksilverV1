@@ -123,8 +123,12 @@ final class SanctumSmokeTests: XCTestCase {
     /// has stopped moving. This changes timing only; every audit issue still fails.
     private func waitForSanctumSettled() {
         let ask = app.navigationBars["Ask"]
-        for _ in 0..<2 where ask.exists {
-            app.swipeDown()
+        // A center swipeDown() lands in Ask's scroll content and often leaves the sheet up
+        // (PR #403 run 40238397386). Drag the sheet by its navigation bar instead.
+        for _ in 0..<3 where ask.exists {
+            let start = ask.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let end = app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+            start.press(forDuration: 0.1, thenDragTo: end)
             _ = waitForAbsence(of: ask, timeout: 5)
         }
         XCTAssertTrue(waitForAbsence(of: ask, timeout: 5), "Ask sheet still presented before audit")
