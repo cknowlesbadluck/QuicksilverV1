@@ -21,17 +21,23 @@ done
 pairs_file=$(mktemp); trap 'rm -f "$pairs_file"' EXIT
 if [ -n "$offline" ]; then
   [ -r "$offline" ] || { echo "cannot read $offline" >&2; exit 2; }
-  grep -v '^[[:space:]]*$' "$offline" | sort -u > "$pairs_file"
+  { grep -v '^[[:space:]]*$' "$offline" || true; } | sort -u > "$pairs_file"
 else
   command -v gh >/dev/null || { echo "gh CLI required (or --offline FILE)" >&2; exit 2; }
   if [ -z "$repo" ]; then
     repo=$(git remote get-url origin 2>/dev/null | sed -E 's#^(git@[^:]+:|[a-z]+://([^@/]+@)?[^/]+/)##; s#\.git$##')
   fi
   [ -n "$repo" ] || { echo "no --repo and no origin remote" >&2; exit 2; }
-  for pr in $(gh pr list --repo "$repo" --state open --limit 10000 --json number --jq '.[].number'); do
+  # Listed first, outside a substitution in the loop header, so a gh failure (auth, network)
+  # stops the script instead of looking like an empty queue.
+  open_prs=$(gh pr list --repo "$repo" --state open --limit 10000 --json number --jq '.[].number') \
+    || { echo "gh pr list failed for $repo" >&2; exit 3; }
+  for pr in $open_prs; do
     # --paginate: the files endpoint returns 30 per page by default (at most 3000 files in total).
-    gh api --paginate "repos/$repo/pulls/$pr/files?per_page=100" --jq ".[] | \"$pr\t\" + .filename"
-  done | sort -u > "$pairs_file"
+    gh api --paginate "repos/$repo/pulls/$pr/files?per_page=100" --jq ".[] | \"$pr\t\" + .filename" \
+      || { echo "gh api failed for PR #$pr" >&2; exit 3; }
+  done > "$pairs_file.raw"
+  sort -u "$pairs_file.raw" > "$pairs_file"; rm -f "$pairs_file.raw"
 fi
 
 json_str() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; printf '"%s"' "$s"; }

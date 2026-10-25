@@ -21,4 +21,11 @@ command -v python3 >/dev/null && python3 -c 'import json,sys; [json.loads(l) for
 bash "$script" --offline "$tmp/files.tsv" | tail -1 | grep -qx "summary: 4 PRs with changes; 3 overlapping pairs; 3 shared files" || fail "table summary"
 printf '%s\t%s\n' 1 a.swift 2 b.swift > "$tmp/none.tsv"
 bash "$script" --offline "$tmp/none.tsv" | grep -qx "summary: 2 PRs with changes; 0 overlapping pairs; 0 shared files" || fail "no overlaps"
+# Empty and whitespace-only snapshots are valid (no open PRs).
+printf '\n  \n' > "$tmp/empty.tsv"
+bash "$script" --offline "$tmp/empty.tsv" --json | grep -qx '{"summary":{"open_prs":0,"overlapping_pairs":0,"shared_files":0}}' || fail "empty snapshot"
+bash "$script" --offline /dev/null | grep -qx "summary: 0 PRs with changes; 0 overlapping pairs; 0 shared files" || fail "/dev/null snapshot"
+# A failing gh must fail the script, not report an empty queue.
+mkdir "$tmp/bin"; printf '#!/bin/sh\nexit 4\n' > "$tmp/bin/gh"; chmod +x "$tmp/bin/gh"
+if PATH="$tmp/bin:$PATH" bash "$script" --repo o/r >/dev/null 2>&1; then fail "gh failure must not exit 0"; fi
 echo "pr-overlap self-test passed"
