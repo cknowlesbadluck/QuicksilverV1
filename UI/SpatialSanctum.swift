@@ -320,11 +320,10 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption)
-                    // Opaque readable token, not mercurySilver at 0.78: the translucent label
-                    // blended with the portal halo and failed the a11y contrast audit
-                    // intermittently ("Workshop").
-                    .foregroundStyle(PersonaTheme.readableText)
+                    .font(.caption.weight(.semibold))
+                    // mercuryBright, semibold: with the Ask sheet truly dismissed the audit failed
+                    // contrast on "Workshop" every run in readableText regular (PR #403).
+                    .foregroundStyle(PersonaTheme.mercuryBright)
                     .multilineTextAlignment(.center)
                     // A single long word ("Planetarium") can't wrap in the narrow column; scale
                     // down instead of clipping at large Dynamic Type (audit: Text clipped).
