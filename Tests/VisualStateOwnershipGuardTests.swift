@@ -9,8 +9,11 @@ final class VisualStateOwnershipGuardTests: XCTestCase {
     private static let mirrors: [String: String] = ["UI/SanctumViewModel.swift": "container.brain.visualState"]
     private static let sourceDirectories = ["App", "Core", "Memory", "Models", "Nexus", "Personas", "Services", "UI", "Intents"]
 
-    /// `visualState = …` or `x.visualState = …`, but not `==`, and not a `visualState: VisualState = …` declaration.
-    private static let assignment = try? NSRegularExpression(pattern: #"\bvisualState\s*=(?!=)\s*([^\n]*)"#)
+    /// `visualState = …` or `x.visualState = …` (a line break may sit before `=`), but not `==`,
+    /// not `let/var visualState = …`, and not a `visualState: VisualState = …` declaration.
+    private static let assignment = try? NSRegularExpression(
+        pattern: #"(?<!\b(?:let|var)\s{1,8})\bvisualState\s*=(?!=)[ \t]*([^\n]*)"#
+    )
 
     func testOnlyMercuryBrainAssignsVisualState() throws {
         let regex = try XCTUnwrap(Self.assignment)
@@ -19,22 +22,29 @@ final class VisualStateOwnershipGuardTests: XCTestCase {
         var ownerAssignments = 0
         for directory in Self.sourceDirectories {
             let base = root.appendingPathComponent(directory)
-            guard let walker = FileManager.default.enumerator(at: base, includingPropertiesForKeys: nil) else { continue }
+            var isDirectory: ObjCBool = false
+            XCTAssertTrue(FileManager.default.fileExists(atPath: base.path, isDirectory: &isDirectory) && isDirectory.boolValue,
+                          "required source directory \(directory) is missing; update sourceDirectories")
+            guard let walker = FileManager.default.enumerator(at: base, includingPropertiesForKeys: nil) else {
+                XCTFail("cannot enumerate \(directory)")
+                continue
+            }
             for case let url as URL in walker where url.pathExtension == "swift" {
                 let path = String(url.path.dropFirst(root.path.count + 1))
                 let text = try String(contentsOf: url, encoding: .utf8)
-                for (number, line) in text.components(separatedBy: "\n").enumerated() {
-                    let code = line.components(separatedBy: "//").first ?? ""
-                    let range = NSRange(code.startIndex..., in: code)
-                    for match in regex.matches(in: code, range: range) {
-                        let rhs = Range(match.range(at: 1), in: code).map { String(code[$0]) } ?? ""
-                        if Self.owners.contains(path) {
-                            ownerAssignments += 1
-                        } else if let mirror = Self.mirrors[path], rhs.trimmingCharacters(in: .whitespaces) == mirror {
-                            continue
-                        } else {
-                            offenders.append("\(path):\(number + 1)")
-                        }
+                let code = text.components(separatedBy: "\n")
+                    .map { $0.components(separatedBy: "//").first ?? "" }
+                    .joined(separator: "\n")
+                let nsCode = code as NSString
+                for match in regex.matches(in: code, range: NSRange(location: 0, length: nsCode.length)) {
+                    let number = nsCode.substring(to: match.range.location).filter { $0 == "\n" }.count
+                    let rhs = Range(match.range(at: 1), in: code).map { String(code[$0]) } ?? ""
+                    if Self.owners.contains(path) {
+                        ownerAssignments += 1
+                    } else if let mirror = Self.mirrors[path], rhs.trimmingCharacters(in: .whitespaces) == mirror {
+                        continue
+                    } else {
+                        offenders.append("\(path):\(number + 1)")
                     }
                 }
             }
@@ -51,6 +61,9 @@ final class VisualStateOwnershipGuardTests: XCTestCase {
         XCTAssertTrue(matches("brain.visualState = .warning"))
         XCTAssertTrue(matches("visualState=.idle"))
         XCTAssertFalse(matches("if visualState == .thinking {"))
+        XCTAssertTrue(matches("visualState\n    = .warning"))
         XCTAssertFalse(matches("var visualState: VisualState = .idle"))
+        XCTAssertFalse(matches("let visualState = container.brain.visualState"))
+        XCTAssertFalse(matches("var visualState = brain.visualState"))
     }
 }
