@@ -82,3 +82,44 @@ final class DeviceRunStampTests: XCTestCase {
         XCTAssertEqual(current.appVersion, AppConfiguration.fallbackVersion)
     }
 }
+
+final class DeviceRunStampSummaryTests: XCTestCase {
+    private func stamp(hardware: String = "iPhone17,5") -> DeviceRunStamp {
+        DeviceRunStamp(
+            configuration: AppConfiguration(version: "0.2.0", build: "7"),
+            osVersion: "27.0.0",
+            hardwareModel: hardware,
+            isSimulator: false,
+            onDeviceModel: .available,
+            startedAt: Date(timeIntervalSince1970: 2_000_000_000)
+        )
+    }
+
+    func testSummaryListsEveryCheckAndEndsNotRecorded() {
+        var stamp = stamp()
+        for check in DeviceRunStamp.Check.allCases { stamp.record(check, .passed) }
+        let lines = stamp.redactedSummary().components(separatedBy: "\n")
+        XCTAssertEqual(lines.last, "deviceAcceptance: not_recorded")
+        XCTAssertTrue(lines.contains("allChecksPassed: true"))
+        for check in DeviceRunStamp.Check.allCases {
+            XCTAssertTrue(lines.contains("\(check.rawValue): passed"), check.rawValue)
+        }
+        XCTAssertFalse(stamp.redactedSummary().contains(": recorded"))
+    }
+
+    func testFreeFormFieldsAreRedacted() {
+        let summary = stamp(hardware: "Chris's iPhone 🙂 <script>buy oat milk at 5pm on Elm Street</script>").redactedSummary()
+        XCTAssertFalse(summary.contains("'"))
+        XCTAssertFalse(summary.contains("<"))
+        XCTAssertFalse(summary.contains("🙂"))
+        XCTAssertFalse(summary.contains("Elm Street"), "capped at 32 characters")
+        XCTAssertEqual(DeviceRunStamp.redacted("iPhone17,5"), "iPhone17,5")
+        XCTAssertEqual(DeviceRunStamp.redacted("🙂"), "-")
+    }
+
+    func testSummaryUsesOnlyTheFixedVocabulary() {
+        let summary = stamp().redactedSummary()
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " .,()_-:[]\n"))
+        XCTAssertTrue(summary.unicodeScalars.allSatisfy { allowed.contains($0) }, summary)
+    }
+}

@@ -147,6 +147,36 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         try container.encode(Self.notRecorded, forKey: .deviceAcceptance)
     }
 
+    /// A plain-text summary for pasting into the CHR-55 issue. It is built only from the stamp's
+    /// fixed fields, with every free-form field passed through `redacted(_:)`, so it can't carry
+    /// user content. The last line always reads `deviceAcceptance: not_recorded`.
+    public func redactedSummary() -> String {
+        func date(_ value: Date?) -> String {
+            value.map { ISO8601DateFormatter().string(from: $0) } ?? "-"
+        }
+        var lines = [
+            "Quicksilver device run (\(Self.acceptanceGate) evidence, not acceptance)",
+            "app: \(Self.redacted(appVersion)) (\(Self.redacted(build)))",
+            "os: \(Self.redacted(osVersion))",
+            "hardware: \(Self.redacted(hardwareModel))\(isSimulator ? " [simulator]" : "")",
+            "onDeviceModel: \(Self.redacted(onDeviceModel))",
+            "started: \(date(startedAt))",
+            "finished: \(date(finishedAt))"
+        ]
+        lines += Check.allCases.map { "\($0.rawValue): \(results[$0, default: .notRun].rawValue)" }
+        lines.append("allChecksPassed: \(allChecksPassed)")
+        lines.append("deviceAcceptance: \(Self.notRecorded)")
+        return lines.joined(separator: "\n")
+    }
+
+    /// Keeps only `[A-Za-z0-9 .,()_-]`, at most 32 characters, so a decoded or hand-edited field
+    /// can't smuggle free text into the summary.
+    static func redacted(_ value: String) -> String {
+        let allowed = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,()_-")
+        let kept = String(value.filter { allowed.contains($0) }.prefix(32))
+        return kept.isEmpty ? "-" : kept
+    }
+
     /// `utsname.machine`, e.g. "iPhone17,5". On the simulator this is the host architecture.
     private static func hardwareIdentifier() -> String {
         var info = utsname()
