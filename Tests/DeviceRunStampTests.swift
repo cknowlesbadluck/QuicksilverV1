@@ -215,4 +215,29 @@ final class DeviceRunStampValidationTests: XCTestCase {
         XCTAssertTrue(summary.contains("validation: finishedBeforeStart"), summary)
         XCTAssertTrue(summary.hasSuffix("deviceAcceptance: not_recorded"))
     }
+
+    func testTrailingLineTerminatorsAreRedacted() {
+        XCTAssertEqual(DeviceRunStamp.validated("27.0.0\n", as: .version), "redacted")
+        XCTAssertEqual(DeviceRunStamp.validated("iPhone17,5\u{2028}", as: .hardware), "redacted")
+        XCTAssertEqual(DeviceRunStamp.validated("27.0.0", as: .version), "27.0.0")
+    }
+
+    func testJSONDataRedactsInvalidMetadata() throws {
+        let hostile = DeviceRunStamp(
+            configuration: AppConfiguration(version: "my secret note", build: "7"),
+            osVersion: "27.0.0\n",
+            hardwareModel: "Chris's diary",
+            isSimulator: false,
+            onDeviceModel: .available,
+            startedAt: start
+        )
+        let json = try XCTUnwrap(String(data: hostile.jsonData(), encoding: .utf8))
+        XCTAssertFalse(json.contains("secret"))
+        XCTAssertFalse(json.contains("diary"))
+        XCTAssertFalse(json.contains("27.0.0\\n"))
+        XCTAssertTrue(json.contains("redacted"))
+        let valid = try XCTUnwrap(String(data: stamp(startedAt: start).jsonData(), encoding: .utf8))
+        XCTAssertTrue(valid.contains("iPhone17,5"))
+        XCTAssertFalse(valid.contains("redacted"))
+    }
 }

@@ -162,12 +162,12 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(appVersion, forKey: .appVersion)
-        try container.encode(build, forKey: .build)
-        try container.encode(osVersion, forKey: .osVersion)
-        try container.encode(hardwareModel, forKey: .hardwareModel)
+        try container.encode(Self.validated(appVersion, as: .version), forKey: .appVersion)
+        try container.encode(Self.validated(build, as: .version), forKey: .build)
+        try container.encode(Self.validated(osVersion, as: .version), forKey: .osVersion)
+        try container.encode(Self.validated(hardwareModel, as: .hardware), forKey: .hardwareModel)
         try container.encode(isSimulator, forKey: .isSimulator)
-        try container.encode(onDeviceModel, forKey: .onDeviceModel)
+        try container.encode(Self.validated(onDeviceModel, as: .onDeviceModel), forKey: .onDeviceModel)
         try container.encode(startedAt, forKey: .startedAt)
         try container.encodeIfPresent(finishedAt, forKey: .finishedAt)
         try container.encode(schemaVersion, forKey: .schemaVersion)
@@ -215,11 +215,13 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
     )
 
     /// Returns `value` only when it matches `format` exactly, otherwise `redacted`.
+    /// `\A`/`\z` (not `^`/`$`) so a trailing newline or U+2028 can't slip through.
+    /// Used by both `redactedSummary()` and `encode(to:)`, so the JSON attachment is checked too.
     static func validated(_ value: String, as format: FieldFormat) -> String {
         let pattern: String
         switch format {
-        case .version: pattern = "^[0-9]{1,6}(\\.[0-9]{1,6}){0,3}$"
-        case .hardware: pattern = "^((iPhone|iPad|iPod|Watch|RealityDevice)[0-9]{1,3},[0-9]{1,3}|arm64|x86_64|unknown)$"
+        case .version: pattern = "\\A[0-9]{1,6}(\\.[0-9]{1,6}){0,3}\\z"
+        case .hardware: pattern = "\\A((iPhone|iPad|iPod|Watch|RealityDevice)[0-9]{1,3},[0-9]{1,3}|arm64|x86_64|unknown)\\z"
         case .onDeviceModel:
             return knownOnDeviceModelLabels.contains(value) ? value : redactedValue
         }
