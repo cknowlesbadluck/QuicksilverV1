@@ -8,7 +8,8 @@
 #            STALE_OPEN_HEADS="a b" lists open PR heads by hand (used by the self-test).
 #
 # Columns:
-#   unique  commits whose patch is not on base (git cherry). 0 means everything is already in base.
+#   unique  commits whose patch is not on base (git cherry). 0 means no patch is missing; in-base also needs
+#           merging the branch into base to leave base's tree unchanged (this catches merge-only changes).
 #   ahead/behind  raw commit counts versus base. Squash merges keep "ahead" above 0, so trust "unique".
 #   last    date of the branch tip.  pr  last closed (c) or merged (m) PR for the branch, if any.
 # Verdict: "in-base" means safe to delete by hand, after a human check. Keep-list branches are never
@@ -29,6 +30,8 @@ done
 # Owner keep list; override with STALE_KEEP="a b c".
 keep_list="${STALE_KEEP:-feat/cutover-lattice-1000 hygiene-audit-2026-10-21 feat/m35-memory-entity}"
 
+# Bind every gh query to the repository behind --remote, not the gh default repo.
+repo=$(git remote get-url "$remote" 2>/dev/null | sed -E 's#^(git@[^:]+:|[a-z]+://([^@/]+@)?[^/]+/)##; s#\.git$##')
 [ "$offline" = 1 ] || command -v gh >/dev/null || { echo "gh CLI required (or --offline)" >&2; exit 2; }
 [ "$fetch" = 1 ] && git fetch --quiet --prune "$remote"
 git rev-parse --verify --quiet "$remote/$base" >/dev/null || { echo "no $remote/$base" >&2; exit 2; }
@@ -38,7 +41,7 @@ if [ -n "${STALE_OPEN_HEADS+set}" ]; then
 elif [ "$offline" = 1 ]; then
   open_heads=""
 else
-  open_heads=$(gh pr list --state open --limit 200 --json headRefName --jq '.[].headRefName')
+  open_heads=$(gh pr list --repo "$repo" --state open --limit 10000 --json headRefName --jq '.[].headRefName')
 fi
 
 json_str() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; printf '"%s"' "$s"; }
@@ -50,16 +53,24 @@ while read -r branch; do
   grep -Fxq -- "$branch" <<<"$open_heads" && continue
   ref="$remote/$branch"
   unique=$(git cherry "$remote/$base" "$ref" | grep -c '^+' || true)
+  # git cherry compares patches, so it misses changes made only in merge commits. Only call a
+  # branch in-base when merging it into base would leave base's tree unchanged.
+  merge_only=0
+  if [ "$unique" = 0 ]; then
+    merged_tree=$(git merge-tree --write-tree "$remote/$base" "$ref" 2>/dev/null | head -1) || merged_tree=""
+    [ "$merged_tree" = "$(git rev-parse "$remote/$base^{tree}")" ] || merge_only=1
+  fi
   read -r behind ahead < <(git rev-list --left-right --count "$remote/$base...$ref")
   last=$(git log -1 --format=%cs "$ref")
   pr="-"
   if [ "$offline" = 0 ]; then
-    pr=$(gh pr list --state all --head "$branch" --limit 1 --json number,state \
-      --jq '.[0] | if . then "#\(.number)" + (if .state == "MERGED" then "m" else "c" end) else "-" end')
+    pr=$(gh pr list --repo "$repo" --state all --head "$branch" --limit 1 --json number,state \
+      --jq '.[0] | if . then "#\(.number)" + (if .state == "MERGED" then "m" elif .state == "OPEN" then "o" else "c" end) else "-" end')
+    [ "${pr%o}" != "$pr" ] && continue  # open PR missed by the list above
   fi
   total=$((total + 1))
   if tr ' ' '\n' <<<"$keep_list" | grep -Fxq -- "$branch"; then verdict="keep-list"; keep=$((keep + 1))
-  elif [ "$unique" = 0 ]; then verdict="in-base"; in_base=$((in_base + 1))
+  elif [ "$unique" = 0 ] && [ "$merge_only" = 0 ]; then verdict="in-base"; in_base=$((in_base + 1))
   elif [ "${pr%m}" != "$pr" ]; then verdict="merged-pr"; merged=$((merged + 1))
   else verdict="unmerged"; unmerged=$((unmerged + 1))
   fi
