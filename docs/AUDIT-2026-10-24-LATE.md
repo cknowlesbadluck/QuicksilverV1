@@ -45,3 +45,9 @@ These findings are new since the earlier audits. Everything was checked live.
 - **Branches.** Prune Merged Branches ran green 3 times on 2026-10-24. `scripts/stale-branches.sh` (#391) finds 16 branches with no open PR: 2 already in `main` (harden/keychain-policy-guard and test/public-api-guard), 3 on the keep list, and 11 with unmerged work that are kept so the closes can be reversed. No branches were deleted.
 - **Issues.** #252 (retire `@unchecked Sendable`, tied to #284) and #250 (SHA-pin Actions, off-limits) are still open.
 - **Open PRs:** 14, including #391. CHR-55 is still `not_recorded`.
+
+## Evidence refresh (8 PM ET)
+
+- **Score: about 7.6.** CHR-55 (`not_recorded`) is still the only critical gate. No device evidence exists, and none is claimed.
+- **Main:** `ba0ecd6` is green on all 6 jobs ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)).
+- **Open PRs:** 13. The earlier full audit (#389) was folded into this PR as `docs/AUDIT-2026-10-24-FULL.md`, and #389 was closed.
