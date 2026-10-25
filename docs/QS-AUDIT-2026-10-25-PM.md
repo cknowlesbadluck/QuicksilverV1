@@ -1,6 +1,6 @@
 # QuicksilverV1 Audit Note — 2026-10-25 3:15 PM ET
 
-- main: `e513530` (docs-only). Quicksilver CI run 40219353029: 5/6 green; iOS UI Smoke failed on the known `testSanctumAccessibilityAudit` "Audit failed to complete in time" flake; one rerun requested.
+- main: `e513530` (docs-only). Quicksilver CI run 40219353029: 5/6 green; iOS UI Smoke failed twice in `testSanctumAccessibilityAudit` (audit timeout at 2:09 PM ET, then "Contrast failed" on rerun at 3:11 PM ET). Treated as flaky but unresolved; main is not green.
 - Open PRs: 20. None closed this pass: no open PR is both docs-only and fully superseded by main (#382 carries a test; #384, #398 intentionally open).
 - CHR-55: deviceAcceptance stays `not_recorded`. No device-acceptance claim is made here.
 
