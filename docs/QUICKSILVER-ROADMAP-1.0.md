@@ -4,6 +4,16 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 
 **State as of 2026-10-25, 6 AM ET:** score about 7.5–7.7 (the owner says 7.5 and the agent 7.7; see AUDIT-2026-10-25.md). `main` is at `ba0ecd6` and green ([run 40102717768](https://github.com/cknowlesbadluck/QuicksilverV1/actions/runs/40102717768)). CHR-55 is `not_recorded` and is the only critical gate. 18 PRs are open. #374 is the only one that conflicts with `main`. New since 4 AM: #395 (stamp schema version and validation, stacked on #392) and #396 (a read-only PR-overlap report). #377's review fixes are pushed. The `@unchecked Sendable` and `nonisolated(unsafe)` ratchets are in #394. Every action in `ci.yml` is SHA-pinned, and `release.yml` (#250) is still tag-pinned. Merged this cycle: #381, #385 and #386.
 
+**State as of 2026-10-25, 9 AM ET:** `main` is still at `6b1912c` (no merges since `ba0ecd6` other than the owner's docs note, so no regressions). 20 PRs are open. #390 was closed by the owner. Compiler warnings on `main`: 57 unique, all in `UITests/SanctumSmokeTests.swift` (main-actor isolation), and #387 already fixes them. SwiftLint warnings: 0. This morning's UI Smoke "Text clipped" flake was the scaled "Planetarium" portal label. #373 removes that `minimumScaleFactor` label scaling and switches to wrapping with fewer columns, and its head is green. New: #399, which checks every ship-version stamp in the docs against project.yml.
+
+Next slices, in order:
+1. Merge #387 (warnings) and #373 (clipping) to calm UI Smoke.
+2. After #384 merges, repoint the `docs/ROADMAP.md` links.
+3. Bound `IntegrationEventStore`.
+4. Close #252 when #284 lands.
+5. Pin `release.yml` (#250, owner only).
+6. Record CHR-55 on device (owner only).
+
 **State as of 2026-10-25, 8 AM ET:** `main` is at `6b1912c`, the owner's mirrored audit note. CI run 40187158661 on it failed only on the known UI Smoke "Text clipped" flake (`testSanctumAccessibilityAudit`), and the failed job was rerun once. 20 PRs are open, with 8 overlapping pairs. New since 6 AM: #397 (a VisualState ownership guard test) and #398 (an AGENTS.md focus-line refresh). #390's conflict with `main` is resolved: the owner's note stays as it is, and the Quicksilver log is now `QS-AUDIT-2026-10-25.md`.
 
 Next slices, in order:
