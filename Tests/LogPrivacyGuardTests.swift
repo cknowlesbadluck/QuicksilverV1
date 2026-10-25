@@ -76,7 +76,7 @@ final class LogPrivacyGuardTests: XCTestCase {
             XCTAssertTrue(text.contains("\(marketing) (**build \(build)**)") || text.contains("\(marketing) (build \(build))")
                           || text.contains("**\(marketing) (build \(build))**"), "\(doc) ship version drifted from project.yml")
             // Every "X.Y.Z (build N)" style stamp in the doc must be current, not just one of them.
-            let stamp = try NSRegularExpression(pattern: #"(\d+\.\d+\.\d+)[\s*(—-]*build\s*\**\s*(\d+)"#)
+            let stamp = try NSRegularExpression(pattern: #"(\d+\.\d+\.\d+)[\s*(—-]*build\s*\**\s*(\d+(?:\.\d+)*)(?![\w.])"#)
             let range = NSRange(text.startIndex..., in: text)
             for match in stamp.matches(in: text, range: range) {
                 let found = [1, 2].compactMap { Range(match.range(at: $0), in: text).map { String(text[$0]) } }
