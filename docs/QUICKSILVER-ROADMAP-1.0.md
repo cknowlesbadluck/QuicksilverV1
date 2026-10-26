@@ -45,6 +45,23 @@ The same 10 phases, framed as how mature Quicksilver is as an iOS intelligence p
 9. **Reliability and observability.** Exit: CI flakes are below 1 in 20 runs, and each known flake is tracked to its cause. Diagnostics are content-free (#374, #392), and `@unchecked Sendable` / `nonisolated(unsafe)` only shrink (#394).
 10. **SideStore distribution.** Exit: an unsigned IPA builds from a script (#375), the docs match project.yml's version (#399), and `release.yml` actions are SHA-pinned (#250, owner only).
 
+## Phase status, deep audit (2026-10-26, 9 AM ET, main `a344a8d`)
+
+Evidence comes from GitHub (main CI run 40266985184 green) and source reads. "Open PR" means the work isn't on main yet.
+
+| Phase | Status | Met | Unmet | Next exit criterion |
+| --- | --- | --- | --- | --- |
+| 1 CHR-55 device fence | Blocked on owner | DeviceRunStamp in #392 (green) | CHR-55 `not_recorded` | Owner records one on-device run |
+| 2 Memory budget | Partial | Budget and at-cap load tests in #410 | Not on main | Merge #410 |
+| 3 Privacy floor | Strong | Defaults/Network guards on main; manifest declared | Disk-space reason `85F4.1` missing (#411) | Merge #411, then #409 |
+| 4 On-device FM routing | Partial | Adapter plus cloud sensitivity gate on main | FM surface guard only in #409 | Merge #409 |
+| 5 Aspect instruments | Not started | none | No spec | Write one instrument spec |
+| 6 Spotlight/Shortcuts/Intents | Partial | 2 intents on main | Input bounds in #408; Spotlight in #377 | Merge #408 |
+| 7 Accessibility | Partial | Sanctum audit test | UI Smoke flake (3 of the last 20 main runs needed a rerun) | Merge #403 |
+| 8 Reliability | Partial | TSan job, 629 test functions | `IntegrationEventStore` uncapped (#410); Integration plane unwired | Merge #410 |
+| 9 Observability | Partial | Private-by-default logger | Diagnostics export #374 conflicted | Owner resolves #374 |
+| 10 SideStore distribution | Documented, unproven | Documentation/SIDESTORE.md; Archive workflow | Last Archive run 2026-09-25, before 0.2.0 build 7; local script only in #375 | Owner runs Archive on current main and installs |
+
 ## 1.0 exit criteria, in order (CHR-55 first)
 
 1. **CHR-55 is `recorded` by the owner.** Every item on the device checklist below passes on one build, with a content-free device-run stamp attached. Nothing else counts toward 1.0 until this holds.
