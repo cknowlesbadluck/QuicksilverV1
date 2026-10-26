@@ -1,58 +1,57 @@
-# Portfolio 10-phase roadmap — refreshed 2026-10-24 06:00 UTC (full audit + harden + stabilize + hygiene prune + innovate)
+# Portfolio 10-phase roadmap — refreshed 2026-10-26, 2:00 AM ET (hygiene prune, CHR-55 gate, innovation)
 
-Live probes 2026-10-24T06:00Z:
-- Conduit https://conduit-feco.onrender.com/ready : **ready OK** (HTTP 200, version 0.8.0, contractRevision=2026-10-03-ready-surface, persistence=postgres). Warm.
-- Resonance https://resonancenexus.netlify.app/api/ready : **ready OK** (HTTP 200, missingRequired=[], production true, authMode required ok, persistenceConfigured true, posture=contract_passed, contractRevision=2026-10-03-owner-gate). Timestamp ~06:00:50Z. Owner gate cleared.
-- Vercel aliases: resonance.vercel.app returns 200 HTML (stranger_occupant / no service stamp); resonancenexus.vercel.app 404 (alias_absent). quicksilver.vercel.app similar. Drift persists.
-- Open PR counts: QuicksilverV1 14, Conduit 25, Resonance 44. Entropy reduced from prior ~18/27/45; hygiene prune ongoing, target <10.
-- CI: recent main runs green across repos (QS CI in progress on latest dead-code prune, Conduit docs-hygiene success, Resonance typecheck/tests green).
-- Portfolio maturity (probe classification): ~7/10. Both planes stamped ready. Remaining: CHR-55 device evidence + alias drift + residual PR entropy.
-- No secrets invented. No device claim (CHR-55 open, deviceAcceptance=not_recorded). Classifier ≠ production proof.
+Evidence block (details in [AUDIT-2026-10-26.md](AUDIT-2026-10-26.md)):
+- Conduit: ready OK, owner-reported probe (~06:00Z / 2:00 AM ET 2026-10-26) — 0.8.0, postgres, production true, diagnostics all green.
+- Resonance: ready OK, owner-reported probe (~06:00Z / 2:00 AM ET 2026-10-26) — missingRequired=[], production true, posture contract_passed, contractRevision=2026-10-03-owner-gate.
+- Open PRs: QuicksilverV1 20 (verified live 2026-10-26, matches owner figure), Conduit 15 and Resonance 24 (owner-reported probe (~06:00Z / 2:00 AM ET 2026-10-26)).
+- CHR-55: open. deviceAcceptance=not_recorded.
+- Alias drift: persists (owner-reported probe (~06:00Z / 2:00 AM ET 2026-10-26)). Some hosting aliases still resolve to an unexpected occupant with no service stamp. Non-blocking, elevated.
+- QuicksilverV1 main a344a8d, Quicksilver CI green.
+- Classifier or probe output is not production proof. No device claim. No secrets recorded.
 
-Brutal maturity: portfolio ~7.0/10. Dominant risks now: CHR-55 device Archive IPA on iPhone 16e/iOS 27 + open-PR entropy + Vercel alias drift. Stabilization holds; fail-closed posture confirmed. Scores: QS ~7.6, Conduit ~7.4, Resonance ~6.8 (post-gate).
+Binding constraint: CHR-55 device evidence is the sole remaining production gate. Everything else is hygiene or hardening.
 
-## Phase 1 — Owner gate cleared (external key set)
-SUPABASE_SERVICE_ROLE_KEY no longer missing. Exit met: live ready body stamped, missingRequired=[], posture contract_passed. Do not invent keys.
+## Phase 1 — Owner gate cleared
+Exit met and still holding: Resonance ready body stamped, missingRequired=[], posture contract_passed. Do not invent keys. Any regression fails closed (not ready).
 
 ## Phase 2 — Alias and stranger classification stay strict
-404 and unexpected 200 occupants are never the gate. Exit: tests reject treating them as owner action, device recorded, or production ready. Drift on Vercel aliases prioritized for cleanup (non-blocking, elevated).
+404 and unexpected 200 occupants are never the gate and never count as ready. Exit: tests reject treating them as owner action, device recorded, or production ready. Alias cleanup is owner work.
 
 ## Phase 3 — Device fence immutable
-claimDeviceAcceptance() rejects. Exit: health body keeps deviceAcceptance=not_recorded and acceptanceGate=CHR-55.
+Exit: health and run-stamp output keep deviceAcceptance=not_recorded and acceptanceGate=CHR-55 (QS #392 adds an exhaustive guard). Nothing in code may write any other value.
 
-## Phase 4 — CHR-55 remains the only device gate
-Simulator, CI, or workers.dev 200 is not acceptance. Exit: Linear CHR-55 open until archive IPA installed and validated on iPhone 16e.
+## Phase 4 — CHR-55 is the sole remaining production gate
+Simulator, CI, or probe 200 is not acceptance. Exit: CHR-55 closed only by the owner after an archived build is installed and validated on a real device. Until then acceptance stays not_recorded.
 
 ## Phase 5 — Conversation and Memory budget stay
-Bounded windows and on-device embeddings continue. Exit: AppTests green; no unbounded history leakage.
+Bounded windows and on-device embeddings. Exit: unit tests green; no unbounded history leakage.
 
-## Phase 6 — Gateway contract and free-tier stay
-No paid Workers bindings (KV/R2/D1/Queues). Exit: wrangler.toml / equivalent clean.
+## Phase 6 — Gateway contract and free tier stay
+No paid services or bindings. Exit: config review clean.
 
-## Phase 7 — Hygiene prune executed
-One roadmap file. No hourly audit artifacts. Held PRs not merged without verification. Archived Quicksilver remains non-product. Superseded docs-refresh PRs targeted for close. Open PR count target below 10 per repo via prioritized merge of green non-overlapping hardens and close of superseded/docs-only. Audit note mirrored across repos. Current: 14/25/44.
+## Phase 7 — Hygiene prune to <10 open QuicksilverV1 PRs
+Exit criteria, all required:
+1. Open QS PR count < 10 (now 20).
+2. Every remaining open PR is CI-green or carries a one-line blocker in its body.
+3. No two open PRs edit the same file unless one is explicitly stacked (`scripts/pr-overlap.sh` reports zero unplanned overlaps).
+4. Superseded docs-only PRs closed with the standard hygiene comment; branches kept.
+5. Merges are owner-approved squash merges of green, non-overlapping PRs only.
+Conduit (15) and Resonance (24) follow the same <10 target.
 
 ## Phase 8 — Resonance control plane stamped
-Live Netlify ready body carries contract stamp. Second client or iOS Resonance surface may advance under existing constraints (no device claim, privacy floor).
+Ready body carries the contract stamp. New surfaces advance only under existing constraints (no device claim, privacy floor).
 
 ## Phase 9 — Privacy and logging stay strict
-Privacy manifest enforced. Gateway logs metadata only. Exit: no request/response body logging.
+Cloud routing fails closed; privacy floors can only tighten remotely. Logs are metadata only. Exit: no request/response body logging; secret scan of tracked files clean (test fixtures only).
 
 ## Phase 10 — Cross-plane acceptance proof
-Single probe covers Conduit ready (true), Resonance ready (stamped), and real device archive evidence. Exit: production verdict accepted. Fixture or classifier test is insufficient. Device remains open.
+One probe covers Conduit ready, Resonance ready (stamped), and real-device evidence for CHR-55. Exit: owner accepts the production verdict. Fixtures or classifiers are insufficient. Device remains open.
 
-Binding constraints: CHR-55 device archive remains. High open-PR entropy and alias drift are current operational risks and must be pruned/cleaned.
+## Innovation track (no gates relaxed)
+1. Cross-plane readiness probe v2: one read-only report of both planes plus QS main CI, failing closed on any missing, stale, or unstamped field.
+2. Automated hygiene score: open-PR count, overlap count, and merge candidates from `scripts/pr-overlap.sh --candidates` (QS #396).
+3. Stale-branch report (QS #391) feeding branch-prune candidates; report only, deletion stays owner-only.
+4. Surface guards as ratchets: allowlists that fail on new offenders and on stale entries.
+5. Device run stamp (QS #392) as the content-free format for future CHR-55 evidence.
 
-## Innovation Track (advanced — no gates violated)
-1. Pure PortfolioPosture classifier holds. Fail-closed. Maturity score added to probe.
-2. portfolio-probe tools with cold-start backoff (retry on 503) — landed.
-3. Open PR entropy reporting advances quantitative hygiene tracking.
-4. Hygiene prune priority: close superseded docs-only PRs; merge only CI-green non-overlapping hardens.
-5. Adversarial review of recent hardens continues.
-6. Cross-plane readiness contract v1 alignment across repos (now both ready).
-7. Lockfile / Dependabot residual hygiene.
-8. Cross-repo consistency: this evidence block is canonical; mirror key notes.
-9. Chamber and capability plane advances now unblocked by Resonance gate.
-10. On-device diagnostics post CHR-55 only. Fresh probe confirms dual ready. No regression.
-
-Highest-value next: aggressively reduce open PR entropy (close docs-only superseded first, merge green non-overlapping hardens), clean Vercel alias drift, then CHR-55 device IPA evidence. Stabilization holds. Innovate continues under constraints. Dual-plane ready is the new baseline.
+Highest-value next: record CHR-55 device evidence on a real device; in parallel prune QS open PRs below 10.
