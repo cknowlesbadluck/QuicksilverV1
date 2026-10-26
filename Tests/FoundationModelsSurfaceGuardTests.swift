@@ -10,7 +10,7 @@ final class FoundationModelsSurfaceGuardTests: XCTestCase {
         "Services/AI/OnDevice/FoundationModelsLanguageModel.swift",
     ]
     static let sourceDirectories = ["App", "Core", "Intents", "Memory", "Models", "Nexus", "Personas", "Services", "UI"]
-    static let pattern = #"\b(LanguageModelSession|SystemLanguageModel)\b|^\s*import\s+FoundationModels\b"#
+    static let pattern = #"\b(LanguageModelSession|SystemLanguageModel)\b|\bimport\s+(?:\w+\s+)?FoundationModels\b"#
 
     private static var root: URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
@@ -18,7 +18,8 @@ final class FoundationModelsSurfaceGuardTests: XCTestCase {
 
     /// Code without comments or string-literal text (interpolations are kept); see `FMCodeScanner`.
     static func codeOnly(_ text: String) -> String {
-        FMCodeScanner.codeOnly(text)
+        // CRLF: Swift reads "\r\n" as one Character, which would hide line-comment ends.
+        FMCodeScanner.codeOnly(text.replacingOccurrences(of: "\r\n", with: "\n"))
     }
 
     static func usesFoundationModels(_ text: String) throws -> Bool {
@@ -60,6 +61,10 @@ final class FoundationModelsSurfaceGuardTests: XCTestCase {
         XCTAssertFalse(try Self.usesFoundationModels("/// mirrors `SystemLanguageModel.Availability`"))
         XCTAssertFalse(try Self.usesFoundationModels("let label = \"LanguageModelSession\""))
         XCTAssertFalse(try Self.usesFoundationModels("let languageModelSessionCount = 1"))
+        XCTAssertTrue(try Self.usesFoundationModels("@preconcurrency import FoundationModels"))
+        XCTAssertTrue(try Self.usesFoundationModels("public import FoundationModels"))
+        XCTAssertTrue(try Self.usesFoundationModels("import struct FoundationModels.Foo"))
+        XCTAssertTrue(try Self.usesFoundationModels("// note\r\nlet s = LanguageModelSession()"))
     }
 }
 
