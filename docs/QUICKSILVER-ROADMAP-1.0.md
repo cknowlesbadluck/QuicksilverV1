@@ -4,10 +4,10 @@ QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A 
 
 **State as of 2026-10-26, 6:30 AM ET:** `main` is still at `a344a8d` and green. Consolidation pass, no merges: test guards #394, #399, #404 and #405 are folded into #409; memory PRs #382, #388 and #407 into #410; #398's AGENTS.md focus line into this PR. Folded PRs are closed with their branches kept. Merged overnight: #397 (only MercuryBrain sets VisualState), #400 (network I/O stays in reviewed clients), #401 (UserDefaults stays in reviewed stores), each green on main CI. Current focus: entropy reduction and CHR-55 device evidence, the sole critical path. CHR-55 is `not_recorded`.
 
-Phase status (2026-10-26, 5:30 AM ET):
+Phase status (2026-10-26, 6:30 AM ET):
 - Phase 1 (CHR-55): open; #392 gives the content-free stamp. No device evidence yet.
-- Phase 2 (memory): #382 and #388 open; #407 adds damaged-row tolerance.
-- Phase 3 (privacy): #404 and #405 open guards; #342 and #374 owner-held.
+- Phase 2 (memory): #410 (budget, load at cap, damaged-row tolerance) open.
+- Phase 3 (privacy): #409 guards open; #342 and #374 owner-held.
 - Phase 6 (App Intents): #377 open; #408 bounds intent input.
 - Phase 7 (accessibility): #403 and #373 open.
 - Phase 8 (reliability): UI Smoke Sanctum audit still flakes until #403 lands.
