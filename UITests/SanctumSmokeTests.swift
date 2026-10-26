@@ -147,6 +147,7 @@ final class SanctumSmokeTests: XCTestCase {
             previous = current
         }
         print("AUDIT settle: stableSamples=\(stableSamples) frame=\(previous)")
+        XCTAssertEqual(stableSamples, 2, "Workshop portal frame never settled before audit")
     }
 
     private func waitForAbsence(of element: XCUIElement, timeout: TimeInterval) -> Bool {

@@ -113,7 +113,7 @@ struct SpatialSanctum: View {
                     .accessibilityLabel("Speak with Quicksilver")
 
                     Spacer()
-                    navigationPrompt
+                    navigationPrompt(maxHeight: proxy.size.height * 0.5)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
@@ -247,11 +247,22 @@ struct SpatialSanctum: View {
         return "What are we getting into?"
     }
 
-    private var navigationPrompt: some View {
+    @ViewBuilder
+    private func navigationPrompt(maxHeight: CGFloat) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            // A single column of large portals is taller than the screen, so it scrolls.
+            ScrollView(.vertical) { portalGrid(columnCount: 1) }
+                .frame(maxHeight: maxHeight)
+                .scrollBounceBehavior(.basedOnSize)
+        } else {
+            portalGrid(columnCount: 3)
+        }
+    }
+
+    private func portalGrid(columnCount: Int) -> some View {
         // One column at accessibility sizes: single-word captions ("Planetarium", "Governance")
         // cannot wrap in a third-width column and the audit flagged "Text clipped" (PR #403).
-        let columnCount = dynamicTypeSize.isAccessibilitySize ? 1 : 3
-        return LazyVGrid(
+        LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount),
             spacing: 12
         ) {
