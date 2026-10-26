@@ -65,6 +65,7 @@ final class FoundationModelsSurfaceGuardTests: XCTestCase {
         XCTAssertTrue(try Self.usesFoundationModels("public import FoundationModels"))
         XCTAssertTrue(try Self.usesFoundationModels("import struct FoundationModels.Foo"))
         XCTAssertTrue(try Self.usesFoundationModels("// note\r\nlet s = LanguageModelSession()"))
+        XCTAssertTrue(try Self.usesFoundationModels("let p = #/\"/#; let s = LanguageModelSession()"))
     }
 }
 
@@ -96,6 +97,8 @@ private struct FMCodeScanner {
                 while index < chars.count, chars[index] != "\n" { index += 1 }
             } else if char == "/", at(1) == "*" {
                 blockComment()
+            } else if char == "#", startsExtendedRegex() {
+                extendedRegex()
             } else if char == "\"" || (char == "#" && startsRawString()) {
                 string()
             } else if char == "(" {
@@ -107,6 +110,30 @@ private struct FMCodeScanner {
             } else {
                 output.append(char); index += 1
             }
+        }
+    }
+
+    /// `#/…/#` (any number of `#`): its body may hold `"` or `//`, which must not open a
+    /// string or comment and hide the code after it.
+    private func startsExtendedRegex() -> Bool {
+        var offset = 0
+        while let char = at(offset), char == "#" { offset += 1 }
+        return at(offset) == "/"
+    }
+
+    private mutating func extendedRegex() {
+        var hashes = 0
+        while at(0) == "#" { hashes += 1; index += 1 }
+        index += 1 // opening "/"
+        output.append(" ")
+        while index < chars.count {
+            if chars[index] == "/" {
+                var offset = 1
+                while offset <= hashes, at(offset) == "#" { offset += 1 }
+                if offset == hashes + 1 { index += offset; return }
+            }
+            if chars[index] == "\n" { output.append("\n") }
+            index += 1
         }
     }
 
