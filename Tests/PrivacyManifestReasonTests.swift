@@ -34,7 +34,7 @@ final class PrivacyManifestReasonTests: XCTestCase {
             let base = Self.root.appendingPathComponent(directory)
             guard let walker = FileManager.default.enumerator(at: base, includingPropertiesForKeys: nil) else { continue }
             for case let url as URL in walker where url.pathExtension == "swift" {
-                text += FoundationModelsSurfaceGuardTests.codeOnly(try String(contentsOf: url, encoding: .utf8)) + "\n"
+                text += DefaultsSurfaceGuardTests.codeOnly(try String(contentsOf: url, encoding: .utf8)) + "\n"
             }
         }
         return text
