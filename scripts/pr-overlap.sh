@@ -1,19 +1,24 @@
 #!/usr/bin/env bash
 # Read-only report: pairs of open PRs that change the same files, so merge order and rebases can
 # be planned before conflicts happen. Never pushes, comments, closes or edits anything.
-#   bash scripts/pr-overlap.sh [--repo owner/name] [--json] [--offline FILE]
+#   bash scripts/pr-overlap.sh [--repo owner/name] [--json] [--offline FILE] [--candidates [--status FILE]]
 # --repo     defaults to the repository behind the `origin` remote.
 # --offline  reads "PR<TAB>path" lines from FILE instead of calling gh (used by the self-test).
 # Output: one line per overlapping pair, lowest PR first, then a summary line.
 #   --json   one JSON object per pair ({"a":N,"b":M,"files":[...]}) then {"summary":{...}}.
+# --candidates  instead list PRs that share no file with any other open PR ("candidate: #N").
+#   Online it also requires GitHub's merge state CLEAN (green, no conflict, not blocked);
+#   offline, --status FILE gives "PR<TAB>STATE" lines (no FILE: overlap check only).
 set -euo pipefail
-repo="" json=0 offline=""
+repo="" json=0 offline="" candidates=0 status_file=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo) repo="$2"; shift 2 ;;
     --json) json=1; shift ;;
     --offline) offline="$2"; shift 2 ;;
-    -h|--help) sed -n '2,9p' "$0"; exit 0 ;;
+    --candidates) candidates=1; shift ;;
+    --status) status_file="$2"; shift 2 ;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
@@ -52,6 +57,34 @@ overlaps=$(awk -F'\t' '
         if (list[i] + 0 < list[j] + 0) print list[i] "\t" list[j] "\t" f
     }
   }' "$pairs_file" | sort -t$'\t' -k1,1n -k2,2n -k3,3)
+
+if [ "$candidates" = 1 ]; then
+  overlapping=$(cut -f1,2 <<<"$overlaps" | tr '\t' '\n' | grep . | sort -u || true)
+  if [ -z "$offline" ] && [ -z "$status_file" ]; then
+    status_file="$pairs_file.status"
+    for pr in $(cut -f1 "$pairs_file" | sort -un); do
+      # GitHub computes merge state lazily and answers UNKNOWN at first; ask again briefly.
+      for _ in 1 2 3; do
+        state=$(gh pr view "$pr" --repo "$repo" --json mergeStateStatus --jq .mergeStateStatus) \
+          || { echo "gh pr view failed for PR #$pr" >&2; exit 3; }
+        [ "$state" = UNKNOWN ] || break
+        sleep 2
+      done
+      printf '%s\t%s\n' "$pr" "$state"
+    done > "$status_file"
+  fi
+  count=0
+  for pr in $(cut -f1 "$pairs_file" | grep . | sort -un); do
+    grep -qx "$pr" <<<"$overlapping" && continue
+    if [ -n "$status_file" ]; then
+      state=$(awk -F'\t' -v p="$pr" '$1 == p { print $2 }' "$status_file")
+      [ "$state" = CLEAN ] || continue
+    fi
+    echo "candidate: #$pr"; count=$((count + 1))
+  done
+  echo "summary: $count merge candidates (no shared files${status_file:+, merge state CLEAN})"
+  exit 0
+fi
 
 total_prs=$(cut -f1 "$pairs_file" | sort -u | grep -c . || true)
 pair_count=0 file_count=0
