@@ -122,9 +122,8 @@ if [ "$entropy" = 1 ]; then
         "\(.number)\t\(.mergeStateStatus)\t\([.reviewThreads.nodes[] | select(.isResolved | not)] | length)"' \
       > "$status_file" || { echo "gh api graphql failed for $repo" >&2; exit 3; }
   fi
-  open=$(cut -f1 "$pairs_file" | grep . | sort -u | wc -l | tr -d ' ')
-  [ -n "$status_file" ] && open=$(cut -f1 "$status_file" | grep . | cat - <(cut -f1 "$pairs_file") | grep . | sort -u | wc -l | tr -d ' ')
-  pairs=$(cut -f1,2 <<<"$overlaps" | grep . | sort -u | grep -c . || true)
+  open=$(cat "$pairs_file" ${status_file:+"$status_file"} | awk -F'\t' 'NF && !seen[$1]++ { n++ } END { print n + 0 }')
+  pairs=$(awk -F'\t' 'NF && !seen[$1 FS $2]++ { n++ } END { print n + 0 }' <<<"$overlaps")
   behind=0 dirty=0 threads=0
   if [ -n "$status_file" ]; then
     behind=$(awk -F'\t' '$2 == "BEHIND"' "$status_file" | grep -c . || true)
