@@ -31,6 +31,13 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - **PrivacyInfo.xcprivacy** present and embedded
 - MercuryBrain: structured aspect switch (`switchAspect`) with error logging
 
+### Surface guards (source-scanning tests, comments and strings ignored)
+Each fails CI on a new offender and on a stale allowlist entry.
+- Only MercuryBrain sets VisualState: `VisualStateOwnershipGuardTests` (#397, main `1dfb92a`, CI run 40259671964 green)
+- Network I/O only in reviewed clients: `NetworkSurfaceGuardTests` (#400, main `8042e05`, CI run 40262020890 green)
+- UserDefaults only in reviewed settings stores, no iCloud key-value sync: `DefaultsSurfaceGuardTests` (#401, main `a344a8d`, CI run 40266985184 green)
+- Open in #409 (not on main): FoundationModels only in the on-device adapter; direct file writes only in reviewed stores; `nonisolated(unsafe)` ratchet; docs version-stamp check; no clipboard, location, contacts, calendar, photos, camera, microphone or health access without privacy review (`SensitiveCapabilitySurfaceGuardTests`)
+
 ### P1 — Architecture & Maintainability
 - Persona prompts externalized to `Resources/Personas/*.txt`
 - PromptManager loads external prompts with embedded fallback
