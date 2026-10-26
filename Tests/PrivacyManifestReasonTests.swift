@@ -11,9 +11,9 @@ final class PrivacyManifestReasonTests: XCTestCase {
     private static let rules: [(category: String, pattern: String, reasons: [String])] = [
         ("NSPrivacyAccessedAPICategoryUserDefaults", #"\bUserDefaults\b"#, ["CA92.1"]),
         // StorageMonitor reads free/total space; InsightEngine shows "Only N GB free." to the user.
-        ("NSPrivacyAccessedAPICategoryDiskSpace", #"\.systemFreeSize\b|\.systemSize\b|volumeAvailableCapacity"#, ["85F4.1"]),
-        ("NSPrivacyAccessedAPICategorySystemBootTime", #"\bsystemUptime\b|mach_absolute_time"#, []),
-        ("NSPrivacyAccessedAPICategoryFileTimestamp", #"\.(creationDate|modificationDate|contentModificationDate)\b"#, [])
+        ("NSPrivacyAccessedAPICategoryDiskSpace", #"\.systemFreeSize\b|\.systemSize\b|\bvolume(Available|Total)Capacity\w*|\bstatv?fs\b|\bgetattrlist\b"#, ["85F4.1"]),
+        ("NSPrivacyAccessedAPICategorySystemBootTime", #"\bsystemUptime\b|\bmach_absolute_time\b"#, []),
+        ("NSPrivacyAccessedAPICategoryFileTimestamp", #"\b(creationDate|modificationDate|fileModificationDate|contentModificationDate)(Key)?\b|\bgetattrlist\b"#, [])
     ]
 
     private func manifestReasons() throws -> [String: Set<String>] {
