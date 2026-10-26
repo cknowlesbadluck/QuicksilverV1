@@ -13,7 +13,7 @@ final class FileWriteSurfaceGuardTests: XCTestCase {
         "Services/AI/Gateway/RoutingConfigStore.swift",
     ]
     static let sourceDirectories = ["App", "Core", "Intents", "Memory", "Models", "Nexus", "Personas", "Services", "UI"]
-    static let pattern = #"\.write\(to:|\b(createFile|removeItem|moveItem|copyItem|createDirectory|replaceItemAt)\("#
+    static let pattern = #"\.write\(\s*to:|\b(createFile|removeItem|moveItem|copyItem|createDirectory|replaceItemAt)\("#
 
     private static var root: URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
@@ -21,7 +21,8 @@ final class FileWriteSurfaceGuardTests: XCTestCase {
 
     /// Code without comments or string-literal text (interpolations are kept); see `FileWriteCodeScanner`.
     static func codeOnly(_ text: String) -> String {
-        FileWriteCodeScanner.codeOnly(text)
+        // CRLF: Swift reads "\r\n" as one Character, which would hide line-comment ends.
+        FileWriteCodeScanner.codeOnly(text.replacingOccurrences(of: "\r\n", with: "\n"))
     }
 
     static func writesFiles(_ text: String) throws -> Bool {
@@ -61,6 +62,8 @@ final class FileWriteSurfaceGuardTests: XCTestCase {
         XCTAssertFalse(try Self.writesFiles("// try data.write(to: url)"))
         XCTAssertFalse(try Self.writesFiles("let s = \"removeItem(at:)\""))
         XCTAssertFalse(try Self.writesFiles("let d = try Data(contentsOf: url)"))
+        XCTAssertTrue(try Self.writesFiles("try data.write(\n    to: url,\n    options: .atomic\n)"))
+        XCTAssertTrue(try Self.writesFiles("// note\r\ntry fm.removeItem(at: url)"))
     }
 }
 
