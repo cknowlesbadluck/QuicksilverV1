@@ -40,9 +40,9 @@ command -v python3 >/dev/null && python3 -c 'import json,sys; [json.loads(l) for
 # --entropy: open + 2*pairs + behind + 2*conflicted + PRs with unresolved threads.
 printf '%s\t%s\t%s\n' 9 CLEAN 0 10 BEHIND 2 12 DIRTY 0 30 CLEAN 1 31 BLOCKED 0 > "$tmp/entropy.tsv"
 ent=$(bash "$script" --offline "$tmp/files.tsv" --entropy --status "$tmp/entropy.tsv")
-[ "$ent" = "entropy: 14 (open 5, overlapping pairs 3, behind 1, conflicted 1, unresolved-thread PRs 2)" ] || fail "entropy: $ent"
+[ "$ent" = "entropy: 16 (open 5, overlapping pairs 3, behind 1, conflicted 1, unresolved-thread PRs 2)" ] || fail "entropy: $ent"
 bash "$script" --offline "$tmp/files.tsv" --entropy --status "$tmp/entropy.tsv" --json \
-  | grep -qx '{"entropy":{"score":14,"open_prs":5,"overlapping_pairs":3,"behind":1,"conflicted":1,"unresolved_thread_prs":2}}' || fail "entropy json"
+  | grep -qx '{"entropy":{"score":16,"open_prs":5,"overlapping_pairs":3,"behind":1,"conflicted":1,"unresolved_thread_prs":2}}' || fail "entropy json"
 bash "$script" --offline /dev/null --entropy | grep -qx "entropy: 0 (open 0, overlapping pairs 0, behind 0, conflicted 0, unresolved-thread PRs 0)" || fail "entropy empty"
 if bash "$script" --offline /dev/null --entropy --candidates >/dev/null 2>&1; then fail "exclusive flags"; fi
 # Empty and whitespace-only snapshots are valid (no open PRs).
