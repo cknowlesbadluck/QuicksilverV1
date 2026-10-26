@@ -64,6 +64,7 @@ final class FileWriteSurfaceGuardTests: XCTestCase {
         XCTAssertFalse(try Self.writesFiles("let d = try Data(contentsOf: url)"))
         XCTAssertTrue(try Self.writesFiles("try data.write(\n    to: url,\n    options: .atomic\n)"))
         XCTAssertTrue(try Self.writesFiles("// note\r\ntry fm.removeItem(at: url)"))
+        XCTAssertTrue(try Self.writesFiles("let p = #/\"/#; try fm.removeItem(at: url)"))
     }
 }
 
@@ -95,6 +96,8 @@ private struct FileWriteCodeScanner {
                 while index < chars.count, chars[index] != "\n" { index += 1 }
             } else if char == "/", at(1) == "*" {
                 blockComment()
+            } else if char == "#", startsExtendedRegex() {
+                extendedRegex()
             } else if char == "\"" || (char == "#" && startsRawString()) {
                 string()
             } else if char == "(" {
@@ -106,6 +109,30 @@ private struct FileWriteCodeScanner {
             } else {
                 output.append(char); index += 1
             }
+        }
+    }
+
+    /// `#/…/#` (any number of `#`): its body may hold `"` or `//`, which must not open a
+    /// string or comment and hide the code after it.
+    private func startsExtendedRegex() -> Bool {
+        var offset = 0
+        while let char = at(offset), char == "#" { offset += 1 }
+        return at(offset) == "/"
+    }
+
+    private mutating func extendedRegex() {
+        var hashes = 0
+        while at(0) == "#" { hashes += 1; index += 1 }
+        index += 1 // opening "/"
+        output.append(" ")
+        while index < chars.count {
+            if chars[index] == "/" {
+                var offset = 1
+                while offset <= hashes, at(offset) == "#" { offset += 1 }
+                if offset == hashes + 1 { index += offset; return }
+            }
+            if chars[index] == "\n" { output.append("\n") }
+            index += 1
         }
     }
 
