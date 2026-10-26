@@ -111,6 +111,9 @@ final class MemoryEntry {
             metadata = [:]
         }
         let category = MemoryItem.Category(rawValue: categoryRaw) ?? .temporary
+        // A damaged row can hold NaN or an out-of-range score. NaN breaks the importance sorts
+        // (no strict weak ordering), so load it as 0 and clamp to the scorer's 0...1 range.
+        let importance = importance.isFinite ? min(max(importance, 0), 1) : 0
         return MemoryItem(
             id: id,
             key: key,
