@@ -53,4 +53,8 @@ bash "$script" --offline /dev/null | grep -qx "summary: 0 PRs with changes; 0 ov
 mkdir "$tmp/bin"; printf '#!/bin/sh\nexit 4\n' > "$tmp/bin/gh"; chmod +x "$tmp/bin/gh"
 if PATH="$tmp/bin:$PATH" bash "$script" --repo o/r >/dev/null 2>&1; then fail "gh failure must not exit 0"; fi
 if PATH="$tmp/bin:$PATH" bash "$script" --repo o/r --entropy >/dev/null 2>&1; then fail "gh failure must not exit 0 (entropy)"; fi
+# A truncated GraphQL page must fail closed, not undercount.
+printf '#!/bin/sh\necho TRUNCATED\n' > "$tmp/bin/gh"
+printf '#!/bin/sh\ncase "$*" in *graphql*) echo TRUNCATED ;; *) exit 0 ;; esac\n' > "$tmp/bin/gh"
+if PATH="$tmp/bin:$PATH" bash "$script" --repo o/r --entropy >/dev/null 2>&1; then fail "truncated entropy must not exit 0"; fi
 echo "pr-overlap self-test passed"

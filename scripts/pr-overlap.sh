@@ -115,12 +115,17 @@ if [ "$entropy" = 1 ]; then
   if [ -z "$offline" ] && [ -z "$status_file" ]; then
     status_file="$pairs_file.status"
     owner=${repo%%/*} name=${repo#*/}
-    gh api graphql -F owner="$owner" -F name="$name" -f query='query($owner:String!,$name:String!){
-      repository(owner:$owner,name:$name){pullRequests(states:OPEN,first:100){nodes{
-        number mergeStateStatus reviewThreads(first:100){nodes{isResolved}}}}}}' \
-      --jq '.data.repository.pullRequests.nodes[] |
-        "\(.number)\t\(.mergeStateStatus)\t\([.reviewThreads.nodes[] | select(.isResolved | not)] | length)"' \
-      > "$status_file" || { echo "gh api graphql failed for $repo" >&2; exit 3; }
+    # One page each (100 PRs, 100 threads per PR). Larger queues fail closed instead of undercounting.
+    raw=$(gh api graphql -F owner="$owner" -F name="$name" -f query='query($owner:String!,$name:String!){
+      repository(owner:$owner,name:$name){pullRequests(states:OPEN,first:100){pageInfo{hasNextPage} nodes{
+        number mergeStateStatus reviewThreads(first:100){pageInfo{hasNextPage} nodes{isResolved}}}}}}' \
+      --jq '.data.repository.pullRequests as $p |
+        if $p.pageInfo.hasNextPage or any($p.nodes[]; .reviewThreads.pageInfo.hasNextPage) then "TRUNCATED"
+        else $p.nodes[] |
+          "\(.number)\t\(.mergeStateStatus)\t\([.reviewThreads.nodes[] | select(.isResolved | not)] | length)"
+        end') || { echo "gh api graphql failed for $repo" >&2; exit 3; }
+    [ "$raw" != TRUNCATED ] || { echo "over 100 open PRs or review threads; entropy not computed" >&2; exit 3; }
+    printf '%s\n' "$raw" > "$status_file"
   fi
   open=$(cat "$pairs_file" ${status_file:+"$status_file"} | awk -F'\t' 'NF && !seen[$1]++ { n++ } END { print n + 0 }')
   pairs=$(awk -F'\t' 'NF && !seen[$1 FS $2]++ { n++ } END { print n + 0 }' <<<"$overlaps")
