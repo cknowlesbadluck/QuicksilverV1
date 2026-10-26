@@ -2,7 +2,16 @@
 
 QuicksilverV1 only. Each phase has a goal, implementations and exit criteria. A phase is done when its exit criteria hold on `main` with Quicksilver CI green on all 6 jobs. Device evidence counts only if the owner records it. Agents never record or claim it.
 
-**State as of 2026-10-26, 12:10 AM ET:** `main` is at `a344a8d`. Three guard PRs landed by squash since 1 PM: #397 (only MercuryBrain sets VisualState), #400 (network I/O stays in reviewed clients), #401 (UserDefaults stays in reviewed stores). Open: #404 (FoundationModels confined to the on-device adapter), #405 (file writes confined to reviewed stores), #403 (Sanctum audit settle; one open review thread on scrolling at accessibility sizes). Current focus: entropy reduction and CHR-55 device evidence, the sole critical path. CHR-55 is `not_recorded`.
+**State as of 2026-10-26, 5:30 AM ET:** `main` is still at `a344a8d` and green (no merges since 12:02 AM ET). 23 PRs are open; `scripts/pr-overlap.sh --entropy` (#396) scored 41 before this pass (21 open, 8 overlapping pairs, 1 conflicted, 2 with unresolved threads). New: #407 (damaged memory importance loads as a finite 0...1 score) and #408 (Ask Nexus intent input capped at 2,000 characters). #403 now scrolls the single-column portal grid at accessibility sizes. #392's CHR-55 summary has a golden format and an explicit "not an acceptance claim" line. Current focus: entropy reduction and CHR-55 device evidence, the sole critical path. CHR-55 is `not_recorded`.
+
+Phase status (2026-10-26, 5:30 AM ET):
+- Phase 1 (CHR-55): open; #392 gives the content-free stamp. No device evidence yet.
+- Phase 2 (memory): #382 and #388 open; #407 adds damaged-row tolerance.
+- Phase 3 (privacy): #404 and #405 open guards; #342 and #374 owner-held.
+- Phase 6 (App Intents): #377 open; #408 bounds intent input.
+- Phase 7 (accessibility): #403 and #373 open.
+- Phase 8 (reliability): UI Smoke Sanctum audit still flakes until #403 lands.
+- Phases 4, 5, 9, 10: no change.
 
 Next slices, in order:
 1. Merge the green guard and test PRs (see the merge order in the latest audit).
@@ -14,6 +23,7 @@ Next slices, in order:
 
 Earlier state lines, newest first:
 
+- 12:10 AM: `main` is at `a344a8d`. Three guard PRs landed by squash since 1 PM: #397 (only MercuryBrain sets VisualState), #400 (network I/O stays in reviewed clients), #401 (UserDefaults stays in reviewed stores). Open: #404 (FoundationModels confined to the on-device adapter), #405 (file writes confined to reviewed stores), #403 (Sanctum audit settle; one open review thread on scrolling at accessibility sizes). Current focus: entropy reduction and CHR-55 device evidence, the sole critical path. CHR-55 is `not_recorded`.
 - 1 PM: `main` was at `3dd53ce` (an owner docs note) and green. 20 PRs are open, and all are green except #374, which conflicts with `main`. #395 is folded into #392, and #387 is closed because #373 carries the same change. New guards: #400 keeps network I/O in the reviewed clients, and #401 keeps UserDefaults in the reviewed settings stores and bans iCloud key-value sync. Branch report (#391's script): 18 branches have no open PR. 3 are on the keep-list. None are fully in `main`. 2 are fully carried by an open PR (`feat/device-run-stamp-validation` in #392, `test/ui-smoke-main-actor` in #373) and become delete candidates once those merge. The other 13 are unmerged work for the owner to decide. CHR-55 is `not_recorded`.
 - 9 AM: `main` is still at `6b1912c` (no merges since `ba0ecd6` other than the owner's docs note, so no regressions). 20 PRs are open. #390 was closed by the owner. Compiler warnings on `main`: 57 unique, all in `UITests/SanctumSmokeTests.swift` (main-actor isolation), and #387 already fixes them. SwiftLint warnings: 0. This morning's UI Smoke "Text clipped" flake was the scaled "Planetarium" portal label. #373 removes that `minimumScaleFactor` label scaling and switches to wrapping with fewer columns, and its head is green. New: #399, which checks every ship-version stamp in the docs against project.yml.
 - 8 AM: `main` is at `6b1912c`, the owner's mirrored audit note. CI run 40187158661 on it failed only on the known UI Smoke "Text clipped" flake (`testSanctumAccessibilityAudit`), and the failed job was rerun once. 20 PRs are open, with 8 overlapping pairs. New since 6 AM: #397 (a VisualState ownership guard test) and #398 (an AGENTS.md focus-line refresh). #390's conflict with `main` is resolved: the owner's note stays as it is, and the Quicksilver log is now `QS-AUDIT-2026-10-25.md`.
