@@ -60,7 +60,7 @@ Evidence comes from GitHub (main CI run 40266985184 green) and source reads. "Op
 | 7 Accessibility | Partial | Sanctum audit test | UI Smoke flake (3 of the last 20 main runs needed a rerun) | Merge #403 |
 | 8 Reliability | Partial | TSan job, 629 test functions | `IntegrationEventStore` uncapped (#410); Integration plane unwired | Merge #410 |
 | 9 Observability | Partial | Private-by-default logger | Diagnostics export #374 conflicted | Owner resolves #374 |
-| 10 SideStore distribution | Documented, unproven | Documentation/SIDESTORE.md; Archive workflow | Last Archive run 2026-09-25, before 0.2.0 build 7; local script only in #375 | Owner runs Archive on current main and installs |
+| 10 SideStore distribution | Documented, unproven | Documentation/SIDESTORE.md; Archive workflow | Last Archive run 2026-09-25, with 239 main commits since; local script only in #375 | Owner runs Archive on current main and installs |
 
 ## 1.0 exit criteria, in order (CHR-55 first)
 
