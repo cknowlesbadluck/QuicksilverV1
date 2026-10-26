@@ -69,6 +69,7 @@ final class DefaultsSurfaceGuardTests: XCTestCase {
     func testPatternsCatchCodeAndIgnoreComments() throws {
         XCTAssertTrue(try Self.matches(Self.defaultsPattern, "let d = UserDefaults.standard"))
         XCTAssertTrue(try Self.matches(Self.defaultsPattern, "@AppStorage(\"k\") var k = false"))
+        XCTAssertTrue(try Self.matches(Self.defaultsPattern, "// note\r\nlet d = UserDefaults.standard"))
         XCTAssertTrue(try Self.matches(Self.iCloudPattern, "NSUbiquitousKeyValueStore.default.set(1, forKey: \"k\")"))
         XCTAssertFalse(try Self.matches(Self.defaultsPattern, "/// never written to UserDefaults"))
         XCTAssertFalse(try Self.matches(Self.defaultsPattern, "/* UserDefaults\n AppStorage */ let x = 1"))
@@ -91,7 +92,8 @@ private struct SwiftCodeScanner {
     private var output = ""
 
     static func codeOnly(_ text: String) -> String {
-        var scanner = SwiftCodeScanner(chars: Array(text))
+        // CRLF: Swift reads "\r\n" as one Character, which would hide line-comment ends.
+        var scanner = SwiftCodeScanner(chars: Array(text.replacingOccurrences(of: "\r\n", with: "\n")))
         scanner.code(stopAtParen: false)
         return scanner.output
     }
