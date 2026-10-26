@@ -32,6 +32,18 @@ final class IntentsTests: XCTestCase {
         XCTAssertEqual(fake.askCalls, ["how should I store keys?"])
     }
 
+    func testIntentInputDropsControlAndFormatCharacters() async throws {
+        _ = try await CaptureMemoryIntent(content: "a\u{0}b\u{1B}[31mc\u{202E}d\u{200B}e\nf\tg").perform()
+        XCTAssertEqual(fake.rememberCalls, ["ab[31mcde\nf\tg"])
+        _ = try await QueryNexusIntent(query: " \u{7}hi\u{2066} ").perform()
+        XCTAssertEqual(fake.askCalls, ["hi"])
+        do {
+            _ = try await CaptureMemoryIntent(content: "\u{0}\u{200B} \u{202E}").perform()
+            XCTFail("control-only content must be rejected as blank")
+        } catch {}
+        XCTAssertEqual(fake.rememberCalls.count, 1)
+    }
+
     func testQueryNexusCapsLongQueries() async throws {
         let long = String(repeating: "a", count: QueryNexusIntent.maxQueryLength + 500)
         _ = try await QueryNexusIntent(query: "  \(long)  ").perform()
