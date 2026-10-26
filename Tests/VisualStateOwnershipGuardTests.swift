@@ -66,6 +66,7 @@ final class VisualStateOwnershipGuardTests: XCTestCase {
         let hidden = SwiftCodeScanner.codeOnly("let u = \"https://x\"; brain.visualState = .warning")
         XCTAssertTrue(matches(hidden), "a // inside a string must not hide the assignment")
         XCTAssertFalse(matches(SwiftCodeScanner.codeOnly("let s = \"visualState = .idle\"")))
+        XCTAssertTrue(matches(SwiftCodeScanner.codeOnly("// note\r\nbrain.visualState = .warning")), "CRLF must not hide code")
     }
 }
 
@@ -78,7 +79,8 @@ private struct SwiftCodeScanner {
     private var output = ""
 
     static func codeOnly(_ text: String) -> String {
-        var scanner = SwiftCodeScanner(chars: Array(text))
+        // CRLF: Swift reads "\r\n" as one Character, which would hide line-comment ends.
+        var scanner = SwiftCodeScanner(chars: Array(text.replacingOccurrences(of: "\r\n", with: "\n")))
         scanner.code(stopAtParen: false)
         return scanner.output
     }
