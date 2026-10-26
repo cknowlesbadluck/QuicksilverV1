@@ -6,11 +6,12 @@ import Personas
 // MARK: - Input hygiene
 
 enum IntentInput {
-    /// Removes control and format characters (NUL, ESC, bidi overrides, zero-width marks) that a
+    /// Removes control and format characters (NUL, ESC, bidi overrides, zero-width space) that a
     /// Shortcut can pass from a clipboard, keeping newlines and tabs, then trims whitespace.
     static func clean(_ text: String) -> String {
         let kept = text.unicodeScalars.filter { scalar in
-            if scalar == "\n" || scalar == "\t" { return true }
+            // Keep newline/tab and ZWNJ/ZWJ, which emoji sequences and some scripts need.
+            if scalar == "\n" || scalar == "\t" || scalar == "\u{200C}" || scalar == "\u{200D}" { return true }
             switch scalar.properties.generalCategory {
             case .control, .format: return false
             default: return true

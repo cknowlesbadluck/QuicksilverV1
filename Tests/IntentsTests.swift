@@ -37,11 +37,14 @@ final class IntentsTests: XCTestCase {
         XCTAssertEqual(fake.rememberCalls, ["ab[31mcde\nf\tg"])
         _ = try await QueryNexusIntent(query: " \u{7}hi\u{2066} ").perform()
         XCTAssertEqual(fake.askCalls, ["hi"])
+        let family = "\u{1F469}\u{200D}\u{1F467} \u{0645}\u{06CC}\u{200C}\u{062E}\u{0648}\u{0627}\u{0645}"
+        _ = try await CaptureMemoryIntent(content: family).perform()
+        XCTAssertEqual(fake.rememberCalls.last, family, "ZWJ/ZWNJ must survive cleaning")
         do {
             _ = try await CaptureMemoryIntent(content: "\u{0}\u{200B} \u{202E}").perform()
             XCTFail("control-only content must be rejected as blank")
         } catch {}
-        XCTAssertEqual(fake.rememberCalls.count, 1)
+        XCTAssertEqual(fake.rememberCalls.count, 2)
     }
 
     func testQueryNexusCapsLongQueries() async throws {
