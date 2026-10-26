@@ -45,7 +45,7 @@ Mercury is a **place**, not a dashboard. Quicksilver core is a living entity. Gl
 
 ## Vertical Slice Preference
 Work one focused production cut at a time. Prefer small, reviewable PRs.
-Current focus: hardening and review of the open PR queue toward 1.0 (no new feature track open on `main`). Done: M3.5-T19 on-device `needsCloud` planner (#282), M3.5-T1/T2 on-device seam (#265), M3.5-T3 on-device-first routing (#268), M3.5-T4 context budget + prewarm (#273, #275), M3.5-T5 Codex mind status (#272), privacy-gated cloud fallback (#277). The gateway track (M3-T16…T21 done) waits on HG2/HG3. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
+Current focus: entropy reduction (land or close the open PR queue; no new feature track on `main`) and CHR-55 device evidence, the sole critical path to 1.0 (still `not_recorded`). Done: M3.5-T19 on-device `needsCloud` planner (#282), M3.5-T1/T2 on-device seam (#265), M3.5-T3 on-device-first routing (#268), M3.5-T4 context budget + prewarm (#273, #275), M3.5-T5 Codex mind status (#272), privacy-gated cloud fallback (#277). The gateway track (M3-T16…T21 done) waits on HG2/HG3. Device HG CHR-55 / HG1 stay owner-blocked. Quicksilver Dev owns merges to `main`.
 
 Audit stabilization pass: September 2026 — single-entity aspect model and entity-wide memory are authoritative.
 
