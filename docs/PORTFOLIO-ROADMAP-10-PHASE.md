@@ -56,3 +56,11 @@ Binding constraints: CHR-55 device archive remains the sole production blocker. 
 10. On-device diagnostics post CHR-55 only. Fresh probe confirms dual ready. No regression. Content-free DeviceRunStamp for future evidence.
 
 Highest-value next: aggressively reduce open PR entropy (close docs-only superseded first, merge green non-overlapping hardens like consolidated guards), clean Vercel alias drift, then CHR-55 device IPA evidence. Stabilization holds. Innovate continues under constraints. Dual-plane ready is the new baseline.
+
+## QuicksilverV1 phase progress (2026-10-26, 8:30 AM ET, verified on GitHub)
+- main `a344a8d`, Quicksilver CI green (run 40266985184). No merges since 12:02 AM ET.
+- Phase 7 (hygiene prune): 23 → 17 open PRs by folding, not merging (#394, #399, #404, #405 → #409; #382, #388, #407 → #410; #398 → #384; branches kept). Entropy (`scripts/pr-overlap.sh --entropy`, #396) 42 → 37. Exit still open: < 10 open PRs, zero unplanned file overlaps (8 pairs today), every PR green or carrying a stated blocker.
+- Phase 3 (device fence): #392's pasteable summary is content-free, has a golden-format test and an explicit "not an acceptance claim" line. deviceAcceptance stays not_recorded.
+- Phase 4 (CHR-55): open; no device evidence recorded. Sole production gate.
+- Phase 9 (privacy): surface guards (#409) and bounded intent input (#408) are green and waiting for owner approval.
+- Merges remain owner-approved only.
