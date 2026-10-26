@@ -112,6 +112,10 @@ public struct OpenDiagnosticsIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {
+    /// Longest query sent on. Shortcuts can pass arbitrarily long text (a whole clipboard);
+    /// the cap keeps one intent call bounded, like `CaptureMemoryIntent`'s 500.
+    public static let maxQueryLength = 2_000
+
     public static let title: LocalizedStringResource = "Ask Nexus"
     public static let description = IntentDescription("Send a short query to the Quicksilver intelligence layer.")
     public static let openAppWhenRun: Bool = false
@@ -131,7 +135,7 @@ public struct QueryNexusIntent: AppIntent {
             throw $query.needsValueError("What would you like to ask?")
         }
         let surface = try IntentDependencies.shared.requireSurface()
-        let answer = try await surface.ask(trimmed)
+        let answer = try await surface.ask(String(trimmed.prefix(Self.maxQueryLength)))
         // P-T6: never prefix with [Aspect] — Mercury is one being.
         return .result(value: LivingNarration.presentIntentAnswer(answer))
     }

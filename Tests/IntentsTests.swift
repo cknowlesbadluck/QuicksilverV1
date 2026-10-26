@@ -32,6 +32,15 @@ final class IntentsTests: XCTestCase {
         XCTAssertEqual(fake.askCalls, ["how should I store keys?"])
     }
 
+    func testQueryNexusCapsLongQueries() async throws {
+        let long = String(repeating: "a", count: QueryNexusIntent.maxQueryLength + 500)
+        _ = try await QueryNexusIntent(query: "  \(long)  ").perform()
+        XCTAssertEqual(fake.askCalls.first?.count, QueryNexusIntent.maxQueryLength)
+        let short = String(repeating: "b", count: QueryNexusIntent.maxQueryLength)
+        _ = try await QueryNexusIntent(query: short).perform()
+        XCTAssertEqual(fake.askCalls.last, short, "a query at the cap passes unchanged")
+    }
+
     func testCaptureMemoryTrimsAndRejectsBlankContent() async throws {
         _ = try await CaptureMemoryIntent(content: "  note  ").perform()
         XCTAssertEqual(fake.rememberCalls, ["note"])
