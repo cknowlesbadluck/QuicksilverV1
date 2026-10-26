@@ -63,6 +63,7 @@ final class NetworkSurfaceGuardTests: XCTestCase {
         XCTAssertTrue(try Self.usesNetwork("let s = URLSession.shared"))
         XCTAssertTrue(try Self.usesNetwork("var r = URLRequest(url: u)"))
         XCTAssertTrue(try Self.usesNetwork("import Network\nlet c = 1"))
+        XCTAssertTrue(try Self.usesNetwork("// note\r\nlet s = URLSession.shared"))
         XCTAssertFalse(try Self.usesNetwork("// URLSession is not used here"))
         XCTAssertFalse(try Self.usesNetwork("/* URLRequest\n NWConnection */ let x = 1"))
         XCTAssertFalse(try Self.usesNetwork("let urlSessionCount = 1"))
@@ -82,7 +83,8 @@ private struct SwiftCodeScanner {
     private var output = ""
 
     static func codeOnly(_ text: String) -> String {
-        var scanner = SwiftCodeScanner(chars: Array(text))
+        // CRLF: Swift reads "\r\n" as one Character, which would hide line-comment ends.
+        var scanner = SwiftCodeScanner(chars: Array(text.replacingOccurrences(of: "\r\n", with: "\n")))
         scanner.code(stopAtParen: false)
         return scanner.output
     }
