@@ -9,20 +9,27 @@
 # --candidates  instead list PRs that share no file with any other open PR ("candidate: #N").
 #   Online it also requires GitHub's merge state CLEAN (green, no conflict, not blocked);
 #   offline, --status FILE gives "PR<TAB>STATE" lines (no FILE: overlap check only).
+#   With --json: {"candidate":N} lines then {"summary":{"candidates":N}}.
+# --entropy  one hygiene score: open PRs + 2*overlapping pairs + behind main + 2*conflicted
+#   + PRs with unresolved review threads (lower is better). Online it reads merge state and
+#   threads with one read-only GraphQL query; offline, --status FILE gives
+#   "PR<TAB>STATE[<TAB>UNRESOLVED_THREADS]" lines. BEHIND counts as behind, DIRTY as conflicted.
 set -euo pipefail
-repo="" json=0 offline="" candidates=0 status_file=""
+repo="" json=0 offline="" candidates=0 entropy=0 status_file=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --repo) repo="$2"; shift 2 ;;
     --json) json=1; shift ;;
     --offline) offline="$2"; shift 2 ;;
     --candidates) candidates=1; shift ;;
+    --entropy) entropy=1; shift ;;
     --status) status_file="$2"; shift 2 ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
+[ "$candidates" = 1 ] && [ "$entropy" = 1 ] && { echo "--candidates and --entropy are exclusive" >&2; exit 2; }
 pairs_file=$(mktemp); trap 'rm -f "$pairs_file"' EXIT
 if [ -n "$offline" ]; then
   [ -r "$offline" ] || { echo "cannot read $offline" >&2; exit 2; }
@@ -45,7 +52,20 @@ else
   sort -u "$pairs_file.raw" > "$pairs_file"; rm -f "$pairs_file.raw"
 fi
 
-json_str() { local s=${1//\\/\\\\}; s=${s//\"/\\\"}; printf '"%s"' "$s"; }
+# JSON string with backslash, quote and every C0 control character escaped.
+json_str() {
+  local LC_ALL=C s=$1 out="" c i
+  for ((i = 0; i < ${#s}; i++)); do
+    c=${s:i:1}
+    case "$c" in
+      '"') out+='\"' ;;
+      '\') out+='\\' ;;
+      [$'\x01'-$'\x1f']) out+=$(printf '\\u%04x' "'$c") ;;
+      *) out+=$c ;;
+    esac
+  done
+  printf '"%s"' "$out"
+}
 
 # Group by file, then emit every PR pair that shares it.
 overlaps=$(awk -F'\t' '
@@ -80,9 +100,44 @@ if [ "$candidates" = 1 ]; then
       state=$(awk -F'\t' -v p="$pr" '$1 == p { print $2 }' "$status_file")
       [ "$state" = CLEAN ] || continue
     fi
-    echo "candidate: #$pr"; count=$((count + 1))
+    if [ "$json" = 1 ]; then printf '{"candidate":%s}\n' "$pr"; else echo "candidate: #$pr"; fi
+    count=$((count + 1))
   done
-  echo "summary: $count merge candidates (no shared files${status_file:+, merge state CLEAN})"
+  if [ "$json" = 1 ]; then
+    printf '{"summary":{"candidates":%s}}\n' "$count"
+  else
+    echo "summary: $count merge candidates (no shared files${status_file:+, merge state CLEAN})"
+  fi
+  exit 0
+fi
+
+if [ "$entropy" = 1 ]; then
+  if [ -z "$offline" ] && [ -z "$status_file" ]; then
+    status_file="$pairs_file.status"
+    owner=${repo%%/*} name=${repo#*/}
+    gh api graphql -F owner="$owner" -F name="$name" -f query='query($owner:String!,$name:String!){
+      repository(owner:$owner,name:$name){pullRequests(states:OPEN,first:100){nodes{
+        number mergeStateStatus reviewThreads(first:100){nodes{isResolved}}}}}}' \
+      --jq '.data.repository.pullRequests.nodes[] |
+        "\(.number)\t\(.mergeStateStatus)\t\([.reviewThreads.nodes[] | select(.isResolved | not)] | length)"' \
+      > "$status_file" || { echo "gh api graphql failed for $repo" >&2; exit 3; }
+  fi
+  open=$(cut -f1 "$pairs_file" | grep . | sort -u | wc -l | tr -d ' ')
+  [ -n "$status_file" ] && open=$(cut -f1 "$status_file" | grep . | cat - <(cut -f1 "$pairs_file") | grep . | sort -u | wc -l | tr -d ' ')
+  pairs=$(cut -f1,2 <<<"$overlaps" | grep . | sort -u | grep -c . || true)
+  behind=0 dirty=0 threads=0
+  if [ -n "$status_file" ]; then
+    behind=$(awk -F'\t' '$2 == "BEHIND"' "$status_file" | grep -c . || true)
+    dirty=$(awk -F'\t' '$2 == "DIRTY"' "$status_file" | grep -c . || true)
+    threads=$(awk -F'\t' '$3 + 0 > 0' "$status_file" | grep -c . || true)
+  fi
+  score=$((open + 2 * pairs + behind + 2 * dirty + threads))
+  if [ "$json" = 1 ]; then
+    printf '{"entropy":{"score":%s,"open_prs":%s,"overlapping_pairs":%s,"behind":%s,"conflicted":%s,"unresolved_thread_prs":%s}}\n' \
+      "$score" "$open" "$pairs" "$behind" "$dirty" "$threads"
+  else
+    echo "entropy: $score (open $open, overlapping pairs $pairs, behind $behind, conflicted $dirty, unresolved-thread PRs $threads)"
+  fi
   exit 0
 fi
 
