@@ -31,7 +31,7 @@ public actor IntegrationEventStore {
 
     private let fileURL: URL
     private var events: [Event] = []
-    public let maxEvents: Int
+    nonisolated public let maxEvents: Int
 
     public init(fileURL: URL? = nil, maxEvents: Int = IntegrationEventStore.defaultMaxEvents) {
         let url = fileURL ?? Self.defaultURL()
