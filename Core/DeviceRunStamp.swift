@@ -96,8 +96,6 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         finishedAt = date
     }
 
-    /// True when every step passed on real hardware. This is evidence for the owner to review,
-    /// not acceptance: `deviceAcceptance` stays `not_recorded`.
     /// The schema this build writes and fully understands.
     public static let currentSchemaVersion = 1
     /// Clock skew allowed before a timestamp counts as "in the future".
@@ -121,6 +119,8 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         return issues
     }
 
+    /// True when every step passed on real hardware. This is evidence for the owner to review,
+    /// not acceptance: `deviceAcceptance` stays `not_recorded`.
     public var allChecksPassed: Bool {
         !isSimulator && Check.allCases.allSatisfy { results[$0] == .passed }
     }
@@ -180,13 +180,16 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
     /// A plain-text summary for pasting into the CHR-55 issue. Each field is checked against its
     /// real format (a version number, a `utsname` machine identifier, a known on-device model
     /// label). Anything else prints as `redacted`, so hand-edited or decoded text can't reach the
-    /// summary. The last line always reads `deviceAcceptance: not_recorded`.
-    public func redactedSummary() -> String {
+    /// summary. The format is fixed: one `key: value` per line, checks in checklist order, UTC
+    /// timestamps, at most `summaryMaxLines` lines. The last line always reads
+    /// `deviceAcceptance: not_recorded`. `now` only affects the validation line.
+    public func redactedSummary(now: Date = Date()) -> String {
         func date(_ value: Date?) -> String {
             value.map { ISO8601DateFormatter().string(from: $0) } ?? "-"
         }
         var lines = [
             "Quicksilver device run (\(Self.acceptanceGate) evidence, not acceptance)",
+            "NOT AN ACCEPTANCE CLAIM. Only the owner records \(Self.acceptanceGate).",
             "app: \(Self.validated(appVersion, as: .version)) (\(Self.validated(build, as: .version)))",
             "os: \(Self.validated(osVersion, as: .version))",
             "hardware: \(Self.validated(hardwareModel, as: .hardware))\(isSimulator ? " [simulator]" : "")",
@@ -196,11 +199,14 @@ public struct DeviceRunStamp: Codable, Equatable, Sendable {
         ]
         lines += Check.allCases.map { "\($0.rawValue): \(results[$0, default: .notRun].rawValue)" }
         lines.append("allChecksPassed: \(allChecksPassed)")
-        let issues = validationIssues()
+        let issues = validationIssues(now: now)
         lines.append("validation: \(issues.isEmpty ? "ok" : issues.map(\.rawValue).joined(separator: ","))")
         lines.append("deviceAcceptance: \(Self.notRecorded)")
         return lines.joined(separator: "\n")
     }
+
+    /// Exact summary line count: header, label, 4 metadata, 2 times, one per check, 3 trailers.
+    public static let summaryMaxLines = 11 + Check.allCases.count
 
     static let redactedValue = "redacted"
 

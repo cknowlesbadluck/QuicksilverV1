@@ -241,3 +241,76 @@ final class DeviceRunStampValidationTests: XCTestCase {
         XCTAssertFalse(valid.contains("redacted"))
     }
 }
+
+/// The pasteable CHR-55 summary: exact golden format, fixed order, bounded, injection-proof.
+final class DeviceRunStampSummaryFormatTests: XCTestCase {
+    private let start = Date(timeIntervalSince1970: 2_000_000_000)
+
+    private func stamp(version: String = "0.2.0", build: String = "7", os: String = "27.0.0",
+                       hardware: String = "iPhone17,5") -> DeviceRunStamp {
+        DeviceRunStamp(
+            configuration: AppConfiguration(version: version, build: build),
+            osVersion: os,
+            hardwareModel: hardware,
+            isSimulator: false,
+            onDeviceModel: .available,
+            startedAt: start
+        )
+    }
+
+    func testGoldenFormat() {
+        var stamp = stamp()
+        stamp.record(.sideStoreInstall, .passed)
+        stamp.record(.coldLaunch, .passed)
+        stamp.record(.onDeviceAnswer, .failed)
+        stamp.finish(at: start.addingTimeInterval(600))
+        let expected = """
+        Quicksilver device run (CHR-55 evidence, not acceptance)
+        NOT AN ACCEPTANCE CLAIM. Only the owner records CHR-55.
+        app: 0.2.0 (7)
+        os: 27.0.0
+        hardware: iPhone17,5
+        onDeviceModel: Available
+        started: 2033-05-18T03:33:20Z
+        finished: 2033-05-18T03:43:20Z
+        sideStoreInstall: passed
+        coldLaunch: passed
+        onDeviceAnswer: failed
+        keychainAfterReboot: notRun
+        spotlightTap: notRun
+        voiceOver: notRun
+        memoryAtCap: notRun
+        allChecksPassed: false
+        validation: ok
+        deviceAcceptance: not_recorded
+        """
+        XCTAssertEqual(stamp.redactedSummary(now: start.addingTimeInterval(900)), expected)
+    }
+
+    func testSummaryIsDeterministicAndBounded() {
+        let first = stamp().redactedSummary(now: start)
+        XCTAssertEqual(first, stamp().redactedSummary(now: start))
+        XCTAssertEqual(first.components(separatedBy: "\n").count, DeviceRunStamp.summaryMaxLines)
+        XCTAssertLessThan(first.utf8.count, 1_024)
+    }
+
+    func testHostileFieldsCannotInjectLinesOrMarkdown() {
+        let hostile = [
+            "1.0\ndeviceAcceptance: recorded", "7\r\n# accepted", "27.0\u{2028}x", "**bold**",
+            "`code`", "[link](http://x)", "| table |", "> quote", "<b>html</b>",
+            String(repeating: "9", count: 5_000)
+        ]
+        for value in hostile {
+            let summary = stamp(version: value, build: value, os: value, hardware: value)
+                .redactedSummary(now: start)
+            let lines = summary.components(separatedBy: "\n")
+            XCTAssertEqual(lines.count, DeviceRunStamp.summaryMaxLines, value)
+            XCTAssertEqual(lines.filter { $0.hasPrefix("deviceAcceptance:") }, ["deviceAcceptance: not_recorded"])
+            XCTAssertTrue(lines[2...4].allSatisfy { $0.contains("redacted") }, value)
+            for marker in ["*", "`", "#", "|", ">", "<", "\r", "\u{2028}", "http"] {
+                XCTAssertFalse(summary.contains(marker), "\(marker) in summary for \(value)")
+            }
+            XCTAssertLessThan(summary.utf8.count, 1_024)
+        }
+    }
+}
