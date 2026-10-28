@@ -2,7 +2,10 @@ import Foundation
 
 /// Append-only local ledger for orchestration events.
 /// Payloads are metadata only and must never contain secrets.
+/// Bounded: keeps the newest `maxEvents` so the file (rewritten on each append) can't grow forever.
 public actor IntegrationEventStore {
+    public static let defaultMaxEvents = 1_000
+
     public struct Event: Codable, Sendable, Hashable, Identifiable {
         public let id: UUID
         public let taskID: UUID
@@ -28,19 +31,22 @@ public actor IntegrationEventStore {
 
     private let fileURL: URL
     private var events: [Event] = []
+    nonisolated public let maxEvents: Int
 
-    public init(fileURL: URL? = nil) {
+    public init(fileURL: URL? = nil, maxEvents: Int = IntegrationEventStore.defaultMaxEvents) {
         let url = fileURL ?? Self.defaultURL()
         self.fileURL = url
+        self.maxEvents = max(1, maxEvents)
         if let data = try? Data(contentsOf: url),
            let decoded = try? Self.decoder().decode([Event].self, from: data) {
-            events = decoded
+            events = Array(decoded.suffix(self.maxEvents))
         }
     }
 
     @discardableResult
     public func append(_ event: Event) async throws -> Event {
         events.append(event)
+        if events.count > maxEvents { events.removeFirst(events.count - maxEvents) }
         try persist()
         return event
     }
@@ -62,7 +68,7 @@ public actor IntegrationEventStore {
             withIntermediateDirectories: true
         )
         let data = try Self.encoder().encode(events)
-        try data.write(to: fileURL, options: .atomic)
+        try data.write(to: fileURL, options: IntegrationTaskStore.writeOptions)
     }
 
     private static func defaultURL() -> URL {
