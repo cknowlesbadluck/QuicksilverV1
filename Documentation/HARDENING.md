@@ -31,6 +31,19 @@ Raising the minimum to 27.0 before CI has an iOS 27 SDK would break every Archiv
 - **PrivacyInfo.xcprivacy** present and embedded
 - MercuryBrain: structured aspect switch (`switchAspect`) with error logging
 
+### Surface guards (source-scanning tests, comments and strings ignored)
+Each fails CI on a new offender and on a stale allowlist entry.
+- Only MercuryBrain sets VisualState: `VisualStateOwnershipGuardTests` (#397, main `1dfb92a`, CI run 40259671964 green)
+- Network I/O only in reviewed clients: `NetworkSurfaceGuardTests` (#400, main `8042e05`, CI run 40262020890 green)
+- UserDefaults only in reviewed settings stores, no iCloud key-value sync: `DefaultsSurfaceGuardTests` (#401, main `a344a8d`, CI run 40266985184 green)
+- Open in #409 (not on main): FoundationModels only in the on-device adapter; direct file writes only in reviewed stores; `nonisolated(unsafe)` ratchet; docs version-stamp check; no clipboard, location, contacts, calendar, photos, camera, microphone or health access without privacy review (`SensitiveCapabilitySurfaceGuardTests`)
+
+### Deep audit 2026-10-26 (9 AM ET, main `a344a8d`)
+- Privacy manifest: disk space is read (`Nexus/StorageMonitor.swift:48-50`) and shown to the user (`Nexus/InsightEngine.swift:103-110`), but only `E174.1` was declared. #411 adds `85F4.1` plus `PrivacyManifestReasonTests`. FileTimestamp and SystemBootTime are declared but unused (harmless). Disk space never reaches the cloud prompt (`CloudContextPolicy.allowedDeviceLines`).
+- Unbounded store: `IntegrationEventStore` was append-only, rewrote its whole file on each append, and wrote without explicit Data Protection. #410 caps it at 1,000 events and sets `.completeFileProtectionUntilFirstUserAuthentication` on both integration stores. The Integration plane (`IntegrationRouter`) is not wired into the app yet; only tests construct it.
+- SwiftData memory store (`Memory/SwiftDataMemoryStore.swift:15`) relies on the iOS default protection class. That is acceptable, but it isn't asserted by a test.
+- `@unchecked Sendable`: 1 production site left (`Core/LoggerService.swift:12`, issue #252, fixed by open #284).
+
 ### P1 — Architecture & Maintainability
 - Persona prompts externalized to `Resources/Personas/*.txt`
 - PromptManager loads external prompts with embedded fallback
