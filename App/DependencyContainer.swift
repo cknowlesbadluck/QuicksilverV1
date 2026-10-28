@@ -22,6 +22,11 @@ final class DependencyContainer {
     let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
 
+    /// Spotlight opt-in for saved notes (off by default; M3.5-T9).
+    @ObservationIgnored lazy var noteSpotlight = NoteSpotlightSync(
+        flags: featureFlags, surface: brain, waitForMemoryLoad: true
+    )
+
     /// Central intelligence coordinator. UI and Intents should prefer the Brain
     /// for complex reasoning instead of reaching into individual services.
     let brain: MercuryBrain
@@ -90,10 +95,7 @@ final class DependencyContainer {
         // SideStore first-run: warm memory so Ask / Intents / Home don't wait
         // for MemoryView to open. Failures are logged inside MemoryManager.
         // Rebuild the embedding sidecar after load, then keep it on memoryDidUpdate.
-        Task {
-            await memoryManager.load()
-            brain.startMemoryIndexSync()
-        }
+        startMemoryLoad()
 
         logger.info(
             "DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)",
@@ -103,5 +105,20 @@ final class DependencyContainer {
 
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
+    }
+
+    /// Loads memory, then starts the brain index and Spotlight. Spotlight reconciles only after
+    /// a successful load (so an empty snapshot never replaces the index), then follows every note change.
+    private func startMemoryLoad() {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.memoryManager.load()
+            self.brain.startMemoryIndexSync()
+            self.noteSpotlight.follow(self.eventBus)
+            // A failed load leaves memory empty; never let that replace the index.
+            // Opt-out removal is not gated and still runs on the next sync.
+            guard self.memoryManager.lastFailure != .load else { return }
+            await self.noteSpotlight.memoryDidLoad()
+        }
     }
 }

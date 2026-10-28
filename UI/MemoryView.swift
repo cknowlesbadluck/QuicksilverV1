@@ -5,10 +5,13 @@ import Memory
 
 struct MemoryView: View {
     @Environment(DependencyContainer.self) private var container
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var viewModel: MemoryViewModel?
     @State private var draft = ""
     @State private var showClearConfirm = false
     @State private var sharePayload: SharePayload?
+    /// A note opened from Spotlight: scrolled to and highlighted once the list has it.
+    var focusedNoteID: UUID?
 
     var body: some View {
         Group {
@@ -56,67 +59,80 @@ struct MemoryView: View {
     private func content(_ vm: MemoryViewModel) -> some View {
         let accent = PersonaTheme.accent(for: container.activeConfiguration.id)
 
-        List {
-            Section {
-                HStack {
-                    TextField("Quick note…", text: $draft)
-                    Button("Save") {
-                        Task {
-                            await vm.addQuickNote(draft)
-                            draft = ""
-                        }
-                    }
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .foregroundStyle(accent)
-                }
-            } header: {
-                if !vm.activePolicyLabel.isEmpty {
-                    Text("Policy: \(vm.activePolicyLabel)")
-                        .foregroundStyle(accent)
-                }
-            }
-
-            Section("Stored (by importance)") {
-                if vm.isLoading {
-                    ProgressView()
-                } else if vm.items.isEmpty {
-                    Text("No memories match current policy")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(vm.items) { item in
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(item.key)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                importanceBadge(item.importance)
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    HStack {
+                        TextField("Quick note…", text: $draft)
+                        Button("Save") {
+                            Task {
+                                await vm.addQuickNote(draft)
+                                draft = ""
                             }
-                            Text(item.value).font(.body)
-                            HStack {
-                                Text(item.updatedAt, style: .relative)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                if let scope = item.personaScope {
-                                    Text("· \(scope)")
+                        }
+                        .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .foregroundStyle(accent)
+                    }
+                } header: {
+                    if !vm.activePolicyLabel.isEmpty {
+                        Text("Policy: \(vm.activePolicyLabel)")
+                            .foregroundStyle(accent)
+                    }
+                }
+
+                Section("Stored (by importance)") {
+                    if vm.isLoading {
+                        ProgressView()
+                    } else if vm.items.isEmpty {
+                        Text("No memories match current policy")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(vm.items) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(item.key)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    importanceBadge(item.importance)
+                                }
+                                Text(item.value).font(.body)
+                                HStack {
+                                    Text(item.updatedAt, style: .relative)
                                         .font(.caption2)
                                         .foregroundStyle(.tertiary)
+                                    if let scope = item.personaScope {
+                                        Text("· \(scope)")
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 2)
+                            .id(item.id)
+                            .listRowBackground(item.id == focusedNoteID ? accent.opacity(PersonaTheme.spotlightSelectionOpacity) : nil)
+                            .accessibilityAddTraits(item.id == focusedNoteID ? .isSelected : [])
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    Task { await vm.delete(id: item.id) }
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
                         }
-                        .padding(.vertical, 2)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                Task { await vm.delete(id: item.id) }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
                     }
                 }
             }
+            // Re-runs when a new Spotlight result is opened, so the selected note is always loaded.
+            .task(id: focusedNoteID) { await vm.load(focusing: focusedNoteID) }
+            // Keyed on the id too, so a second Spotlight tap scrolls even when both notes are loaded.
+            .onChange(of: FocusTarget(id: focusedNoteID, loaded: vm.items.contains { $0.id == focusedNoteID })) { _, target in
+                guard target.loaded, let id = target.id else { return }
+                withAnimation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion)) {
+                    proxy.scrollTo(id, anchor: .center)
+                }
+            }
         }
-        .task { await vm.load() }
     }
 
     private func importanceBadge(_ value: Double) -> some View {
@@ -144,4 +160,10 @@ private struct ActivityView: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+/// What the Archive scrolls to: the focused note's id and whether that note is loaded yet.
+private struct FocusTarget: Equatable {
+    let id: UUID?
+    let loaded: Bool
 }
