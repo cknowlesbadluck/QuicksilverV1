@@ -3,6 +3,24 @@ import Foundation
 import Core
 import Personas
 
+// MARK: - Input hygiene
+
+enum IntentInput {
+    /// Removes control and format characters (NUL, ESC, bidi overrides, zero-width space) that a
+    /// Shortcut can pass from a clipboard, keeping newlines and tabs, then trims whitespace.
+    static func clean(_ text: String) -> String {
+        let kept = text.unicodeScalars.filter { scalar in
+            // Keep newline/tab and ZWNJ/ZWJ, which emoji sequences and some scripts need.
+            if scalar == "\n" || scalar == "\t" || scalar == "\u{200C}" || scalar == "\u{200D}" { return true }
+            switch scalar.properties.generalCategory {
+            case .control, .format: return false
+            default: return true
+            }
+        }
+        return String(String.UnicodeScalarView(kept)).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
 // MARK: - Get Current Aspect (primary read surface)
 
 @available(iOS 17.0, macOS 14.0, *)
@@ -43,7 +61,7 @@ public struct CaptureMemoryIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = IntentInput.clean(content)
         guard !trimmed.isEmpty else {
             throw $content.needsValueError("What should Quicksilver remember?")
         }
@@ -112,6 +130,10 @@ public struct OpenDiagnosticsIntent: AppIntent {
 
 @available(iOS 17.0, macOS 14.0, *)
 public struct QueryNexusIntent: AppIntent {
+    /// Longest query sent on. Shortcuts can pass arbitrarily long text (a whole clipboard);
+    /// the cap keeps one intent call bounded, like `CaptureMemoryIntent`'s 500.
+    public static let maxQueryLength = 2_000
+
     public static let title: LocalizedStringResource = "Ask Nexus"
     public static let description = IntentDescription("Send a short query to the Quicksilver intelligence layer.")
     public static let openAppWhenRun: Bool = false
@@ -126,12 +148,12 @@ public struct QueryNexusIntent: AppIntent {
 
     @MainActor
     public func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = IntentInput.clean(query)
         guard !trimmed.isEmpty else {
             throw $query.needsValueError("What would you like to ask?")
         }
         let surface = try IntentDependencies.shared.requireSurface()
-        let answer = try await surface.ask(trimmed)
+        let answer = try await surface.ask(String(trimmed.prefix(Self.maxQueryLength)))
         // P-T6: never prefix with [Aspect] — Mercury is one being.
         return .result(value: LivingNarration.presentIntentAnswer(answer))
     }
