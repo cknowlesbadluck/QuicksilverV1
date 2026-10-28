@@ -65,6 +65,9 @@ jobs:
           done
           echo "Structure and contracts verified."
 
+      - name: Script self-tests (offline)
+        run: bash scripts/tests/stale-branches-selftest.sh
+
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
