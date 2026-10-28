@@ -80,6 +80,7 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
         // Sanctum portals and Speak with Quicksilver must be idle before audit.
         // Decorative motion is frozen via -uitest in AmbientLayer/core/Sanctum.
+        waitForSanctumSettled()
         try performAccessibilityAuditRetryingTimeouts()
     }
 
@@ -110,8 +111,48 @@ final class SanctumSmokeTests: XCTestCase {
                 print("AUDIT attempt \(attempt) timed out; settling before retry")
                 Thread.sleep(forTimeInterval: Self.auditSettleInterval)
                 XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
+                waitForSanctumSettled()
             }
         }
+    }
+
+    /// The audit samples rendered pixels. `waitForExistence` passes while the Ask
+    /// sheet is still sliding away, and main run 40219353029 then failed contrast on
+    /// the opaque "Workshop" portal title (frame y=652) and, on another attempt, timed
+    /// out. Audit only once the sheet is gone, the portal is hittable, and its frame
+    /// has stopped moving. This changes timing only; every audit issue still fails.
+    private func waitForSanctumSettled() {
+        let ask = app.navigationBars["Ask"]
+        // A center swipeDown() lands in Ask's scroll content and often leaves the sheet up
+        // (PR #403 run 40238397386). Drag the sheet by its navigation bar instead.
+        for _ in 0..<3 where ask.exists {
+            let start = ask.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let end = app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+            start.press(forDuration: 0.1, thenDragTo: end)
+            _ = waitForAbsence(of: ask, timeout: 5)
+        }
+        XCTAssertTrue(waitForAbsence(of: ask, timeout: 5), "Ask sheet still presented before audit")
+
+        let portal = app.buttons["The Workshop"]
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: portal)
+        XCTAssertEqual(XCTWaiter.wait(for: [hittable], timeout: 8), .completed, "Workshop portal not hittable before audit")
+
+        var previous = portal.frame
+        let deadline = Date().addingTimeInterval(10)
+        var stableSamples = 0
+        while stableSamples < 2 && Date() < deadline {
+            Thread.sleep(forTimeInterval: 0.5)
+            let current = portal.frame
+            stableSamples = current == previous ? stableSamples + 1 : 0
+            previous = current
+        }
+        print("AUDIT settle: stableSamples=\(stableSamples) frame=\(previous)")
+        XCTAssertEqual(stableSamples, 2, "Workshop portal frame never settled before audit")
+    }
+
+    private func waitForAbsence(of element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: element)
+        return XCTWaiter.wait(for: [gone], timeout: timeout) == .completed
     }
 
     /// Taps a portal and returns the realm's Done button. A busy simulator can
