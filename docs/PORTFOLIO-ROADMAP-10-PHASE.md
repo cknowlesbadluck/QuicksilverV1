@@ -1,11 +1,11 @@
-> Mirror of canonical Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md (refreshed 2026-11-07 05Z).
+> Mirror of canonical Resonance docs/PORTFOLIO-ROADMAP-10-PHASE.md (refreshed 2026-11-09 03Z).
 > See https://github.com/cknowlesbadluck/Resonance/blob/main/docs/PORTFOLIO-ROADMAP-10-PHASE.md for full living document.
-> Companion audit: https://github.com/cknowlesbadluck/Resonance/blob/main/docs/AUDIT-2026-11-07-05Z.md
+> Companion audit: https://github.com/cknowlesbadluck/Resonance/blob/main/docs/AUDIT-2026-11-09-03Z.md
 
-**Live probe evidence (2026-11-07 ~05:01Z):**
-- Conduit ready when warm. Resonance ready OK.
-- Open PRs: QS ~17 / Conduit ~19 / Resonance ~24. Target <10. Entropy is the current killer.
+**Live probe evidence (2026-11-09 ~03:01Z):**
+- Conduit ready 200 (recovered from cold). Resonance ready 200 OK (missingRequired=[], githubAdapterConfigured=false, posture=contract_passed).
+- Open PRs: QS 17 / Conduit 20 / Resonance 25. Target <10. Entropy is the current killer.
 - CHR-55 sole critical path for QS. deviceAcceptance=not_recorded.
-- Portfolio maturity ~7.5/10. 
+- Portfolio maturity ~7.6/10 when both warm.
 
-Phases 1-10 as in canonical. Highest-value next: prune entropy (close noise PRs on confirmation), merge green hardens, record CHR-55 on real device.
+Phases 1-10 as in canonical. Highest-value next: prune entropy (close noise PRs on confirmation: docs mirrors + Bolt micro-opts), merge green hardens, record CHR-55 on real device.
