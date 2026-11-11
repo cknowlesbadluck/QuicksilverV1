@@ -74,6 +74,7 @@ struct SpatialSanctum: View {
     let onInvoke: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// Freeze decorative time under Reduce Motion or `-uitest` (CI a11y audit).
     private var freezeMotion: Bool { reduceMotion || UITestLaunch.isActive }
@@ -112,7 +113,7 @@ struct SpatialSanctum: View {
                     .accessibilityLabel("Speak with Quicksilver")
 
                     Spacer()
-                    navigationPrompt
+                    navigationPrompt(maxHeight: proxy.size.height * 0.5)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
@@ -170,7 +171,12 @@ struct SpatialSanctum: View {
     /// middot and IDLE label still audited as StaticText (contrast on `\u{00B7}`,
     /// Dynamic Type on caption2). Same collapse SpatialPortalButton already uses.
     private var headerIdentity: some View {
-        HStack(spacing: 8) {
+        // Stack vertically at accessibility sizes so "SANCTUM" and the state label get the
+        // full row width; side by side they were flagged "Text clipped" (PR #403).
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+            : AnyLayout(HStackLayout(spacing: 8))
+        return layout {
             Circle()
                 .fill(accent)
                 .frame(width: 7, height: 7)
@@ -241,8 +247,25 @@ struct SpatialSanctum: View {
         return "What are we getting into?"
     }
 
-    private var navigationPrompt: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 12) {
+    @ViewBuilder
+    private func navigationPrompt(maxHeight: CGFloat) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            // A single column of large portals is taller than the screen, so it scrolls.
+            ScrollView(.vertical) { portalGrid(columnCount: 1) }
+                .frame(maxHeight: maxHeight)
+                .scrollBounceBehavior(.basedOnSize)
+        } else {
+            portalGrid(columnCount: 3)
+        }
+    }
+
+    private func portalGrid(columnCount: Int) -> some View {
+        // One column at accessibility sizes: single-word captions ("Planetarium", "Governance")
+        // cannot wrap in a third-width column and the audit flagged "Text clipped" (PR #403).
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columnCount),
+            spacing: 12
+        ) {
             ForEach(SpatialDestination.allCases) { destination in
                 SpatialPortalButton(destination: destination) {
                     onDestination(destination)
@@ -320,16 +343,14 @@ private struct SpatialPortalButton: View {
                 }
 
                 Text(destination.title.replacingOccurrences(of: "The ", with: ""))
-                    .font(.caption)
-                    // Opaque readable token, not mercurySilver at 0.78: the translucent label
-                    // blended with the portal halo and failed the a11y contrast audit
-                    // intermittently ("Workshop").
-                    .foregroundStyle(PersonaTheme.readableText)
+                    .font(.caption.weight(.semibold))
+                    // mercuryBright + semibold: with the Ask sheet truly dismissed the audit failed
+                    // contrast on "Workshop" every run in regular weight, either color (PR #403).
+                    .foregroundStyle(PersonaTheme.mercuryBright)
                     .multilineTextAlignment(.center)
-                    // A single long word ("Planetarium") can't wrap in the narrow column; scale
-                    // down instead of clipping at large Dynamic Type (audit: Text clipped).
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    // Wrap rather than lineLimit(1) + minimumScaleFactor: semibold under a one-line
+                    // limit tripped "Text clipped" (PR #403); the subtitle already wraps this way.
+                    .fixedSize(horizontal: false, vertical: true)
                     .accessibilityHidden(true)
 
                 Text(destination.subtitle)
