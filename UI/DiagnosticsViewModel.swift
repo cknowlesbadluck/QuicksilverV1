@@ -15,6 +15,8 @@ final class DiagnosticsViewModel {
     private(set) var thermal: String = "—"
     private(set) var lowPower: Bool = false
     private(set) var lastRefresh: Date = Date()
+    /// Redacted CHR-55 evidence text for this run. Read-only; never an acceptance claim.
+    private(set) var deviceRunSummary: String = ""
 
     private let container: DependencyContainer
     private var refreshTask: Task<Void, Never>?
@@ -35,6 +37,21 @@ final class DiagnosticsViewModel {
         thermal = state.thermalState.capitalized
         lowPower = state.lowPowerMode
         lastRefresh = Date()
+        deviceRunSummary = Self.deviceRunSummary(
+            onDeviceModel: container.aiService.onDeviceAvailability,
+            now: lastRefresh
+        )
+    }
+
+    /// Fresh stamp for the running process. Nothing is persisted and every check stays `notRun`:
+    /// the owner runs the checklist and records CHR-55 in Linear.
+    static func deviceRunSummary(
+        onDeviceModel: OnDeviceModelAvailability,
+        configuration: AppConfiguration = .shared,
+        now: Date = Date()
+    ) -> String {
+        DeviceRunStamp.current(onDeviceModel: onDeviceModel, configuration: configuration, now: now)
+            .redactedSummary(now: now)
     }
 
     /// Event-driven live refresh (replaces the previous polling loop).

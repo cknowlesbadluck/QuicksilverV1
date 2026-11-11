@@ -35,6 +35,7 @@ struct DiagnosticsView: View {
             statusSection(vm)
             insightsSection(vm, personaID: personaID)
             signalsSection(vm)
+            deviceRunSection(vm)
         }
         .onAppear {
             vm.refresh()
@@ -62,6 +63,25 @@ struct DiagnosticsView: View {
             Text("Quicksilver state")
         } footer: {
             Text("Quicksilver chooses the aspect that fits the current context.")
+        }
+    }
+
+    /// CHR-55 evidence: the redacted stamp, shared only when the owner taps Share.
+    @ViewBuilder
+    private func deviceRunSection(_ vm: DiagnosticsViewModel) -> some View {
+        Section {
+            Text(vm.deviceRunSummary)
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+                .accessibilityIdentifier("diagnostics.deviceRunSummary")
+            ShareLink(item: vm.deviceRunSummary) {
+                Label("Share run evidence", systemImage: "square.and.arrow.up")
+            }
+            .accessibilityIdentifier("diagnostics.shareDeviceRun")
+        } header: {
+            Text("Device run evidence")
+        } footer: {
+            Text("App, OS and hardware facts only, with no memories or messages. This isn't an acceptance; the owner records CHR-55.")
         }
     }
 
