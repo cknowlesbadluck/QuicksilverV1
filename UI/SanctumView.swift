@@ -1,5 +1,7 @@
+import CoreSpotlight
 import SwiftUI
 import Core
+import QuicksilverIntents
 
 /// The Sanctum — Quicksilver's spatial home.
 ///
@@ -10,6 +12,8 @@ struct SanctumView: View {
     @State private var viewModel: SanctumViewModel?
     @State private var destination: SpatialDestination?
     @State private var showAsk = false
+    /// Set by a Spotlight result tap, so the Archive opens scrolled to that note.
+    @State private var focusedNoteID: UUID?
 
     var body: some View {
         Group {
@@ -43,6 +47,15 @@ struct SanctumView: View {
         .fullScreenCover(item: $destination) { selected in
             destinationView(selected)
         }
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let id = NoteSpotlightRoute.noteID(from: activity) else { return }
+            showAsk = false
+            focusedNoteID = id
+            destination = .archive
+        }
+        .onChange(of: destination) { _, new in
+            if new != .archive { focusedNoteID = nil }
+        }
     }
 
     @ViewBuilder
@@ -55,7 +68,7 @@ struct SanctumView: View {
             switch selected {
             case .workshop: ForgeView()
             case .planetarium: EternalView()
-            case .archive: MemoryView()
+            case .archive: MemoryView(focusedNoteID: focusedNoteID)
             case .codex: CodexView()
             case .diagnostics: DiagnosticsView()
             }
