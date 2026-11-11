@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import Core
+import Memory
 import ServicesAI
 
 @MainActor
@@ -34,10 +35,10 @@ final class CodexViewModel {
     private(set) var onDeviceStatus: String = ""
     private(set) var onDeviceReason: String?
     private(set) var answerRoute: String = ""
-    /// Content-free log of recent routing decisions (newest first, at most 10).
-    private(set) var recentRoutes: [RouteRecord] = []
     /// Cloud requests left today, from the gateway budget headers. nil until a gateway reply is seen.
     private(set) var cloudBudgetLabel: String?
+    /// Content-free log of recent routing decisions (newest first, at most 10).
+    private(set) var recentRoutes: [RouteRecord] = []
 
     private let container: DependencyContainer
     /// Cancels in-flight `/v1/config` refresh on unbind / rebind.
@@ -71,8 +72,26 @@ final class CodexViewModel {
         onDeviceStatus = availability.shortLabel
         onDeviceReason = availability.isAvailable ? nil : availability.userFacingReason
         answerRoute = aiEnabled ? container.aiService.activeRouteName : "Dormant (wake it above)"
-        recentRoutes = container.aiService.routeLog.recent(limit: 10)
         cloudBudgetLabel = hasGatewayBinding ? container.aiService.cloudBudget.current()?.label : nil
+        recentRoutes = container.aiService.routeLog.recent(limit: 10)
+    }
+
+    /// Content-free diagnostics text for the share sheet. Counts, states and config only.
+    func diagnosticsText() -> String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let memory = container.memoryManager
+        return DiagnosticsReport(
+            appVersion: info["CFBundleShortVersionString"] as? String ?? "",
+            build: info["CFBundleVersion"] as? String ?? "",
+            routes: container.aiService.routeLog.recent(),
+            // A cleared/unbound gateway must not export the former binding's quota.
+            budget: container.aiService.hasGatewayBinding ? container.aiService.cloudBudget.current() : nil,
+            credentials: container.aiService.credentialStates(),
+            memoryTotal: memory.items.count,
+            memoryNotes: memory.items.filter { $0.key.hasPrefix("note.") }.count,
+            memoryUsingBackupStore: memory.usesBackupStore,
+            onDeviceAvailable: container.aiService.onDeviceAvailability.isAvailable
+        ).text
     }
 
     func saveGrokKey() {
