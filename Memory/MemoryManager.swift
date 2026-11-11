@@ -16,6 +16,8 @@ public final class MemoryManager {
     public private(set) var lastFailure: Failure?
 
     private let store: MemoryStore
+    /// True when SwiftData was unavailable and memory fell back to the Keychain store (diagnostics only).
+    public var usesBackupStore: Bool { store is KeychainMemoryStore }
     /// M4-T4: applied on load and after a conversation write that exceeds the cap.
     public var retention: MemoryRetentionPolicy = .default
     private let eventBus: EventBus
