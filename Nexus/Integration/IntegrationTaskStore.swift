@@ -117,7 +117,16 @@ public actor IntegrationTaskStore {
             withIntermediateDirectories: true
         )
         let data = try Self.encoder().encode(tasks)
-        try data.write(to: fileURL, options: .atomic)
+        try data.write(to: fileURL, options: Self.writeOptions)
+    }
+
+    /// Explicit Data Protection, matching EmbeddingIndex: unreadable before first unlock.
+    static var writeOptions: Data.WritingOptions {
+        #if os(iOS)
+        return [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+        #else
+        return [.atomic]
+        #endif
     }
 
     private static func load(from url: URL) -> [UUID: Task] {
