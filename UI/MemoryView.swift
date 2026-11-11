@@ -84,7 +84,6 @@ struct MemoryView: View {
                                 draft = ""
                             }
                         }
-                        }
                         .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .foregroundStyle(accent)
                     }
