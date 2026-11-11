@@ -12,6 +12,10 @@ final class MemoryViewModel {
     private(set) var activePolicyLabel: String = ""
     private(set) var lastExportJSON: String?
     private(set) var statusMessage: String?
+    /// M4-T5: banner for the most recent persistence failure, nil when healthy.
+    private(set) var failureNotice: String?
+    /// M4-T5: disclosure when memories live in the Keychain backup store.
+    var backupStoreNotice: String? { container.memoryBackend.disclosure }
 
     private let container: DependencyContainer
 
@@ -42,6 +46,11 @@ final class MemoryViewModel {
                 return $0.updatedAt > $1.updatedAt
             }
         isLoading = false
+        refreshFailureNotice()
+    }
+
+    func refreshFailureNotice() {
+        failureNotice = container.memoryManager.lastFailure?.userNotice
     }
 
     func addQuickNote(_ text: String) async {

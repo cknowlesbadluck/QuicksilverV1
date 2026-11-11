@@ -18,6 +18,8 @@ final class DependencyContainer {
     let eventBus: EventBus
     let personaManager: PersonaManager
     let memoryManager: MemoryManager
+    /// Which memory store opened this session (M4-T5 backup-store disclosure).
+    let memoryBackend: MemoryBackend
     let aiService: AIService
     let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
@@ -46,17 +48,8 @@ final class DependencyContainer {
             logger: logger
         )
 
-        let resolvedMemoryStore: MemoryStore
-        if let memoryStore {
-            resolvedMemoryStore = memoryStore
-            logger.info("Memory backend: injected", category: logger.memory)
-        } else if let swiftDataStore = try? SwiftDataMemoryStore() {
-            resolvedMemoryStore = swiftDataStore
-            logger.info("Memory backend: SwiftData", category: logger.memory)
-        } else {
-            resolvedMemoryStore = KeychainMemoryStore()
-            logger.info("Memory backend: Keychain (SwiftData unavailable)", category: logger.memory)
-        }
+        let (resolvedMemoryStore, backend) = Self.resolveMemoryStore(injected: memoryStore, logger: logger)
+        self.memoryBackend = backend
         self.memoryManager = MemoryManager(store: resolvedMemoryStore, eventBus: eventBus, logger: logger)
 
         self.routingConfigStore = routingConfigStore ?? RoutingConfigStore()
@@ -103,5 +96,21 @@ final class DependencyContainer {
 
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
+    }
+}
+
+extension DependencyContainer {
+    /// Injected store, else SwiftData, else the Keychain backup (disclosed in the Memory screen, M4-T5).
+    static func resolveMemoryStore(injected: MemoryStore?, logger: LoggerService) -> (MemoryStore, MemoryBackend) {
+        if let injected {
+            logger.info("Memory backend: injected", category: logger.memory)
+            return (injected, .injected)
+        }
+        if let swiftDataStore = try? SwiftDataMemoryStore() {
+            logger.info("Memory backend: SwiftData", category: logger.memory)
+            return (swiftDataStore, .swiftData)
+        }
+        logger.info("Memory backend: Keychain (SwiftData unavailable)", category: logger.memory)
+        return (KeychainMemoryStore(), .keychainFallback)
     }
 }

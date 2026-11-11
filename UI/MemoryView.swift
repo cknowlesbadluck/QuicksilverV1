@@ -57,6 +57,20 @@ struct MemoryView: View {
         let accent = PersonaTheme.accent(for: container.activeConfiguration.id)
 
         List {
+            if vm.failureNotice != nil || vm.backupStoreNotice != nil {
+                Section {
+                    if let failure = vm.failureNotice {
+                        Label(failure, systemImage: "exclamationmark.triangle")
+                            .foregroundStyle(PersonaTheme.readableText)
+                            .accessibilityIdentifier("memory.failureNotice")
+                    }
+                    if let backup = vm.backupStoreNotice {
+                        Label(backup, systemImage: "lock.shield")
+                            .foregroundStyle(PersonaTheme.readableSecondary)
+                            .accessibilityIdentifier("memory.backupStoreNotice")
+                    }
+                }
+            }
             Section {
                 HStack {
                     TextField("Quick note…", text: $draft)

@@ -30,4 +30,12 @@ final class MemoryViewModelTests: XCTestCase {
         XCTAssertTrue(vm.items.isEmpty)
         XCTAssertNil(vm.lastExportJSON)
     }
+
+    func testHealthyInjectedStoreShowsNoNotices() async throws {
+        let container = try ViewModelTestSupport.makeContainer(provider: nil, testCase: self)
+        let vm = MemoryViewModel(container: container)
+        await vm.load()
+        XCTAssertNil(vm.failureNotice)
+        XCTAssertNil(vm.backupStoreNotice, "injected store is not the Keychain backup")
+    }
 }
