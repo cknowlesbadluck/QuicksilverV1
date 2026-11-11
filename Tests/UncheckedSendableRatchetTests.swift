@@ -5,8 +5,8 @@ import XCTest
 /// declaration sites listed here. Adding a new one fails CI. Removing one means
 /// shrinking the allowlist in the same PR.
 final class UncheckedSendableRatchetTests: XCTestCase {
-    /// LoggerService wraps `os.Logger` (not Sendable). Removal is tracked by #284 (owner-gated).
-    private static let allowlist: Set<String> = ["Core/LoggerService.swift"]
+    /// Empty: the last entry (LoggerService) became checked `Sendable` in #284.
+    private static let allowlist: Set<String> = []
 
     private static let sourceDirectories = [
         "App", "Core", "Memory", "Models", "Nexus", "Personas", "Services", "UI", "Intents",

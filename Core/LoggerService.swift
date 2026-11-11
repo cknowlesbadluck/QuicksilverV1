@@ -3,13 +3,12 @@ import os.log
 
 /// Injectable logging service.
 ///
-/// Marked `@unchecked Sendable` because `os.Logger` is not currently Sendable.
-/// All public methods are pure and side-effect free beyond logging; safe to call
-/// from any isolation domain.
+/// Checked `Sendable` (issue #252): every stored property is an immutable `let`
+/// of a Sendable type (`String`, `os.Logger`). Safe to call from any isolation domain.
 ///
 /// Privacy default is `.private`. Callers that intentionally want public messages
 /// must pass `isPrivate: false`. Never log raw API keys, tokens, or memory contents.
-public final class LoggerService: @unchecked Sendable {
+public final class LoggerService: Sendable {
     private let subsystem: String
 
     public let general: Logger
