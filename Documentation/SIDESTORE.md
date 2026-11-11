@@ -1,5 +1,7 @@
 # Quicksilver → SideStore (iPhone-only path)
 
+> Local unsigned build + owner install steps: see `docs/SIDESTORE.md` and `scripts/build-unsigned-ipa.sh`.
+
 **Primary device:** iPhone 16e / **iOS 27**  
 **Build floor (CI):** iOS 18.0 — the Archive workflow produces a binary that installs and runs on iOS 27.  
 **Current ship:** 0.2.0 (**build 7**)  
