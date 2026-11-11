@@ -79,6 +79,9 @@ jobs:
           npm ci
           npm test
 
+      - name: PR overlap report self-test (offline)
+        run: bash scripts/tests/pr-overlap-selftest.sh
+
   lint:
     name: SwiftLint
     runs-on: macos-15
