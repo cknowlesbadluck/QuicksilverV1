@@ -19,7 +19,7 @@ final class NoteSpotlightRegressionTests: XCTestCase {
         let note = MemoryItem(key: "note.legacy", category: .preference, value: "legacy saved note")
         let surface = RegressionNotesSurface(items: [note])
         surface.snapshotOverride = []
-        XCTAssertEqual(surface.memoryNotes().map(\\.value), ["legacy saved note"])
+        XCTAssertEqual(surface.memoryNotes().map(\.value), ["legacy saved note"])
     }
 
     func testConversationOnlyMemoryUpdateDoesNotRebuildSpotlightIndex() async throws {
@@ -59,6 +59,7 @@ final class NoteSpotlightRegressionTests: XCTestCase {
 @MainActor
 private final class RegressionNotesSurface: IntelligenceSurface {
     var items: [MemoryItem]
+    var snapshotOverride: [MemoryItem]?
     init(items: [MemoryItem]) { self.items = items }
     func ask(_ query: String) async throws -> String { "" }
     func remember(_ content: String) async {}
