@@ -128,8 +128,9 @@ public final class NoteSpotlightSync {
                 try await index.replaceAll(with: entities)
                 lastIndexedSnapshot = snapshot
             } else {
-                try await index.removeAll()
+                // A failed removal leaves index contents uncertain too.
                 lastIndexedSnapshot = nil
+                try await index.removeAll()
             }
             lastError = nil
             removalFailed = false
