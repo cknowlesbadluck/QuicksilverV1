@@ -137,25 +137,32 @@ final class DependencyContainer {
             return false
         }
         memoryLoadRetryTask?.cancel()
-        memoryLoadRetryTask = Task { [weak self] in
+        let (triggers, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let eventListener = Task {
+            for await _ in stream {
+                guard !Task.isCancelled else { break }
+                continuation.yield(())
+            }
+        }
+        let timer = Task {
             for delay in [1, 3, 10] {
                 try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
-                guard !Task.isCancelled, let self, !self.noteSpotlight.isMemoryReady else { return }
-                await self.memoryManager.load()
-                if self.memoryManager.lastFailure != .load {
-                    await self.memoryLoadDidSucceed()
-                    return
-                }
+                guard !Task.isCancelled else { return }
+                continuation.yield(())
             }
-
-            for await _ in stream {
+        }
+        memoryLoadRetryTask = Task { [weak self] in
+            for await _ in triggers {
                 guard !Task.isCancelled, let self, !self.noteSpotlight.isMemoryReady else { break }
                 await self.memoryManager.load()
                 if self.memoryManager.lastFailure != .load {
-                    await self.noteSpotlight.memoryLoadSucceeded()
+                    await self.memoryLoadDidSucceed()
                     break
                 }
             }
+            eventListener.cancel()
+            timer.cancel()
+            continuation.finish()
         }
     }
 }
