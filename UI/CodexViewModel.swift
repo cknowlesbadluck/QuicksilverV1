@@ -42,6 +42,8 @@ final class CodexViewModel {
     private(set) var spotlightNotice: String?
     static let spotlightRemovalFailedNotice =
         "Couldn't remove your notes from Spotlight yet. Quicksilver will retry the next time it opens."
+    static let spotlightIndexFailedNotice =
+        "Couldn't update your notes in Spotlight. Quicksilver will retry after the next note change or app launch."
     /// Cloud requests left today, from the gateway budget headers. nil until a gateway reply is seen.
     private(set) var cloudBudgetLabel: String?
     /// Content-free log of recent routing decisions (newest first, at most 10).
@@ -82,15 +84,21 @@ final class CodexViewModel {
         cloudBudgetLabel = hasGatewayBinding ? container.aiService.cloudBudget.current()?.label : nil
         recentRoutes = container.aiService.routeLog.recent(limit: 10)
         spotlightNotesEnabled = container.featureFlags.isEnabled(NoteSpotlightSync.flagKey)
-        spotlightNotice = container.noteSpotlight.removalFailed ? Self.spotlightRemovalFailedNotice : nil
+        spotlightNotice = spotlightStatusNotice
     }
 
     func setSpotlightNotes(_ enabled: Bool) {
         spotlightNotesEnabled = enabled
         Task {
             await container.noteSpotlight.setEnabled(enabled)
-            spotlightNotice = container.noteSpotlight.removalFailed ? Self.spotlightRemovalFailedNotice : nil
+            spotlightNotice = spotlightStatusNotice
         }
+    }
+
+    private var spotlightStatusNotice: String? {
+        if container.noteSpotlight.removalFailed { return Self.spotlightRemovalFailedNotice }
+        if container.noteSpotlight.lastError != nil { return Self.spotlightIndexFailedNotice }
+        return nil
     }
 
     /// Content-free diagnostics text for the share sheet. Counts, states and config only.
