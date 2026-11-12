@@ -1,6 +1,7 @@
 import XCTest
 @testable import Quicksilver
 import Core
+import Memory
 
 @MainActor
 final class MemoryViewModelTests: XCTestCase {
