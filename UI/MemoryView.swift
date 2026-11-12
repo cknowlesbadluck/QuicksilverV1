@@ -141,7 +141,7 @@ struct MemoryView: View {
             // Re-runs when a new Spotlight result is opened, so the selected note is always loaded.
             .task(id: FocusRequest(id: focusedNoteID, token: focusRequestID)) { await vm.load(focusing: focusedNoteID) }
             // Keyed on the id too, so a second Spotlight tap scrolls even when both notes are loaded.
-            .onChange(of: FocusTarget(id: focusedNoteID, loaded: vm.items.contains { $0.id == focusedNoteID }, token: focusRequestID)) { _, target in
+            .onChange(of: FocusTarget(id: focusedNoteID, loaded: !vm.isLoading && vm.items.contains { $0.id == focusedNoteID }, token: focusRequestID)) { _, target in
                 guard target.loaded, let id = target.id else { return }
                 withAnimation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion)) {
                     proxy.scrollTo(id, anchor: .center)
