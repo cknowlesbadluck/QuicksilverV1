@@ -14,6 +14,8 @@ struct SanctumView: View {
     @State private var showAsk = false
     /// Set by a Spotlight result tap, so the Archive opens scrolled to that note.
     @State private var focusedNoteID: UUID?
+    /// Changes for every accepted Spotlight activity, including repeated taps on one note.
+    @State private var focusRequestID = UUID()
 
     var body: some View {
         Group {
@@ -51,6 +53,7 @@ struct SanctumView: View {
             guard let id = NoteSpotlightRoute.noteID(from: activity) else { return }
             showAsk = false
             focusedNoteID = id
+            focusRequestID = UUID()
             destination = .archive
         }
         .onChange(of: destination) { _, new in
@@ -68,7 +71,7 @@ struct SanctumView: View {
             switch selected {
             case .workshop: ForgeView()
             case .planetarium: EternalView()
-            case .archive: MemoryView(focusedNoteID: focusedNoteID)
+            case .archive: MemoryView(focusedNoteID: focusedNoteID, focusRequestID: focusRequestID)
             case .codex: CodexView()
             case .diagnostics: DiagnosticsView()
             }
