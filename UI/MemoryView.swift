@@ -12,6 +12,7 @@ struct MemoryView: View {
     @State private var sharePayload: SharePayload?
     /// A note opened from Spotlight: scrolled to and highlighted once the list has it.
     var focusedNoteID: UUID?
+    var focusRequestID: UUID = UUID()
 
     var body: some View {
         Group {
@@ -138,9 +139,9 @@ struct MemoryView: View {
                 }
             }
             // Re-runs when a new Spotlight result is opened, so the selected note is always loaded.
-            .task(id: focusedNoteID) { await vm.load(focusing: focusedNoteID) }
+            .task(id: FocusRequest(id: focusedNoteID, token: focusRequestID)) { await vm.load(focusing: focusedNoteID) }
             // Keyed on the id too, so a second Spotlight tap scrolls even when both notes are loaded.
-            .onChange(of: FocusTarget(id: focusedNoteID, loaded: vm.items.contains { $0.id == focusedNoteID })) { _, target in
+            .onChange(of: FocusTarget(id: focusedNoteID, loaded: vm.items.contains { $0.id == focusedNoteID }, token: focusRequestID)) { _, target in
                 guard target.loaded, let id = target.id else { return }
                 withAnimation(MotionTokens.resolved(MotionTokens.stabilization, reduceMotion: reduceMotion)) {
                     proxy.scrollTo(id, anchor: .center)
@@ -180,4 +181,10 @@ private struct ActivityView: UIViewControllerRepresentable {
 private struct FocusTarget: Equatable {
     let id: UUID?
     let loaded: Bool
+    let token: UUID
+}
+
+private struct FocusRequest: Equatable {
+    let id: UUID?
+    let token: UUID
 }
