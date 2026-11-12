@@ -32,6 +32,7 @@ final class DependencyContainerTests: XCTestCase {
         }
         let initialLoadAttempts = await store.loadAttempts()
         XCTAssertEqual(initialLoadAttempts, 1)
+        try await Task.sleep(nanoseconds: 100_000_000)
         XCTAssertFalse(container.noteSpotlight.isMemoryReady)
 
         await container.memoryManager.set(
