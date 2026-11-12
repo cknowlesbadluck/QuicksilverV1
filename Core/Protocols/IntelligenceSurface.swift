@@ -17,6 +17,9 @@ public protocol IntelligenceSurface: AnyObject {
     /// Ranked memory snapshot for capability reads and diagnostics.
     func snapshot(limit: Int) -> [MemoryItem]
 
+    /// Unfiltered saved-note source for automation; production Brain bypasses aspect retention floors.
+    func noteSnapshot(limit: Int) -> [MemoryItem]
+
     /// Explicit aspect entry (Shortcuts / diagnostics).
     func switchAspect(to aspect: Aspect) async throws
 
@@ -25,6 +28,10 @@ public protocol IntelligenceSurface: AnyObject {
 }
 
 extension IntelligenceSurface {
+    public func noteSnapshot(limit: Int) -> [MemoryItem] {
+        snapshot(limit: limit)
+    }
+
     public func snapshot() -> [MemoryItem] {
         snapshot(limit: 5)
     }
@@ -38,7 +45,7 @@ extension IntelligenceSurface {
     /// Filters the whole ranked memory before applying limit.
     public func memoryNotes(matching query: String? = nil, limit: Int = 20) -> [MemoryItem] {
         let needle = query?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
-        return snapshot(limit: .max)
+        return noteSnapshot(limit: .max)
             .filter { $0.key.hasPrefix("note.") && $0.category != .conversation && $0.category != .system }
             .filter { needle.isEmpty || $0.value.lowercased().contains(needle) }
             .prefix(limit)
