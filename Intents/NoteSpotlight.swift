@@ -121,6 +121,9 @@ public final class NoteSpotlightSync {
                     removalFailed = false
                     return
                 }
+                // replaceAll deletes the old domain before indexing the new items.
+                // If indexing then fails, the previous snapshot is no longer trustworthy.
+                lastIndexedSnapshot = nil
                 try await index.replaceAll(with: entities)
                 lastIndexedSnapshot = snapshot
             } else {
