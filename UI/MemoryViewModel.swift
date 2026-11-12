@@ -18,6 +18,8 @@ final class MemoryViewModel {
     var backupStoreNotice: String? { container.memoryBackend.disclosure }
 
     private let container: DependencyContainer
+    /// Preserve a Spotlight-injected note across ordinary Archive reloads.
+    private var focusedNoteID: UUID?
 
     init(container: DependencyContainer) {
         self.container = container
@@ -26,6 +28,8 @@ final class MemoryViewModel {
     /// Loads the Archive. `focusing` is a note opened from Spotlight: it's always included,
     /// even when the active aspect's scoped view or retention threshold would hide it.
     func load(focusing focusedID: UUID? = nil) async {
+        if let focusedID { self.focusedNoteID = focusedID }
+        let targetID = self.focusedNoteID
         isLoading = true
         await container.memoryManager.load()
         guard !Task.isCancelled else { return }
@@ -52,10 +56,13 @@ final class MemoryViewModel {
                 if $0.importance != $1.importance { return $0.importance > $1.importance }
                 return $0.updatedAt > $1.updatedAt
             }
-        if let focusedID, !items.contains(where: { $0.id == focusedID }),
-           var focused = container.memoryManager.items(matching: MemoryQuery()).first(where: { $0.id == focusedID }) {
-            focused.importance = MemoryScorer.decayedImportance(for: focused)
-            items.insert(focused, at: 0)
+        if let targetID, !items.contains(where: { $0.id == targetID }) {
+            if var focused = container.memoryManager.items(matching: MemoryQuery()).first(where: { $0.id == targetID }) {
+                focused.importance = MemoryScorer.decayedImportance(for: focused)
+                items.insert(focused, at: 0)
+            } else {
+                focusedNoteID = nil
+            }
         }
         isLoading = false
         refreshFailureNotice()
@@ -84,12 +91,14 @@ final class MemoryViewModel {
     }
 
     func delete(id: UUID) async {
+        if focusedNoteID == id { focusedNoteID = nil }
         await container.memoryManager.delete(id: id)
         await load()
         statusMessage = "Memory deleted"
     }
 
     func clearAll() async {
+        focusedNoteID = nil
         let didClear = await container.memoryManager.clearAll()
         await load()
         statusMessage = didClear ? "All memories cleared" : "Unable to clear all memories"
