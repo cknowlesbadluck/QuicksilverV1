@@ -26,10 +26,12 @@ final class DependencyContainerTests: XCTestCase {
         let container = DependencyContainer(memoryStore: store, nexus: nexus, defaults: defaults)
         await container.noteSpotlight.setEnabled(true)
 
-        for _ in 0..<50 where await store.loadAttempts() == 0 {
+        for _ in 0..<50 {
+            if await store.loadAttempts() > 0 { break }
             try await Task.sleep(nanoseconds: 10_000_000)
         }
-        XCTAssertEqual(await store.loadAttempts(), 1)
+        let initialLoadAttempts = await store.loadAttempts()
+        XCTAssertEqual(initialLoadAttempts, 1)
         XCTAssertFalse(container.noteSpotlight.isMemoryReady)
 
         await container.brain.remember("Spotlight retry after transient store failure")
