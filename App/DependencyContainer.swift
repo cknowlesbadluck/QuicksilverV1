@@ -23,6 +23,7 @@ final class DependencyContainer {
     let aiService: AIService
     let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
+    @ObservationIgnored private var memoryLoadRetryTask: Task<Void, Never>?
 
     /// Spotlight opt-in for saved notes (off by default; M3.5-T9).
     @ObservationIgnored lazy var noteSpotlight = NoteSpotlightSync(
@@ -108,10 +109,42 @@ final class DependencyContainer {
             await self.memoryManager.load()
             self.brain.startMemoryIndexSync()
             self.noteSpotlight.follow(self.eventBus)
-            // A failed load leaves memory empty; never let that replace the index.
-            // Opt-out removal is not gated and still runs on the next sync.
-            guard self.memoryManager.lastFailure != .load else { return }
-            await self.noteSpotlight.memoryDidLoad()
+            // Never replace a valid Spotlight index with an empty snapshot after a failed read.
+            if self.memoryManager.lastFailure == .load {
+                await self.retrySpotlightMemoryLoad()
+            } else {
+                await self.noteSpotlight.memoryDidLoad()
+            }
+        }
+    }
+
+    /// Reopen the Spotlight readiness gate after a transient initial memory-store failure.
+    /// Retry on a short bounded schedule, then wait for a memory write (e.g. from Shortcuts).
+    private func retrySpotlightMemoryLoad() async {
+        let stream = await eventBus.events(bufferingNewest: 1) { event in
+            if case .memoryDidUpdate = event { return true }
+            return false
+        }
+        memoryLoadRetryTask?.cancel()
+        memoryLoadRetryTask = Task { [weak self] in
+            for delay in [1, 3, 10] {
+                try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                guard !Task.isCancelled, let self, !self.noteSpotlight.isMemoryReady else { return }
+                await self.memoryManager.load()
+                if self.memoryManager.lastFailure != .load {
+                    await self.noteSpotlight.memoryLoadSucceeded()
+                    return
+                }
+            }
+
+            for await _ in stream {
+                guard !Task.isCancelled, let self, !self.noteSpotlight.isMemoryReady else { break }
+                await self.memoryManager.load()
+                if self.memoryManager.lastFailure != .load {
+                    await self.noteSpotlight.memoryLoadSucceeded()
+                    break
+                }
+            }
         }
     }
 }
