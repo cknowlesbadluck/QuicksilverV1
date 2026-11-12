@@ -15,6 +15,13 @@ final class NoteSpotlightRegressionTests: XCTestCase {
         XCTAssertEqual(surface.memoryNotes().map(\.value), ["visible note"])
     }
 
+    func testSavedNotesIgnoreActiveAspectSnapshotRetentionFiltering() {
+        let note = MemoryItem(key: "note.legacy", category: .preference, value: "legacy saved note")
+        let surface = RegressionNotesSurface(items: [note])
+        surface.snapshotOverride = []
+        XCTAssertEqual(surface.memoryNotes().map(\\.value), ["legacy saved note"])
+    }
+
     func testConversationOnlyMemoryUpdateDoesNotRebuildSpotlightIndex() async throws {
         let flags = FeatureFlags(defaults: UserDefaults(suiteName: "NoteSpotlightRegression.\(UUID().uuidString)") ?? .standard)
         let index = RegressionNoteIndex()
@@ -55,7 +62,8 @@ private final class RegressionNotesSurface: IntelligenceSurface {
     init(items: [MemoryItem]) { self.items = items }
     func ask(_ query: String) async throws -> String { "" }
     func remember(_ content: String) async {}
-    func snapshot(limit: Int) -> [MemoryItem] { Array(items.prefix(limit)) }
+    func snapshot(limit: Int) -> [MemoryItem] { Array((snapshotOverride ?? items).prefix(limit)) }
+    func noteSnapshot(limit: Int) -> [MemoryItem] { Array(items.prefix(limit)) }
     func switchAspect(to aspect: Aspect) async throws {}
     func statusReport() throws -> String { "" }
 }
