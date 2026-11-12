@@ -24,6 +24,7 @@ final class DependencyContainer {
     let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
     @ObservationIgnored private var memoryLoadRetryTask: Task<Void, Never>?
+    @ObservationIgnored private var memoryIndexSyncStarted = false
 
     /// Spotlight opt-in for saved notes (off by default; M3.5-T9).
     @ObservationIgnored lazy var noteSpotlight = NoteSpotlightSync(
@@ -107,15 +108,25 @@ final class DependencyContainer {
         Task { [weak self] in
             guard let self else { return }
             await self.memoryManager.load()
-            self.brain.startMemoryIndexSync()
             self.noteSpotlight.follow(self.eventBus)
             // Never replace a valid Spotlight index with an empty snapshot after a failed read.
             if self.memoryManager.lastFailure == .load {
                 await self.retrySpotlightMemoryLoad()
             } else {
-                await self.noteSpotlight.memoryDidLoad()
+                await self.memoryLoadDidSucceed()
             }
         }
+    }
+
+    /// Complete memory-load-dependent indexes exactly once, including recovery paths.
+    func memoryLoadDidSucceed() async {
+        memoryLoadRetryTask?.cancel()
+        memoryLoadRetryTask = nil
+        if !memoryIndexSyncStarted {
+            brain.startMemoryIndexSync()
+            memoryIndexSyncStarted = true
+        }
+        await noteSpotlight.memoryLoadSucceeded()
     }
 
     /// Reopen the Spotlight readiness gate after a transient initial memory-store failure.
@@ -132,7 +143,7 @@ final class DependencyContainer {
                 guard !Task.isCancelled, let self, !self.noteSpotlight.isMemoryReady else { return }
                 await self.memoryManager.load()
                 if self.memoryManager.lastFailure != .load {
-                    await self.noteSpotlight.memoryLoadSucceeded()
+                    await self.memoryLoadDidSucceed()
                     return
                 }
             }
