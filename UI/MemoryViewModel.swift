@@ -34,7 +34,7 @@ final class MemoryViewModel {
         await container.memoryManager.load()
         guard !Task.isCancelled else { return }
         if container.memoryManager.lastFailure != .load {
-            await container.noteSpotlight.memoryLoadSucceeded()
+            await container.memoryLoadDidSucceed()
         }
         guard !Task.isCancelled else { return }
 
