@@ -2,34 +2,37 @@ import CoreSpotlight
 import Foundation
 import Core
 
-/// Where saved notes are indexed for system search. Internal: only the app's own CoreSpotlight
-/// index and test fakes conform, so no other module can receive note text through it.
 protocol NoteSearchIndexing: Sendable {
     func replaceAll(with notes: [MemoryEntity]) async throws
     func removeAll() async throws
 }
 
-/// Spotlight opt-in for saved notes (M3.5-T9). **Off by default.** Only notes (never chat turns)
-/// are indexed, only while the user has opted in, and turning it off removes every indexed note.
 @available(iOS 17.0, macOS 14.0, *)
 @MainActor
 public final class NoteSpotlightSync {
     public static let flagKey = "spotlightNotesEnabled"
-    /// Upper bound on indexed notes, so a large memory never floods Spotlight.
     public static let maxIndexed = 200
+
+    private struct IndexedNote: Equatable {
+        let id: UUID
+        let text: String
+        let savedAt: Date
+        init(_ note: MemoryEntity) {
+            id = note.id
+            text = note.text
+            savedAt = note.savedAt
+        }
+    }
 
     private let flags: FeatureFlags
     private let index: NoteSearchIndexing
     private let notes: () -> [MemoryItem]
-    /// False until the first memory load finishes (production). While false an enabled sync
-    /// is skipped, so an empty, not-yet-loaded snapshot never replaces the index.
     private var memoryReady: Bool
-    /// Tail of the serialized reconcile chain (see `sync()`).
     private var queue: Task<Void, Never>?
     private var followTask: Task<Void, Never>?
+    /// Last successfully indexed note snapshot. nil forces the first opted-in sync.
+    private var lastIndexedSnapshot: [IndexedNote]?
     public private(set) var lastError: Error?
-    /// True when the user turned Spotlight off but removing indexed notes failed. The UI must
-    /// say so; the next sync (app activation, memory change or toggle) retries the removal.
     public private(set) var removalFailed = false
 
     init(
@@ -44,7 +47,6 @@ public final class NoteSpotlightSync {
         self.notes = notes
     }
 
-    /// Production wiring: CoreSpotlight, with notes only from `IntelligenceSurface.memoryNotes`.
     public convenience init(
         flags: FeatureFlags,
         surface: IntelligenceSurface,
@@ -71,23 +73,18 @@ public final class NoteSpotlightSync {
         await sync()
     }
 
-    /// Call once the initial memory load has finished, then the index is reconciled.
     public func memoryDidLoad() async {
         memoryReady = true
         await sync()
     }
 
-    /// A later successful load (for example the Archive retrying after a failed cold-launch load)
-    /// releases the gate once. It does nothing when memory is already ready, so opening the Archive
-    /// doesn't trigger a reconcile every time.
     public func memoryLoadSucceeded() async {
         guard !memoryReady else { return }
         await memoryDidLoad()
     }
 
-    /// Re-syncs after every note save, edit or delete while opted in, so a deleted note does
-    /// not linger in Spotlight until the next app activation. After a failed opt-out it
-    /// retries the removal on the next memory change.
+    /// Conversation updates are ignored unless the saved-note snapshot actually changed.
+    /// Snapshot comparison still detects edits, additions and deletions.
     public func follow(_ eventBus: EventBus) {
         followTask?.cancel()
         followTask = Task { [weak self] in
@@ -97,15 +94,11 @@ public final class NoteSpotlightSync {
             }
             for await _ in stream {
                 guard !Task.isCancelled, let self else { break }
-                // Also retry a failed opt-out removal, as `removalFailed` documents.
                 if self.isEnabled || self.removalFailed { await self.sync() }
             }
         }
     }
 
-    /// Brings the index in line with the flag. Never throws; the last failure is kept for the UI.
-    /// Calls are serialized and each one reads the flag when it runs, so a fast on → off can
-    /// never finish with notes still indexed.
     public func sync() async {
         let previous = queue
         let task = Task { [weak self] in
@@ -121,9 +114,18 @@ public final class NoteSpotlightSync {
         if enabled && !memoryReady { return }
         do {
             if enabled {
-                try await index.replaceAll(with: notes().prefix(Self.maxIndexed).map(MemoryEntity.init))
+                let entities = notes().prefix(Self.maxIndexed).map(MemoryEntity.init)
+                let snapshot = entities.map(IndexedNote.init)
+                guard snapshot != lastIndexedSnapshot else {
+                    lastError = nil
+                    removalFailed = false
+                    return
+                }
+                try await index.replaceAll(with: entities)
+                lastIndexedSnapshot = snapshot
             } else {
                 try await index.removeAll()
+                lastIndexedSnapshot = nil
             }
             lastError = nil
             removalFailed = false
@@ -134,7 +136,6 @@ public final class NoteSpotlightSync {
     }
 }
 
-/// CoreSpotlight-backed index. Items live in one domain so opt-out can remove them all at once.
 @available(iOS 17.0, macOS 14.0, *)
 struct CoreSpotlightNoteIndex: NoteSearchIndexing {
     static let domain = "com.quicksilver.notes"
@@ -160,9 +161,6 @@ struct CoreSpotlightNoteIndex: NoteSearchIndexing {
     }
 }
 
-/// Routes a Spotlight result tap back to its note. Only `CSSearchableItemActionType` activities
-/// carrying a UUID identifier are accepted, because the index only ever holds note IDs (see
-/// `CoreSpotlightNoteIndex`), so anything else is ignored.
 public enum NoteSpotlightRoute {
     public static func noteID(from activity: NSUserActivity) -> UUID? {
         guard activity.activityType == CSSearchableItemActionType,
