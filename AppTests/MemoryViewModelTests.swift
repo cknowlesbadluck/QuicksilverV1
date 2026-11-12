@@ -40,14 +40,16 @@ final class MemoryViewModelTests: XCTestCase {
         await container.memoryManager.set(
             key: "note.spotlight-target",
             value: "Saved note outside the active aspect scope",
-            category: .preference,
-            importanceBoost: 0.01,
+            category: .temporary,
+            importanceBoost: 0.1,
             personaScope: "forge"
         )
         let targetID = try XCTUnwrap(
             container.memoryManager.items(matching: MemoryQuery()).first(where: { $0.key == "note.spotlight-target" })?.id
         )
         let vm = MemoryViewModel(container: container)
+        await vm.load()
+        XCTAssertFalse(vm.items.contains(where: { $0.id == targetID }), "fixture must be hidden by the active retention threshold")
         await vm.load(focusing: targetID)
         XCTAssertTrue(vm.items.contains(where: { $0.id == targetID }))
 
