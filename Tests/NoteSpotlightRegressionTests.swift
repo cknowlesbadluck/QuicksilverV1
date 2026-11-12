@@ -42,6 +42,28 @@ final class NoteSpotlightRegressionTests: XCTestCase {
         XCTAssertEqual(index.replaceCount, 1, "conversation updates must not rewrite the notes-only Spotlight index")
     }
 
+    func testFailedReplacementInvalidatesThePreviouslyIndexedSnapshot() async {
+        let flags = FeatureFlags(defaults: UserDefaults(suiteName: "NoteSpotlightRegression.\(UUID().uuidString)") ?? .standard)
+        let index = RegressionNoteIndex()
+        let surface = RegressionNotesSurface(items: [
+            MemoryItem(key: "note.saved", category: .preference, value: "snapshot A")
+        ])
+        let sync = NoteSpotlightSync(flags: flags, index: index, surface: surface)
+        await sync.setEnabled(true)
+        XCTAssertEqual(index.replaceCount, 1)
+
+        surface.items = [MemoryItem(key: "note.saved", category: .preference, value: "snapshot B")]
+        index.failNextReplacement()
+        await sync.sync()
+        XCTAssertEqual(index.replaceCount, 2)
+        XCTAssertNotNil(sync.lastError)
+
+        surface.items = [MemoryItem(key: "note.saved", category: .preference, value: "snapshot A")]
+        await sync.sync()
+        XCTAssertEqual(index.replaceCount, 3, "an uncertain index must be rebuilt even if notes return to the last successful snapshot")
+        XCTAssertNil(sync.lastError)
+    }
+
     func testChangedNoteSnapshotIsReindexed() async {
         let flags = FeatureFlags(defaults: UserDefaults(suiteName: "NoteSpotlightRegression.\(UUID().uuidString)") ?? .standard)
         let index = RegressionNoteIndex()
@@ -72,7 +94,17 @@ private final class RegressionNotesSurface: IntelligenceSurface {
 @available(iOS 17.0, macOS 14.0, *)
 private final class RegressionNoteIndex: NoteSearchIndexing {
     private let count = Mutex(0)
+    private let failures = Mutex(0)
     var replaceCount: Int { count.withLock { $0 } }
-    func replaceAll(with notes: [MemoryEntity]) async throws { count.withLock { $0 += 1 } }
+    func failNextReplacement() { failures.withLock { $0 += 1 } }
+    func replaceAll(with notes: [MemoryEntity]) async throws {
+        count.withLock { $0 += 1 }
+        let shouldFail = failures.withLock { value in
+            guard value > 0 else { return false }
+            value -= 1
+            return true
+        }
+        if shouldFail { throw NSError(domain: "SpotlightTest", code: 1) }
+    }
     func removeAll() async throws {}
 }
