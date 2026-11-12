@@ -34,7 +34,11 @@ final class DependencyContainerTests: XCTestCase {
         XCTAssertEqual(initialLoadAttempts, 1)
         XCTAssertFalse(container.noteSpotlight.isMemoryReady)
 
-        await container.brain.remember("Spotlight retry after transient store failure")
+        await container.memoryManager.set(
+            key: "note.retry",
+            value: "Spotlight retry after transient store failure",
+            category: .preference
+        )
         for _ in 0..<100 where !container.noteSpotlight.isMemoryReady {
             try await Task.sleep(nanoseconds: 50_000_000)
         }
