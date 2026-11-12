@@ -28,9 +28,11 @@ final class MemoryViewModel {
     func load(focusing focusedID: UUID? = nil) async {
         isLoading = true
         await container.memoryManager.load()
+        guard !Task.isCancelled else { return }
         if container.memoryManager.lastFailure != .load {
             await container.noteSpotlight.memoryLoadSucceeded()
         }
+        guard !Task.isCancelled else { return }
 
         let personaID = container.personaManager.activePersonaID
         let policy = container.personaManager.activeMemoryPolicy
