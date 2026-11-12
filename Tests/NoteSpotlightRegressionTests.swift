@@ -1,3 +1,4 @@
+import Synchronization
 import XCTest
 @testable import Core
 @testable import QuicksilverIntents
@@ -33,10 +34,24 @@ final class NoteSpotlightRegressionTests: XCTestCase {
 
         XCTAssertEqual(index.replaceCount, 1, "conversation updates must not rewrite the notes-only Spotlight index")
     }
+
+    func testChangedNoteSnapshotIsReindexed() async {
+        let flags = FeatureFlags(defaults: UserDefaults(suiteName: "NoteSpotlightRegression.\(UUID().uuidString)") ?? .standard)
+        let index = RegressionNoteIndex()
+        let surface = RegressionNotesSurface(items: [
+            MemoryItem(key: "note.saved", category: .preference, value: "first version")
+        ])
+        let sync = NoteSpotlightSync(flags: flags, index: index, surface: surface)
+        await sync.setEnabled(true)
+        surface.items = [MemoryItem(key: "note.saved", category: .preference, value: "edited version")]
+        await sync.sync()
+        XCTAssertEqual(index.replaceCount, 2, "edits and deletions must invalidate the indexed snapshot")
+    }
 }
 
+@MainActor
 private final class RegressionNotesSurface: IntelligenceSurface {
-    let items: [MemoryItem]
+    var items: [MemoryItem]
     init(items: [MemoryItem]) { self.items = items }
     func ask(_ query: String) async throws -> String { "" }
     func remember(_ content: String) async {}
@@ -47,7 +62,8 @@ private final class RegressionNotesSurface: IntelligenceSurface {
 
 @available(iOS 17.0, macOS 14.0, *)
 private final class RegressionNoteIndex: NoteSearchIndexing {
-    private(set) var replaceCount = 0
-    func replaceAll(with notes: [MemoryEntity]) async throws { replaceCount += 1 }
+    private let count = Mutex(0)
+    var replaceCount: Int { count.withLock { $0 } }
+    func replaceAll(with notes: [MemoryEntity]) async throws { count.withLock { $0 += 1 } }
     func removeAll() async throws {}
 }
