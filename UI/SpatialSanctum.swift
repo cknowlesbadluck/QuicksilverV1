@@ -372,7 +372,7 @@ private struct SpatialPortalButton: View {
                     .font(.caption.weight(.semibold))
                     // mercuryBright + semibold: with the Ask sheet truly dismissed the audit failed
                     // contrast on "Workshop" every run in regular weight, either color (PR #403).
-                    .foregroundStyle(PersonaTheme.mercuryBright)
+                    .foregroundStyle(PersonaTheme.readableText)
                     .multilineTextAlignment(.center)
                     // Wrap rather than lineLimit(1) + minimumScaleFactor: semibold under a one-line
                     // limit tripped "Text clipped" (PR #403); the subtitle already wraps this way.
