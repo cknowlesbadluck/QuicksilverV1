@@ -67,6 +67,7 @@ public final class NoteSpotlightSync {
     }
 
     public var isEnabled: Bool { flags.isEnabled(Self.flagKey) }
+    public var isMemoryReady: Bool { memoryReady }
 
     public func setEnabled(_ enabled: Bool) async {
         flags.set(Self.flagKey, enabled: enabled)
