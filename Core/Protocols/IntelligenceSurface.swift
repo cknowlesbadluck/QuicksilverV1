@@ -33,14 +33,13 @@ extension IntelligenceSurface {
 // MARK: - Memory notes for App Intents (M3.5-T11)
 
 extension IntelligenceSurface {
-    /// User notes only (keys `note.*`, which includes "remember …"). Conversation turns
+    /// User notes only (keys `note.*`, which includes "remember …"). Conversation
     /// and system items are never exposed to Shortcuts, Siri or Spotlight.
-    /// Filters the whole ranked memory *before* applying `limit`, so a store full of
-    /// conversation turns can't push notes out of the window.
+    /// Filters the whole ranked memory before applying limit.
     public func memoryNotes(matching query: String? = nil, limit: Int = 20) -> [MemoryItem] {
         let needle = query?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
         return snapshot(limit: .max)
-            .filter { $0.key.hasPrefix("note.") && $0.category != .conversation }
+            .filter { $0.key.hasPrefix("note.") && $0.category != .conversation && $0.category != .system }
             .filter { needle.isEmpty || $0.value.lowercased().contains(needle) }
             .prefix(limit)
             .map { $0 }
