@@ -108,15 +108,19 @@ public final class MemoryManager {
         return effective.apply(to: items)
     }
 
-    public func delete(id: UUID) async {
+    /// Deletes one item and reports persistence success so the UI can preserve focus on failure.
+    @discardableResult
+    public func delete(id: UUID) async -> Bool {
         do {
             try await store.delete(id: id)
             items.removeAll { $0.id == id }
             if lastFailure == .delete { lastFailure = nil }
             await eventBus.publish(.memoryDidUpdate(itemID: id.uuidString))
+            return true
         } catch {
             lastFailure = .delete
             logger.error("Failed to delete memory item: \(error.localizedDescription)", category: logger.memory)
+            return false
         }
     }
 
