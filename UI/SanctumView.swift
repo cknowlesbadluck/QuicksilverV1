@@ -1,5 +1,7 @@
+import CoreSpotlight
 import SwiftUI
 import Core
+import QuicksilverIntents
 
 /// The Sanctum — Quicksilver's spatial home.
 ///
@@ -10,6 +12,10 @@ struct SanctumView: View {
     @State private var viewModel: SanctumViewModel?
     @State private var destination: SpatialDestination?
     @State private var showAsk = false
+    /// Set by a Spotlight result tap, so the Archive opens scrolled to that note.
+    @State private var focusedNoteID: UUID?
+    /// Changes for every accepted Spotlight activity, including repeated taps on one note.
+    @State private var focusRequestID = UUID()
 
     var body: some View {
         Group {
@@ -40,8 +46,6 @@ struct SanctumView: View {
             NavigationStack {
                 AskView()
                     .toolbar {
-                        // Explicit close: a swipe can be eaten by the keyboard, and VoiceOver
-                        // and Switch Control users need a visible way out.
                         ToolbarItem(placement: .cancellationAction) {
                             Button("Close") { showAsk = false }
                                 .accessibilityIdentifier("ask.close")
@@ -52,6 +56,16 @@ struct SanctumView: View {
         }
         .fullScreenCover(item: $destination) { selected in
             destinationView(selected)
+        }
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let id = NoteSpotlightRoute.noteID(from: activity) else { return }
+            showAsk = false
+            focusedNoteID = id
+            focusRequestID = UUID()
+            destination = .archive
+        }
+        .onChange(of: destination) { _, new in
+            if new != .archive { focusedNoteID = nil }
         }
     }
 
@@ -65,7 +79,7 @@ struct SanctumView: View {
             switch selected {
             case .workshop: ForgeView()
             case .planetarium: EternalView()
-            case .archive: MemoryView()
+            case .archive: MemoryView(focusedNoteID: focusedNoteID, focusRequestID: focusRequestID)
             case .codex: CodexView()
             case .diagnostics: DiagnosticsView()
             }
