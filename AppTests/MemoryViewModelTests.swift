@@ -147,13 +147,13 @@ private actor TestMemoryStore: MemoryStore {
     private enum Failure: Error { case delete }
     private var items: [MemoryItem] = []
     private var failDeletes = false
-    private var delayNextLoad = false
+    private var shouldDelayNextLoad = false
     private var loads = 0
 
     func loadAll() async throws -> [MemoryItem] {
         loads += 1
-        if delayNextLoad {
-            delayNextLoad = false
+        if shouldDelayNextLoad {
+            shouldDelayNextLoad = false
             try await Task.sleep(nanoseconds: 5_000_000_000)
         }
         return items
@@ -178,6 +178,6 @@ private actor TestMemoryStore: MemoryStore {
     }
 
     func setDeleteFailures(_ enabled: Bool) { failDeletes = enabled }
-    func delayNextLoad() { delayNextLoad = true }
+    func delayNextLoad() { shouldDelayNextLoad = true }
     func loadCount() -> Int { loads }
 }
