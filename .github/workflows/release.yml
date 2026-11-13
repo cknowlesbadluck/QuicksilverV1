@@ -78,11 +78,19 @@ jobs:
 
           APP_PATH=$(find DerivedData -name "Quicksilver.app" -type d | head -n 1)
           test -n "$APP_PATH"
+
+          # Fail the release if the asset catalog did not compile the configured app icon.
+          test -s "$APP_PATH/Assets.car"
+          ICON_NAME=$(plutil -extract CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName raw -o - "$APP_PATH/Info.plist")
+          test "$ICON_NAME" = "AppIcon"
+
           mkdir -p build/Payload
           cp -R "$APP_PATH" build/Payload/
           (cd build && zip -r Quicksilver-unsigned.ipa Payload)
           ls -lh build/Quicksilver-unsigned.ipa
           unzip -l build/Quicksilver-unsigned.ipa | grep -q "Payload/Quicksilver.app"
+          unzip -l build/Quicksilver-unsigned.ipa | grep -q "Payload/Quicksilver.app/Assets.car"
+          unzip -l build/Quicksilver-unsigned.ipa | grep -q "Payload/Quicksilver.app/Info.plist"
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/') && inputs.dry_run != true
