@@ -37,19 +37,20 @@ final class MemoryViewModelTests: XCTestCase {
 
     func testSpotlightFocusSurvivesUnrelatedArchiveReloads() async throws {
         let container = try ViewModelTestSupport.makeContainer(provider: nil, testCase: self)
+        try await container.personaManager.switchTo(id: "forge")
         await container.memoryManager.set(
             key: "note.spotlight-target",
             value: "Saved note outside the active aspect scope",
-            category: .temporary,
+            category: .preference,
             importanceBoost: 0.1,
-            personaScope: "forge"
+            personaScope: "quicksilver"
         )
         let targetID = try XCTUnwrap(
             container.memoryManager.items(matching: MemoryQuery()).first(where: { $0.key == "note.spotlight-target" })?.id
         )
         let vm = MemoryViewModel(container: container)
         await vm.load()
-        XCTAssertFalse(vm.items.contains(where: { $0.id == targetID }), "fixture must be hidden by the active retention threshold")
+        XCTAssertFalse(vm.items.contains(where: { $0.id == targetID }), "fixture must be hidden by the active aspect scope")
         await vm.load(focusing: targetID)
         XCTAssertTrue(vm.items.contains(where: { $0.id == targetID }))
 
