@@ -96,7 +96,7 @@ final class MemoryViewModelTests: XCTestCase {
         XCTAssertEqual(vm.statusMessage, "Unable to clear all memories")
     }
 
-    func testCancelledLoadClearsLoadingStateWithoutStompingNewerLoad() async throws {
+    func testCancelledLoadClearsLoadingState() async throws {
         let store = TestMemoryStore()
         let container = try makeContainer(memoryStore: store)
         for _ in 0..<100 where !container.noteSpotlight.isMemoryReady {
