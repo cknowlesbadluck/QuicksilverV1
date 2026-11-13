@@ -42,7 +42,7 @@ Main commit: `0adba9d2aa8ac546900fff07ebfa2bcc0d15ae1d`.
 - PR #418 merged the current-main Dynamic Type/accessibility follow-up. Superseded PR #373 is closed.
 
 **Open repository work:**
-- PR #416: opt-in Spotlight indexing for saved notes. Remains unmerged and requires PR CI plus physical-device verification.
+- PR #416: opt-in Spotlight indexing for saved notes. Its current head includes follow-up fixes for note filtering, snapshot-based sync, focus tokens, indexing error visibility, early event subscription and failed-delete focus preservation. Existing checks passed on a stale base; it still requires a fresh full CI run and final review reconciliation before merge.
 - PR #419: SHA-pin the four third-party action references in `.github/workflows/release.yml`. Issue #250 remains open until merge and verification.
 - PR #420: this roadmap reconciliation.
 
@@ -68,12 +68,14 @@ Main commit: `0adba9d2aa8ac546900fff07ebfa2bcc0d15ae1d`.
 
 ## Milestone 2 — Complete the intelligence engine
 
-**Status: core architecture and foundations present; end-to-end behavior still needs focused validation.**
+**Status: architecture and deterministic planner are implemented on main; integrated privacy validation remains open.**
 
 - [x] MercuryBrain is the central intelligence surface and owns VisualState.
 - [x] Provider abstraction and IntelligenceBroker exist.
 - [x] Context-based aspect policy, dwell/hysteresis, and persistence exist.
 - [x] Deterministic note recall can answer high-confidence saved-note questions locally without a model call.
+- [x] M3.5-T19 local deterministic `needsCloud` planner is implemented in `Services/AI/CloudContextPolicy+Planner.swift`; `CloudPlannerTests.swift` covers core eligible/local cases, determinism and fallback gating. This is implementation-complete, not a claim that the privacy classifier is exhaustive.
+- [ ] Expand and validate the cloud-planner privacy corpus across multilingual, ambiguous, indirect, quoted, code, structured-identifier and mixed-history inputs; preserve fail-closed behavior when uncertain.
 - [ ] Exercise multi-turn conversation history, query-aware retrieval, ranking, retention, deletion, and relaunch persistence as integrated user flows.
 - [ ] Validate provider selection, unavailable-provider handling, cancellation, timeout, rate limits, and fallback without leaking secrets or private memory.
 - [ ] Validate offline/keyless behavior and confirm local failure never silently routes private context to cloud.
