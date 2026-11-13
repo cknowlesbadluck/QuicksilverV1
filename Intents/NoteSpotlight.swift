@@ -86,13 +86,14 @@ public final class NoteSpotlightSync {
 
     /// Conversation updates are ignored unless the saved-note snapshot actually changed.
     /// Snapshot comparison still detects edits, additions and deletions.
-    public func follow(_ eventBus: EventBus) {
+    /// Registers the event stream before returning, so the caller can safely open the memory-ready gate.
+    public func follow(_ eventBus: EventBus) async {
         followTask?.cancel()
+        let stream = await eventBus.events(bufferingNewest: 1) { event in
+            if case .memoryDidUpdate = event { return true }
+            return false
+        }
         followTask = Task { [weak self] in
-            let stream = await eventBus.events(bufferingNewest: 1) { event in
-                if case .memoryDidUpdate = event { return true }
-                return false
-            }
             for await _ in stream {
                 guard !Task.isCancelled, let self else { break }
                 if self.isEnabled || self.removalFailed { await self.sync() }
