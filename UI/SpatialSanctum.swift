@@ -96,30 +96,30 @@ struct SpatialSanctum: View {
 
                 spatialArchitecture(in: proxy.size)
 
-                VStack(spacing: 0) {
-                    topPresence
-                    Spacer()
-
-                    QuicksilverPresenceView(
-                        personaID: activeAspect.rawValue,
-                        livingStatus: livingStatus,
-                        visualState: visualState
-                    )
-                    .frame(minWidth: 44, minHeight: 44)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onInvoke() }
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityLabel("Speak with Quicksilver")
-
-                    Spacer()
-                    navigationPrompt(maxHeight: proxy.size.height * 0.5)
+                if needsScrolling {
+                    ScrollView {
+                        VStack(spacing: PersonaTheme.sanctumAccessibilityStackSpacing) {
+                            topPresence
+                            presence
+                            navigationPrompt(maxHeight: proxy.size.height * 0.5)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        topPresence
+                        Spacer()
+                        presence
+                        Spacer()
+                        navigationPrompt(maxHeight: proxy.size.height * 0.5)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 18)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 18)
 
-                if showGreeting {
+                if showGreeting && !needsScrolling {
                     greeting
                         .frame(maxWidth: proxy.size.width - 36)
                         // No fade when motion is frozen (Reduce Motion / -uitest): a half-faded
@@ -171,36 +171,39 @@ struct SpatialSanctum: View {
     /// middot and IDLE label still audited as StaticText (contrast on `\u{00B7}`,
     /// Dynamic Type on caption2). Same collapse SpatialPortalButton already uses.
     private var headerIdentity: some View {
-        // Stack vertically at accessibility sizes so "SANCTUM" and the state label get the
-        // full row width; side by side they were flagged "Text clipped" (PR #403).
-        let layout = dynamicTypeSize.isAccessibilitySize
-            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 4))
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: PersonaTheme.sanctumHeaderStackSpacing))
             : AnyLayout(HStackLayout(spacing: 8))
         return layout {
-            Circle()
-                .fill(accent)
-                .frame(width: 7, height: 7)
-                .shadow(color: accent.opacity(0.8), radius: 4)
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(accent)
+                    .frame(width: 7, height: 7)
+                    .shadow(color: accent.opacity(0.8), radius: 4)
 
-            Text("SANCTUM")
-                .font(.caption.weight(.semibold))
-                .tracking(1.6)
-                .foregroundStyle(PersonaTheme.readableText)
+                Text("SANCTUM")
+                    .font(.caption.weight(.semibold))
+                    .tracking(1.6)
+                    .foregroundStyle(PersonaTheme.readableText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
-            // A shape, not Text("\u{00B7}"): a 4 pt glyph still surfaced to the audit as
-            // StaticText and failed contrast intermittently, even inside the collapsed element.
-            Circle()
-                .fill(PersonaTheme.readableText)
-                .frame(width: 3, height: 3)
-                .accessibilityHidden(true)
+            if !stacked {
+                // A shape, not a text glyph: keep it out of the accessibility tree.
+                Circle()
+                    .fill(PersonaTheme.readableText)
+                    .frame(width: 3, height: 3)
+                    .accessibilityHidden(true)
+            }
 
             Text(visualState.rawValue.uppercased())
                 .font(.caption.weight(.medium))
                 .foregroundStyle(PersonaTheme.readableSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        // The audit intermittently flagged this element's caption-height frame as a too-small
-        // hit area (#278 logging). Give it the 44 pt minimum and mark it a header, not a control.
         .frame(minHeight: 44)
+        .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isHeader)
         .accessibilityLabel("Quicksilver's Sanctum, \(visualState.rawValue)")
@@ -247,15 +250,38 @@ struct SpatialSanctum: View {
         return "What are we getting into?"
     }
 
+    private var needsScrolling: Bool { dynamicTypeSize >= .xxLarge }
+
+    private var portalColumns: Int {
+        if dynamicTypeSize >= .accessibility2 { return 1 }
+        if dynamicTypeSize >= .xLarge { return 2 }
+        return 3
+    }
+
+    private var presence: some View {
+        QuicksilverPresenceView(
+            personaID: activeAspect.rawValue,
+            livingStatus: livingStatus,
+            visualState: visualState
+        )
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
+        .onTapGesture { onInvoke() }
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("Speak with Quicksilver")
+    }
+
     @ViewBuilder
     private func navigationPrompt(maxHeight: CGFloat) -> some View {
-        if dynamicTypeSize.isAccessibilitySize {
-            // A single column of large portals is taller than the screen, so it scrolls.
-            ScrollView(.vertical) { portalGrid(columnCount: 1) }
+        if needsScrolling {
+            portalGrid(columnCount: portalColumns)
+        } else if dynamicTypeSize.isAccessibilitySize {
+            ScrollView(.vertical) { portalGrid(columnCount: portalColumns) }
                 .frame(maxHeight: maxHeight)
                 .scrollBounceBehavior(.basedOnSize)
         } else {
-            portalGrid(columnCount: 3)
+            portalGrid(columnCount: portalColumns)
         }
     }
 
@@ -346,7 +372,7 @@ private struct SpatialPortalButton: View {
                     .font(.caption.weight(.semibold))
                     // mercuryBright + semibold: with the Ask sheet truly dismissed the audit failed
                     // contrast on "Workshop" every run in regular weight, either color (PR #403).
-                    .foregroundStyle(PersonaTheme.mercuryBright)
+                    .foregroundStyle(PersonaTheme.readableText)
                     .multilineTextAlignment(.center)
                     // Wrap rather than lineLimit(1) + minimumScaleFactor: semibold under a one-line
                     // limit tripped "Text clipped" (PR #403); the subtitle already wraps this way.

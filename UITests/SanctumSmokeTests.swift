@@ -71,7 +71,7 @@ final class SanctumSmokeTests: XCTestCase {
         XCTAssertTrue(invoke.waitForExistence(timeout: 8))
         invoke.tap()
         XCTAssertTrue(app.navigationBars["Ask"].waitForExistence(timeout: 8))
-        app.swipeDown()
+        dismissAsk()
         XCTAssertTrue(app.buttons["The Workshop"].waitForExistence(timeout: 8))
     }
 
@@ -122,16 +122,7 @@ final class SanctumSmokeTests: XCTestCase {
     /// out. Audit only once the sheet is gone, the portal is hittable, and its frame
     /// has stopped moving. This changes timing only; every audit issue still fails.
     private func waitForSanctumSettled() {
-        let ask = app.navigationBars["Ask"]
-        // A center swipeDown() lands in Ask's scroll content and often leaves the sheet up
-        // (PR #403 run 40238397386). Drag the sheet by its navigation bar instead.
-        for _ in 0..<3 where ask.exists {
-            let start = ask.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            let end = app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
-            start.press(forDuration: 0.1, thenDragTo: end)
-            _ = waitForAbsence(of: ask, timeout: 5)
-        }
-        XCTAssertTrue(waitForAbsence(of: ask, timeout: 5), "Ask sheet still presented before audit")
+        dismissAsk()
 
         let portal = app.buttons["The Workshop"]
         let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: portal)
@@ -211,4 +202,17 @@ final class SanctumSmokeTests: XCTestCase {
             app.buttons["Done"].tap()
         }
     }
+    /// Prefer the visible, accessible close control; swipe gestures can be intercepted by the keyboard.
+    private func dismissAsk() {
+        let ask = app.navigationBars["Ask"]
+        guard ask.exists else { return }
+        let close = app.buttons["ask.close"]
+        if close.waitForExistence(timeout: 3) {
+            close.tap()
+        } else {
+            ask.swipeDown(velocity: .fast)
+        }
+        XCTAssertTrue(ask.waitForNonExistence(timeout: 5), "Ask sheet did not dismiss")
+    }
+
 }
