@@ -33,7 +33,7 @@ final class NoteSpotlightRegressionTests: XCTestCase {
         XCTAssertEqual(index.replaceCount, 1)
 
         let bus = EventBus()
-        sync.follow(bus)
+        await sync.follow(bus)
         for _ in 0..<10 {
             await bus.publish(.memoryDidUpdate(itemID: "chat.turn"))
             try await Task.sleep(nanoseconds: 10_000_000)
