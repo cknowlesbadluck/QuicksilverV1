@@ -90,7 +90,7 @@ final class NoteSpotlightTests: XCTestCase {
         let sync = NoteSpotlightSync(flags: flags, index: index, surface: surface)
         await sync.setEnabled(true)
         let bus = EventBus()
-        sync.follow(bus)
+        await sync.follow(bus)
         surface.items[0].value = "Updated saved note"
         for _ in 0..<200 where index.calls.count < 2 {
             await bus.publish(.memoryDidUpdate(itemID: "note.1"))
@@ -106,7 +106,7 @@ final class NoteSpotlightTests: XCTestCase {
         await sync.setEnabled(false)
         XCTAssertTrue(sync.removalFailed)
         let bus = EventBus()
-        sync.follow(bus)
+        await sync.follow(bus)
         for _ in 0..<200 where sync.removalFailed {
             await bus.publish(.memoryDidUpdate(itemID: "note.1"))
             try await Task.sleep(nanoseconds: 10_000_000)
