@@ -37,7 +37,7 @@ These five moments are what make Mercury recognisable. They are moments, not ges
 |---|---|---|---|---|
 | 1 | **Summoned from anywhere** | Press the Action button (or Control, Siri, widget, Spotlight). Mercury opens *already listening*, the core gathers from a still puddle into a bead with one quick silver snap, and a time-aware line appears ("It's late. I'm judging. Quietly."). | Zero-tap voice entry; the Action button works with an App Shortcut, so no extension is needed. | The entrance is his: sly, quick, a little smug. |
 | 2 | **The inscription** | The answer streams in as a clean document. The headline or recommendation appears first and biggest. Code blocks have Copy; sources are chips; tool results are cards. A Stop control sits where the send button was. | ChatGPT-grade answer surface: markdown blocks, code, lists, tables, sources, cards, stop, copy, share, select. | Per-aspect entrance: open *flicks* in crisply, Forge's headline *scrambles and snaps* into place, Eternal *fades in slowly like starlight*. Only the first block performs; the rest just appear. |
-| 3 | **Shift, then snap** | Ask a build question and a small chip appears by the core: "Forge · this is a build problem". The core heats from silver to molten green, jitters while it thinks, then snaps to a crisp lattice as the answer lands with one clean tap. Tap the chip to pin or undo. | Aspects shift automatically with a *visible reason*, and you can pin one for a thread (Auto / Quicksilver / Forge / Eternal). | Controlled chaos in one second: chaos, then a precise landing (bible §5.6). |
+| 3 | **Shift, then snap** | Ask a build question and a small informational chip appears by the core: "Forge · this is a build problem". The core heats from silver to molten green, jitters while it thinks, then snaps to a crisp lattice as the answer lands with one clean tap. The chip explains the Brain's decision; it is not interactive. | Aspects shift automatically with a *visible reason*. The Brain alone chooses the aspect from context; users cannot select, pin, or override it. | Controlled chaos in one second: chaos, then a precise landing (bible §5.6). |
 | 4 | **Receipts** | When Mercury uses a memory, the answer shows a small citation chip: "From your note, Tue 15th". Tap it and the memory opens in the Archive, where you can edit or forget it. | Memory you can see, verify and fix. Threads and memories are searchable, and optionally show up in Spotlight. | Eternal's exact recall ("So it was decided. Tuesday."), made trustworthy. |
 | 5 | **The mask slip** | You say something heavy. The core stops moving, colours settle to warm hearth silver, haptics go silent, and the words turn plain. | Safety, and trust in an assistant with an edge. | The stillness *is* the signal: someone is paying attention (bible §4.3). |
 
@@ -53,9 +53,9 @@ All gestures are standard iOS. There's no hidden or playful gesture. Each one ha
 | **Speak** | Hold the mic in the composer (hold-to-talk), or tap once for hands-free mode, which ends on a pause; Siri | Listening state; live transcript shown in the composer; release sends; slide left to cancel | Core rim pulses gently with *real mic level* (the only input-driven motion) | soft tick on start, one on stop | Mic is a toggle button ("Start dictation" / "Stop and send"); Voice Control "Tap Speak" |
 | **Interrupt** | Tap Stop (replaces Send while busy); start speaking or send a new message while he's answering (barge-in) | Stream cancelled (M3-T1); the partial answer is kept and marked "stopped" | Forge: sparks die instantly; others: settle | one crisp tap | Stop button; VoiceOver Magic Tap (two-finger double-tap) stops/starts |
 | **Follow up** | Type in the docked composer; tap a suggestion chip; "Ask about this" on any block | Sent on the same thread with context (M3-T8/T9) | normal thinking per aspect | light tick on send (none in mask slip) | All are buttons; the block action is in the rotor/Actions |
-| **Switch aspect deliberately** | Tap the aspect chip next to the core → menu: Auto (default), Quicksilver, Forge, Eternal. Pin lasts for the thread. Or ask ("be Forge about this") | Brain records the pin; the chip shows "Forge · pinned" | restrained morph (≤ 450 ms; Eternal 1.2 s) | none | Chip is a menu button; also an App Intent "Set Mercury's aspect" |
-| **Auto shift (Mercury decides)** | none (Brain / AspectPolicy) | Chip shows the aspect *and reason* for 4 s, then collapses to a dot. Tap within 4 s to undo | same morph | none | VoiceOver announcement "Forge, for a build problem" (polite, once) |
-| **Revisit** | Threads list (search, pins); memory citation chips; Archive (search, timeline); Spotlight | Opens the thread or memory in place | Archive/Eternal: calm starfield backdrop, no motion on content | none | Standard lists and search, and a rotor over the list |
+| **Aspect expression (automatic)** | Ask naturally; the Brain evaluates intent and context | The informational chip shows the selected aspect and a short reason; it cannot be tapped to change or pin the aspect | restrained morph (≤ 450 ms; Eternal 1.2 s) | none | VoiceOver announces the automatic choice and reason; no aspect-selection intent exists |
+| **Auto shift (Mercury decides)** | none (Brain / AspectPolicy) | Chip shows the aspect *and reason* for 4 s, then collapses to a dot. It is informational and has no undo action | same morph | none | VoiceOver announcement "Forge, for a build problem" (polite, once) |
+| **Revisit** | Threads list (search); memory citation chips; Archive (search, timeline); Spotlight | Opens the thread or memory in place | Archive/Eternal: calm starfield backdrop, no motion on content | none | Standard lists and search, and a rotor over the list |
 | **Act on a result** | Long-press any block, or tap its trailing ••• → Copy, Share, Remember, Ask about this, Open source; code: Copy code; cards: their action button | Performs via Brain action registry (M3.5-T20) where it changes state | Remember: the block's rim glints once | Remember/action done: one soft tap. Copy/share: none | Every action is in the Actions rotor and the ••• button |
 | **Touch acknowledgement** | Tap the presence | Opens Invocation (same as invoke) with one soft brightness ripple | per-aspect tint of the ripple | none | as Invoke |
 | **Dismiss** | Swipe down on the sheet; Done | Back to the Sanctum; the thread is kept | none | none | Escape gesture (two-finger Z); Done button |
@@ -123,7 +123,7 @@ The aspect is a continuous blend, `AspectBlend` (three weights), driven by one s
 | Any → `.steady` (mask slip) | all chaos stops; colour goes to `hearthSilver` (`maskSlipSettle`, 0.9 s, critically damped) | 0.9 s |
 | Reduce Motion | cross-fade of colour only, 250 ms; no jitter or sparks | 250 ms |
 
-Auto shifts show the reason chip. Pinned shifts show "· pinned". In `.steady` the pin is recorded but the calm look wins until the register returns to playful (P-T5 latch).
+Automatic shifts show the reason chip. There is no pin state. In `.steady`, the calm look wins until the register returns to playful (P-T5 latch).
 
 ---
 
@@ -148,8 +148,8 @@ The iPhone 16e has a **notch, not a Dynamic Island**, a **60 Hz** display, an **
 ## 8. Technical approach
 
 ### 8.1 Architecture (Sense → Think → Express)
-- **Core** (SPM-tested, no protocols added): `InteractionEvent` (V-T1) holds the semantic events above. `InteractionPolicy` is a pure event × context → response mapping: next state, route, haptic moment, presence cue. `RenderTierPolicy` (V-T3), `AnswerDocument` + `AnswerParser` (V-T4), `AspectPin` (V-T2). The V-T1/V-T2/V-T4 types were prototyped and type-checked under Swift 6.2 strict concurrency before this plan was written.
-- **MercuryBrain** (App) gets one entry point, `handle(_ event: InteractionEvent)`. It stays the only writer of `VisualState`, the active aspect, the pin, and a new Brain-owned `presenceCue`/`aspectShiftReason`. It's a synchronous main-actor call rather than a stream: gestures are already on the main actor, and an async hop would add a frame of latency. Streaming answers flow Brain → view model as `AnswerDocument` snapshots.
+- **Core** (SPM-tested, no protocols added): `InteractionEvent` (V-T1) holds the semantic events above. `InteractionPolicy` is a pure event × context → response mapping: next state, route, haptic moment, presence cue. `RenderTierPolicy` (V-T3), `AnswerDocument` + `AnswerParser` (V-T4). Aspect projection remains Brain-owned by `AspectPolicy`; there is no pin model. The V-T1/V-T2/V-T4 types were prototyped and type-checked under Swift 6.2 strict concurrency before this plan was written.
+- **MercuryBrain** (App) gets one entry point, `handle(_ event: InteractionEvent)`. It stays the only writer of `VisualState`, the active aspect, and the Brain-owned `presenceCue`/`aspectShiftReason`. It's a synchronous main-actor call rather than a stream: gestures are already on the main actor, and an async hop would add a frame of latency. Streaming answers flow Brain → view model as `AnswerDocument` snapshots.
 - **UI** renders only. Continuous inputs (mic level, scroll offset) stay local. All numbers come from `PersonaTheme`/`MotionTokens` (moving to `DesignTokens/` in M3.5-T23), which are tested by AppTests (M2-T1).
 
 ### 8.2 Rendering the presence
@@ -205,7 +205,7 @@ Note: `AspectPolicy` moves Mercury to **Forge** in Low Power Mode, and Forge is 
 - **No game mechanics:** no poke/tease reactions, "pushing back" when touched, drag-to-travel, pinch-to-switch aspect, tilt/slosh physics, shake, or touch-deformable metal.
 - **No tilt parallax.** It was judged not worth its Core Motion cost and distraction on a 60 Hz phone. Dropped.
 - **No chat bubbles, avatars or typing dots.** No spinners in Mercury's presence (P-T13).
-- **No aspect "persona picker" as a product.** The pin is a mood for this thread on one entity; Auto is the default.
+- **No aspect selector, pinning, or user override.** Quicksilver, Forge, and Eternal are automatic expressions of one entity, selected by the Brain from context.
 - **No 3D engines** (SceneKit/RealityKit/Unity), **no ARKit, no camera "noticing you"**, no sound effects, no custom fonts, no paid assets, **no third-party SDKs** (no Rive, Lottie or markdown libraries).
 - **No Liquid Glass on Mercury**, and no custom blur materials replacing system glass.
 - **No Dynamic Island-first design** (the 16e has none), and no animated widgets.
@@ -215,7 +215,7 @@ Note: `AspectPolicy` moves Mercury to **Forge** in Low Power Mode, and Forge is 
 ## 11. Owner decisions and open question
 Decided 2026-09-25 under the creative control Christopher granted (recorded as Owner decision 10 in [ROADMAP.md](ROADMAP.md)):
 - **Q-V2 → yes:** optional "read replies aloud" (V-T18), on-device TTS, an opt-in Codex setting that is **off by default**.
-- **Q-V3 → yes:** aspects may be **pinned per thread** as a mood of the one entity; Auto is the default. AGENTS.md is reworded to match. The mask slip still overrides a pin.
+- **Owner invariant:** aspects are never user-selectable or pinnable. The Brain selects automatically from context; UI may explain the choice but cannot override it.
 - **Q-V4 → yes:** M5-T12 shows the **scrollable current thread**, not only the current exchange.
 - **Q-V5 → yes, off by default:** thread titles may be indexed in Spotlight (titles only), behind a Codex toggle that defaults off.
 
