@@ -42,9 +42,9 @@ Main commit: `0adba9d2aa8ac546900fff07ebfa2bcc0d15ae1d`.
 - PR #418 merged the current-main Dynamic Type/accessibility follow-up. Superseded PR #373 is closed.
 
 **Open repository work:**
-- PR #416: opt-in Spotlight indexing for saved notes. Its current head includes follow-up fixes for note filtering, snapshot-based sync, focus tokens, indexing error visibility, early event subscription and failed-delete focus preservation. Existing checks passed on a stale base; it still requires a fresh full CI run and final review reconciliation before merge.
-- PR #419: SHA-pin the four third-party action references in `.github/workflows/release.yml`. Issue #250 remains open until merge and verification.
-- PR #420: this roadmap reconciliation.
+- PR #422: opt-in Spotlight indexing for saved notes, rebased onto current main. Preserves the current Sanctum Dynamic Type spacing and explicit Ask close control; fresh CI is running.
+- PR #419: release workflow action references SHA-pinned and merged at `6db7810`; all six CI jobs passed. Issue #250 is closed.
+- PR #421: this roadmap reconciliation.
 
 **Release gate:** CHR-55 remains `deviceAcceptance: not_recorded`. Only a real install and soak on the owner's iPhone 16e / iOS 27 can close it. CI, simulator runs, static inspection, and IPA packaging cannot substitute.
 
@@ -59,8 +59,8 @@ Main commit: `0adba9d2aa8ac546900fff07ebfa2bcc0d15ae1d`.
 - [x] Verify strict concurrency ratchet has an empty `@unchecked Sendable` allowlist.
 - [x] Verify PR #284 merged and close issue #252 as completed.
 - [x] Identify and correct stale roadmap status, PR references and historical CI claims (this update).
-- [ ] Merge and verify PR #419; then close issue #250.
-- [ ] Review and merge PR #416 only after its complete CI and review evidence are green.
+- [x] Merge and verify PR #419; issue #250 closed after the merge.
+- [ ] Review and merge PR #422 only after its complete CI and review evidence are green.
 - [ ] Complete a source-wide dead-code / duplicate-path audit with local checkout, Swift tooling and tests. Do not delete code based only on search-result snippets.
 - [ ] Confirm all architecture guard tests cover the invariants listed above and fail on violations.
 
@@ -109,7 +109,7 @@ Main commit: `0adba9d2aa8ac546900fff07ebfa2bcc0d15ae1d`.
 
 - [x] Native App Intents package and app intent entry points exist.
 - [x] Nexus exposes privacy-conscious device/environment signals.
-- [x] Saved-note Spotlight implementation is proposed in PR #416, opt-in and off by default.
+- [ ] Saved-note Spotlight implementation is proposed in PR #422, opt-in and off by default; merge after fresh CI and final review.
 - [ ] Verify cold-start App Intents and Shortcuts execution, input validation, cancellation, and user-visible errors.
 - [ ] Verify Spotlight opt-in, indexing limits, deletion, retries, cross-aspect Archive routing and actual device search results before enabling by default.
 - [ ] Verify Apple Intelligence / Foundation Models availability detection, unsupported-device behavior, offline behavior, and graceful fallback on the target OS.
@@ -129,7 +129,7 @@ Main commit: `0adba9d2aa8ac546900fff07ebfa2bcc0d15ae1d`.
 - [x] Keychain-backed provider credential storage and privacy boundary foundations.
 - [x] Privacy manifest and source-surface guard tests exist.
 - [x] SideStore unsigned IPA packaging workflow verifies app bundle and icon assets.
-- [ ] Merge PR #419 and verify every action in every workflow is pinned to immutable commit SHAs.
+- [x] PR #419 merged; all four release-workflow action references are pinned to verified immutable commit SHAs. Continue auditing any newly added workflow actions.
 - [ ] Audit Keychain access groups, accessibility class, deletion, rotation, and locked-device behavior.
 - [ ] Audit all network, file, defaults, clipboard, location, contacts, calendar, photos, camera, microphone and health surfaces; require explicit privacy review before adding sensitive access.
 - [ ] Test airplane mode, invalid credentials, exhausted quotas, provider timeouts, malformed responses, storage pressure, app termination and interrupted writes.
