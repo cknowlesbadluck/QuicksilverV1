@@ -108,7 +108,7 @@ final class DependencyContainer {
         Task { [weak self] in
             guard let self else { return }
             await self.memoryManager.load()
-            self.noteSpotlight.follow(self.eventBus)
+            await self.noteSpotlight.follow(self.eventBus)
             // Never replace a valid Spotlight index with an empty snapshot after a failed read.
             if self.memoryManager.lastFailure == .load {
                 await self.retrySpotlightMemoryLoad()
