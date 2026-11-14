@@ -175,7 +175,12 @@ extension MercuryBrain {
             personality.increase(nudge.dimension, by: nudge.amount)
         }
 
-        if visualState != .thinking
+        // Processing is also a short-lived interaction state after a memory write.
+        // Preserve it while its owned stabilization task is active; environmental
+        // processing (low health) still recomputes normally.
+        let transientProcessing = visualState == .processing && visualStateTransitionTask != nil
+        if !transientProcessing
+            && visualState != .thinking
             && visualState != .speaking
             && visualState != .transitioning
             && visualState != .listening
@@ -359,10 +364,17 @@ extension MercuryBrain {
     /// Restore the active aspect's environmental baseline after memory-only interactions.
     /// This remains separate from the response presentation sequence below.
     private func stabilizeVisualStateAfterSuccess() {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(600))
-            if visualState == .success || visualState == .processing {
-                visualState = environmentalBaseline()
+        visualStateTransitionTask?.cancel()
+        visualStateTransitionTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(600))
+                guard !Task.isCancelled, let self else { return }
+                if self.visualState == .success || self.visualState == .processing {
+                    self.visualState = self.environmentalBaseline()
+                }
+                self.visualStateTransitionTask = nil
+            } catch {
+                // Cancellation is expected when a newer interaction supersedes this state.
             }
         }
     }
