@@ -34,7 +34,14 @@ final class MercuryBrain {
     private(set) var personality = PersonalityState()
     private(set) var primaryInsight: String?
     private(set) var livingStatus: String = LivingNarration.defaultStatus
-    private(set) var visualState: VisualState = .idle
+    private(set) var visualState: VisualState = .idle {
+        didSet {
+            guard oldValue != visualState else { return }
+            let bus = eventBus
+            let state = visualState
+            Task { await bus.publish(.visualStateChanged(state: state)) }
+        }
+    }
     private(set) var activeAspect: Aspect = .quicksilver
     /// Latched conversational register. Resets to `.playful` on a new Brain session.
     private(set) var activeRegister: Register = .playful
