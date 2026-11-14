@@ -67,6 +67,21 @@ final class MercuryBrainTests: XCTestCase {
         XCTAssertEqual(viewModel.visualState, expected)
     }
 
+    func testSanctumPreservesRememberProcessingStateUntilStabilized() async throws {
+        let harness = try makeHarness(provider: GatedProvider(gate: RequestGate(), reply: "unused"))
+        let sanctum = SanctumViewModel(container: harness.container)
+        sanctum.startLiveRefresh()
+
+        await harness.container.brain.remember("Keep this note.")
+        try await waitForVisualState(.processing, in: sanctum)
+        XCTAssertEqual(harness.container.brain.visualState, .processing)
+
+        try await Task.sleep(for: .milliseconds(700))
+        XCTAssertEqual(sanctum.visualState, harness.container.brain.visualState)
+        XCTAssertNotEqual(harness.container.brain.visualState, .processing)
+        sanctum.stopLiveRefresh()
+    }
+
     func testBrokerDenySetsWarningAndThrows() throws {
         let harness = try makeHarness(provider: GatedProvider(gate: RequestGate(), reply: "unused"))
         XCTAssertThrowsError(
