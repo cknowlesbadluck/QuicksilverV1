@@ -1,5 +1,6 @@
 import Foundation
 import Core
+import Memory
 
 // MARK: - Capabilities
 
@@ -42,6 +43,11 @@ extension MercuryBrain: IntelligenceSurface {
     /// Memory snapshot for Intents / automation (alias of retrieveSnapshot).
     func snapshot(limit: Int) -> [MemoryItem] {
         retrieveSnapshot(limit: limit)
+    }
+
+    /// Automation note queries must not inherit the active aspect's retention threshold.
+    func noteSnapshot(limit: Int) -> [MemoryItem] {
+        memoryManager.items(matching: MemoryQuery(keyPrefix: "note.", limit: limit))
     }
 
     /// Aspect identity plus Nexus full diagnostic — Intents call only this.

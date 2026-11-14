@@ -26,6 +26,7 @@ struct QuicksilverApp: App {
                     case .active:
                         container.nexus.start()
                         energy = .current
+                        Task { await container.noteSpotlight.sync() } // keeps the index matching notes and the opt-in
                     case .background:
                         container.nexus.stop()
                         container.aiService.releaseOnDeviceResources() // M3.5-T4: don't hold a warm session in background

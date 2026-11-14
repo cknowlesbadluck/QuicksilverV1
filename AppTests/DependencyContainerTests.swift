@@ -7,6 +7,48 @@ import Nexus
 
 @MainActor
 final class DependencyContainerTests: XCTestCase {
+    func testSpotlightReadinessRecoversAfterInitialMemoryLoadFailure() async throws {
+        let suiteName = "DependencyContainerRetryTests.\\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = FailOnceMemoryStore()
+        let logger = LoggerService(subsystem: "com.quicksilver.tests")
+        let eventBus = EventBus()
+        let nexus = NexusCoordinator(
+            networkMonitor: StubNetworkMonitor(),
+            batteryMonitor: StubBatteryMonitor(),
+            storageMonitor: StubStorageMonitor(),
+            deviceMonitor: StubDeviceMonitor(),
+            logger: logger,
+            eventBus: eventBus
+        )
+        let container = DependencyContainer(memoryStore: store, nexus: nexus, defaults: defaults)
+        await container.noteSpotlight.setEnabled(true)
+
+        for _ in 0..<50 {
+            if await store.loadAttempts() > 0 { break }
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        let initialLoadAttempts = await store.loadAttempts()
+        XCTAssertEqual(initialLoadAttempts, 1)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertFalse(container.noteSpotlight.isMemoryReady)
+
+        await container.memoryManager.set(
+            key: "note.retry",
+            value: "Spotlight retry after transient store failure",
+            category: .preference
+        )
+        for _ in 0..<100 where !container.noteSpotlight.isMemoryReady {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+
+        XCTAssertTrue(container.noteSpotlight.isMemoryReady, "a later successful load must release the Spotlight readiness gate")
+        let stored = try await store.loadAll()
+        XCTAssertTrue(stored.contains(where: { $0.value == "Spotlight retry after transient store failure" }))
+    }
+
     func testInjectedStoreAndProviderDriveBrainWithoutUsingDeviceBackends() async throws {
         let suiteName = "DependencyContainerTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -42,6 +84,37 @@ final class DependencyContainerTests: XCTestCase {
             item.value == "Keep the injection seam small."
         }))
     }
+}
+
+private actor FailOnceMemoryStore: MemoryStore {
+    private var items: [MemoryItem] = []
+    private var loads = 0
+
+    func loadAttempts() -> Int { loads }
+
+    func loadAll() async throws -> [MemoryItem] {
+        loads += 1
+        if loads == 1 { throw Failure.transientRead }
+        return items
+    }
+
+    func save(_ item: MemoryItem) async throws {
+        if let index = items.firstIndex(where: { $0.id == item.id }) {
+            items[index] = item
+        } else {
+            items.append(item)
+        }
+    }
+
+    func delete(id: UUID) async throws {
+        items.removeAll { $0.id == id }
+    }
+
+    func deleteAll(in category: MemoryItem.Category) async throws {
+        items.removeAll { $0.category == category }
+    }
+
+    private enum Failure: Error { case transientRead }
 }
 
 private struct StubAIProvider: AIProvider {

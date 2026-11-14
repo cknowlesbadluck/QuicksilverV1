@@ -23,6 +23,13 @@ final class DependencyContainer {
     let aiService: AIService
     let routingConfigStore: RoutingConfigStore
     let nexus: NexusCoordinator
+    @ObservationIgnored private var memoryLoadRetryTask: Task<Void, Never>?
+    @ObservationIgnored private var memoryIndexSyncStarted = false
+
+    /// Spotlight opt-in for saved notes (off by default; M3.5-T9).
+    @ObservationIgnored lazy var noteSpotlight = NoteSpotlightSync(
+        flags: featureFlags, surface: brain, waitForMemoryLoad: true
+    )
 
     /// Central intelligence coordinator. UI and Intents should prefer the Brain
     /// for complex reasoning instead of reaching into individual services.
@@ -83,10 +90,7 @@ final class DependencyContainer {
         // SideStore first-run: warm memory so Ask / Intents / Home don't wait
         // for MemoryView to open. Failures are logged inside MemoryManager.
         // Rebuild the embedding sidecar after load, then keep it on memoryDidUpdate.
-        Task {
-            await memoryManager.load()
-            brain.startMemoryIndexSync()
-        }
+        startMemoryLoad()
 
         logger.info(
             "DependencyContainer ready — Mercury Brain online — \(configuration.fullVersionString)",
@@ -96,6 +100,70 @@ final class DependencyContainer {
 
     var activeConfiguration: PersonaConfiguration {
         personaManager.activeConfiguration
+    }
+
+    /// Loads memory, then starts the brain index and Spotlight. Spotlight reconciles only after
+    /// a successful load (so an empty snapshot never replaces the index), then follows every note change.
+    private func startMemoryLoad() {
+        Task { [weak self] in
+            guard let self else { return }
+            await self.memoryManager.load()
+            await self.noteSpotlight.follow(self.eventBus)
+            // Never replace a valid Spotlight index with an empty snapshot after a failed read.
+            if self.memoryManager.lastFailure == .load {
+                await self.retrySpotlightMemoryLoad()
+            } else {
+                await self.memoryLoadDidSucceed()
+            }
+        }
+    }
+
+    /// Complete memory-load-dependent indexes exactly once, including recovery paths.
+    func memoryLoadDidSucceed() async {
+        memoryLoadRetryTask?.cancel()
+        memoryLoadRetryTask = nil
+        if !memoryIndexSyncStarted {
+            brain.startMemoryIndexSync()
+            memoryIndexSyncStarted = true
+        }
+        await noteSpotlight.memoryLoadSucceeded()
+    }
+
+    /// Reopen the Spotlight readiness gate after a transient initial memory-store failure.
+    /// Retry on a short bounded schedule, then wait for a memory write (e.g. from Shortcuts).
+    private func retrySpotlightMemoryLoad() async {
+        let stream = await eventBus.events(bufferingNewest: 1) { event in
+            if case .memoryDidUpdate = event { return true }
+            return false
+        }
+        memoryLoadRetryTask?.cancel()
+        let (triggers, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let eventListener = Task {
+            for await _ in stream {
+                guard !Task.isCancelled else { break }
+                continuation.yield(())
+            }
+        }
+        let timer = Task {
+            for delay in [1, 3, 10] {
+                try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
+                guard !Task.isCancelled else { return }
+                continuation.yield(())
+            }
+        }
+        memoryLoadRetryTask = Task { [weak self] in
+            for await _ in triggers {
+                guard !Task.isCancelled, let self, !self.noteSpotlight.isMemoryReady else { break }
+                await self.memoryManager.load()
+                if self.memoryManager.lastFailure != .load {
+                    await self.memoryLoadDidSucceed()
+                    break
+                }
+            }
+            eventListener.cancel()
+            timer.cancel()
+            continuation.finish()
+        }
     }
 }
 
