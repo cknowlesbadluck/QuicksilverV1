@@ -49,7 +49,6 @@ final class MercuryBrain {
     /// Prior turns only. Current prompt is sent separately. Capped at 8 pairs.
     private var conversation: [Message] = []
     var memoryIndexSyncTask: Task<Void, Never>?
-    /// Cancels stale response presentation transitions when a newer turn begins.
     private var visualStateTransitionTask: Task<Void, Never>?
 
     init(
@@ -175,9 +174,6 @@ extension MercuryBrain {
             personality.increase(nudge.dimension, by: nudge.amount)
         }
 
-        // Processing is also a short-lived interaction state after a memory write.
-        // Preserve it while its owned stabilization task is active; environmental
-        // processing (low health) still recomputes normally.
         let transientProcessing = visualState == .processing && visualStateTransitionTask != nil
         if !transientProcessing
             && visualState != .thinking
@@ -361,8 +357,6 @@ extension MercuryBrain {
         BrainComposition.environmentalBaseline(state: nexus.state, aspect: activeAspect)
     }
 
-    /// Restore the active aspect's environmental baseline after memory-only interactions.
-    /// This remains separate from the response presentation sequence below.
     private func stabilizeVisualStateAfterSuccess() {
         visualStateTransitionTask?.cancel()
         visualStateTransitionTask = Task { @MainActor [weak self] in
@@ -379,8 +373,6 @@ extension MercuryBrain {
         }
     }
 
-    /// Keep the entity visibly speaking after the response is ready, then acknowledge
-    /// completion before returning to the active aspect's environmental baseline.
     private func scheduleResponsePresentationTransition() {
         visualStateTransitionTask?.cancel()
         visualStateTransitionTask = Task { @MainActor [weak self] in
