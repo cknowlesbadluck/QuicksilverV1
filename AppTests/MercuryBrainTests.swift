@@ -32,6 +32,41 @@ final class MercuryBrainTests: XCTestCase {
         XCTAssertEqual(harness.container.brain.visualState, .thinking)
     }
 
+    func testSanctumMirrorsBrainSuccessAndRestingVisualStates() async throws {
+        let gate = RequestGate()
+        let harness = try makeHarness(provider: GatedProvider(gate: gate, reply: "Ready."))
+        harness.container.featureFlags.set("aiServiceEnabled", enabled: true)
+        let sanctum = SanctumViewModel(container: harness.container)
+        sanctum.startLiveRefresh()
+
+        let task = Task { try await harness.container.brain.ask("build a shelf") }
+        await gate.waitUntilEntered()
+        gate.proceed()
+        _ = try await task.value
+
+        try await waitForVisualState(.speaking, in: sanctum)
+        try await Task.sleep(for: .milliseconds(800))
+        XCTAssertEqual(harness.container.brain.visualState, .success)
+        XCTAssertEqual(sanctum.visualState, .success, "Sanctum must mirror the Brain's success transition")
+
+        try await Task.sleep(for: .milliseconds(700))
+        XCTAssertEqual(harness.container.brain.visualState, .thinking)
+        XCTAssertEqual(sanctum.visualState, .thinking, "Sanctum must mirror the Brain's resting state")
+        sanctum.stopLiveRefresh()
+    }
+
+    private func waitForVisualState(
+        _ expected: VisualState,
+        in viewModel: SanctumViewModel,
+        timeout: Duration = .seconds(2)
+    ) async throws {
+        let deadline = ContinuousClock.now + timeout
+        while viewModel.visualState != expected && ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertEqual(viewModel.visualState, expected)
+    }
+
     func testBrokerDenySetsWarningAndThrows() throws {
         let harness = try makeHarness(provider: GatedProvider(gate: RequestGate(), reply: "unused"))
         XCTAssertThrowsError(
