@@ -148,6 +148,7 @@ final class EternalViewModel {
              .aiRequestStarted,
              .focusDidChange,
              .timeContextDidChange,
+             .visualStateChanged,
              .custom:
             return false
         }

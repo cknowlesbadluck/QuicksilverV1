@@ -34,7 +34,14 @@ final class MercuryBrain {
     private(set) var personality = PersonalityState()
     private(set) var primaryInsight: String?
     private(set) var livingStatus: String = LivingNarration.defaultStatus
-    private(set) var visualState: VisualState = .idle
+    private(set) var visualState: VisualState = .idle {
+        didSet {
+            guard oldValue != visualState else { return }
+            let bus = eventBus
+            let state = visualState
+            Task { await bus.publish(.visualStateChanged(state: state)) }
+        }
+    }
     private(set) var activeAspect: Aspect = .quicksilver
     /// Latched conversational register. Resets to `.playful` on a new Brain session.
     private(set) var activeRegister: Register = .playful
@@ -42,6 +49,7 @@ final class MercuryBrain {
     /// Prior turns only. Current prompt is sent separately. Capped at 8 pairs.
     private var conversation: [Message] = []
     var memoryIndexSyncTask: Task<Void, Never>?
+    private var visualStateTransitionTask: Task<Void, Never>?
 
     init(
         personaManager: PersonaManager,
@@ -83,6 +91,8 @@ final class MercuryBrain {
     func prepareInvocation() { aiService.prewarmOnDevice() } // M3.5-T4: warm on-device on Invocation open
 
     func askWithAspect(_ query: String) async throws -> AskResult {
+        visualStateTransitionTask?.cancel()
+        visualStateTransitionTask = nil
         personaManager.recordInteraction()
         if let recall = MemoryRecall.answer(to: query, from: memoryManager.items) {
             return answerFromMemory(query: query, text: recall.text) // no model call, nothing leaves the device
@@ -164,7 +174,9 @@ extension MercuryBrain {
             personality.increase(nudge.dimension, by: nudge.amount)
         }
 
-        if visualState != .thinking
+        let transientProcessing = visualState == .processing && visualStateTransitionTask != nil
+        if !transientProcessing
+            && visualState != .thinking
             && visualState != .speaking
             && visualState != .transitioning
             && visualState != .listening
@@ -331,9 +343,8 @@ extension MercuryBrain {
             recordTurn(user: query, assistant: response.content)
             visualState = .speaking
             let colored = personality.colorResponse(response.content, personaID: turn.config.id)
-            visualState = .success
+            scheduleResponsePresentationTransition()
             refreshLivingStatus()
-            stabilizeVisualStateAfterSuccess()
             return colored
         } catch {
             visualState = AppError.isCalmOutcome(error) ? environmentalBaseline() : .warning
@@ -347,10 +358,35 @@ extension MercuryBrain {
     }
 
     private func stabilizeVisualStateAfterSuccess() {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(600))
-            if visualState == .success || visualState == .processing {
-                visualState = environmentalBaseline()
+        visualStateTransitionTask?.cancel()
+        visualStateTransitionTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(600))
+                guard !Task.isCancelled, let self else { return }
+                if self.visualState == .success || self.visualState == .processing {
+                    self.visualState = self.environmentalBaseline()
+                }
+                self.visualStateTransitionTask = nil
+            } catch {
+                // Cancellation is expected when a newer interaction supersedes this state.
+            }
+        }
+    }
+
+    private func scheduleResponsePresentationTransition() {
+        visualStateTransitionTask?.cancel()
+        visualStateTransitionTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(700))
+                guard !Task.isCancelled, let self, self.visualState == .speaking else { return }
+                self.visualState = .success
+
+                try await Task.sleep(for: .milliseconds(600))
+                guard !Task.isCancelled, self.visualState == .success else { return }
+                self.visualState = self.environmentalBaseline()
+                self.visualStateTransitionTask = nil
+            } catch {
+                // Cancellation is expected when a newer turn supersedes this presentation.
             }
         }
     }

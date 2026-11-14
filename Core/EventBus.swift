@@ -12,6 +12,7 @@ public actor EventBus {
         case featureFlagDidChange(key: String, enabled: Bool)
         case aiRequestStarted(requestID: String)
         case aiRequestCompleted(requestID: String)
+        case visualStateChanged(state: VisualState)
         case signalReceived(source: String, value: String, numericValue: Double?)
         case focusDidChange(focusName: String?)
         case timeContextDidChange(period: TimePeriod)

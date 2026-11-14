@@ -205,6 +205,7 @@ final class ForgeViewModel {
              .aiRequestStarted,
              .focusDidChange,
              .timeContextDidChange,
+             .visualStateChanged,
              .custom:
             return false
         }
