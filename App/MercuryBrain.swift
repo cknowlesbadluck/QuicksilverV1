@@ -42,6 +42,8 @@ final class MercuryBrain {
     /// Prior turns only. Current prompt is sent separately. Capped at 8 pairs.
     private var conversation: [Message] = []
     var memoryIndexSyncTask: Task<Void, Never>?
+    /// Cancels stale response presentation transitions when a newer turn begins.
+    private var visualStateTransitionTask: Task<Void, Never>?
 
     init(
         personaManager: PersonaManager,
@@ -83,6 +85,8 @@ final class MercuryBrain {
     func prepareInvocation() { aiService.prewarmOnDevice() } // M3.5-T4: warm on-device on Invocation open
 
     func askWithAspect(_ query: String) async throws -> AskResult {
+        visualStateTransitionTask?.cancel()
+        visualStateTransitionTask = nil
         personaManager.recordInteraction()
         if let recall = MemoryRecall.answer(to: query, from: memoryManager.items) {
             return answerFromMemory(query: query, text: recall.text) // no model call, nothing leaves the device
@@ -331,9 +335,8 @@ extension MercuryBrain {
             recordTurn(user: query, assistant: response.content)
             visualState = .speaking
             let colored = personality.colorResponse(response.content, personaID: turn.config.id)
-            visualState = .success
+            scheduleResponsePresentationTransition()
             refreshLivingStatus()
-            stabilizeVisualStateAfterSuccess()
             return colored
         } catch {
             visualState = AppError.isCalmOutcome(error) ? environmentalBaseline() : .warning
@@ -346,11 +349,22 @@ extension MercuryBrain {
         BrainComposition.environmentalBaseline(state: nexus.state, aspect: activeAspect)
     }
 
-    private func stabilizeVisualStateAfterSuccess() {
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(600))
-            if visualState == .success || visualState == .processing {
-                visualState = environmentalBaseline()
+    /// Keep the entity visibly speaking after the response is ready, then acknowledge
+    /// completion before returning to the active aspect's environmental baseline.
+    private func scheduleResponsePresentationTransition() {
+        visualStateTransitionTask?.cancel()
+        visualStateTransitionTask = Task { @MainActor [weak self] in
+            do {
+                try await Task.sleep(for: .milliseconds(700))
+                guard !Task.isCancelled, let self, self.visualState == .speaking else { return }
+                self.visualState = .success
+
+                try await Task.sleep(for: .milliseconds(600))
+                guard !Task.isCancelled, self.visualState == .success else { return }
+                self.visualState = self.environmentalBaseline()
+                self.visualStateTransitionTask = nil
+            } catch {
+                // Cancellation is expected when a newer turn supersedes this presentation.
             }
         }
     }
