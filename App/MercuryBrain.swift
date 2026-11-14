@@ -349,6 +349,17 @@ extension MercuryBrain {
         BrainComposition.environmentalBaseline(state: nexus.state, aspect: activeAspect)
     }
 
+    /// Restore the active aspect's environmental baseline after memory-only interactions.
+    /// This remains separate from the response presentation sequence below.
+    private func stabilizeVisualStateAfterSuccess() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(600))
+            if visualState == .success || visualState == .processing {
+                visualState = environmentalBaseline()
+            }
+        }
+    }
+
     /// Keep the entity visibly speaking after the response is ready, then acknowledge
     /// completion before returning to the active aspect's environmental baseline.
     private func scheduleResponsePresentationTransition() {
