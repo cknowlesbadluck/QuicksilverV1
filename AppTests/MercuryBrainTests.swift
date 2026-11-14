@@ -9,7 +9,7 @@ import Personas
 
 @MainActor
 final class MercuryBrainTests: XCTestCase {
-    func testAskHappyPathReportsThinkingThenSuccessThenBaseline() async throws {
+    func testAskHappyPathReportsThinkingThenSpeakingThenSuccessThenBaseline() async throws {
         let gate = RequestGate()
         let harness = try makeHarness(provider: GatedProvider(gate: gate, reply: "Ready."))
         harness.container.featureFlags.set("aiServiceEnabled", enabled: true)
@@ -22,9 +22,12 @@ final class MercuryBrainTests: XCTestCase {
         let reply = try await task.value
         XCTAssertEqual(reply, "Ready.")
         XCTAssertEqual(harness.container.brain.activeAspect, .forge)
-        XCTAssertEqual(harness.container.brain.visualState, .success)
+        XCTAssertEqual(harness.container.brain.visualState, .speaking)
 
         try await Task.sleep(for: .milliseconds(800))
+        XCTAssertEqual(harness.container.brain.visualState, .success)
+
+        try await Task.sleep(for: .milliseconds(700))
         // Forge's resting state is `.thinking` (Aspect.defaultVisualState).
         XCTAssertEqual(harness.container.brain.visualState, .thinking)
     }
