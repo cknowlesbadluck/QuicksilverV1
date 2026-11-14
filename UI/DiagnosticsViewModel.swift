@@ -92,6 +92,7 @@ final class DiagnosticsViewModel {
              .featureFlagDidChange,
              .aiRequestStarted,
              .aiRequestCompleted,
+             .visualStateChanged,
              .focusDidChange,
              .timeContextDidChange,
              .custom:
