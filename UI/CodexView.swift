@@ -46,7 +46,7 @@ struct CodexView: View {
                         .accessibilityIdentifier("codex.spotlightNotice")
                 }
             } footer: {
-                Text("Off by default. Only saved notes, never conversations. Turning it off removes them from search.")
+                Text("Off by default. On-device Spotlight can show saved note titles and text. Only saved notes are indexed, never conversations; turning it off removes them from search.")
             }
             gatewaySection(vm)
             covenantSection(vm)
