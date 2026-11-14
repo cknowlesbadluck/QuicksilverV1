@@ -93,6 +93,7 @@ final class SanctumViewModel {
              .thermalPressureChanged,
              .networkConditionChanged,
              .aiRequestCompleted,
+             .visualStateChanged,
              .focusDidChange:
             return true
         case .featureFlagDidChange, .aiRequestStarted, .custom:
